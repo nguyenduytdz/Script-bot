@@ -1,7 +1,7 @@
---========================================================--
---          MODERN DUY DASHBOARD - FULL VERSION
---          Server Hop 1 Player Fixed
---========================================================--
+--========================================================
+-- MODERN DUY DASHBOARD
+-- HOME / PLAYERS / SERVER HOP / TELE PLAYER / SETTINGS
+--========================================================
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -10,1429 +10,1018 @@ local RunService = game:GetService("RunService")
 local Stats = game:GetService("Stats")
 
 local LocalPlayer = Players.LocalPlayer
+local PlayerGui = LocalPlayer:WaitForChild("PlayerGui")
 
---========================================================--
--- REMOTES
---========================================================--
-
-local Remotes = ReplicatedStorage:WaitForChild("DuyRemotes")
-
-local GetServers = Remotes:WaitForChild("GetServers")
-local JoinServer = Remotes:WaitForChild("JoinServer")
-local TeleportPlayer = Remotes:FindFirstChild("TeleportPlayer")
-
---========================================================--
+--========================================================
 -- CONFIG
---========================================================--
+--========================================================
 
-local CONFIG = {
-    MaxServerPlayers = 1,
-    Theme = Color3.fromRGB(115,75,255)
+local Theme = Color3.fromRGB(115, 75, 255)
+
+local Colors = {
+	Background = Color3.fromRGB(16,16,23),
+	Panel = Color3.fromRGB(22,22,31),
+	Panel2 = Color3.fromRGB(29,29,41),
+	Text = Color3.fromRGB(240,240,248),
+	SubText = Color3.fromRGB(140,140,160),
+	Border = Color3.fromRGB(70,70,90)
 }
 
---========================================================--
--- GUI
---========================================================--
+--========================================================
+-- REMOTES
+-- Không WaitForChild để menu luôn hiện
+--========================================================
 
-local gui = Instance.new("ScreenGui")
-gui.Name = "ModernDuyDashboard"
-gui.ResetOnSpawn = false
-gui.IgnoreGuiInset = true
-gui.Parent = LocalPlayer:WaitForChild("PlayerGui")
+local GetServers
+local JoinServer
+local TeleportPlayer
 
---========================================================--
--- FUNCTIONS
---========================================================--
+local function RefreshRemotes()
+	local folder = ReplicatedStorage:FindFirstChild("DuyRemotes")
 
-local function Corner(parent, radius)
+	if not folder then
+		return false
+	end
 
-    local c = Instance.new("UICorner")
-    c.CornerRadius = UDim.new(0,radius or 12)
-    c.Parent = parent
+	GetServers = folder:FindFirstChild("GetServers")
+	JoinServer = folder:FindFirstChild("JoinServer")
+	TeleportPlayer = folder:FindFirstChild("TeleportPlayer")
 
+	return true
 end
 
-
-local function Stroke(parent,color,transparency)
-
-    local s = Instance.new("UIStroke")
-
-    s.Color = color or Color3.fromRGB(70,70,90)
-    s.Transparency = transparency or 0
-    s.Thickness = 1
-
-    s.Parent = parent
-
-end
-
-
-local function Label(parent,text,size,pos,font)
-
-    local l = Instance.new("TextLabel")
-
-    l.BackgroundTransparency = 1
-    l.Text = text
-    l.TextColor3 = Color3.fromRGB(235,235,245)
-
-    l.TextSize = size or 14
-    l.Font = font or Enum.Font.Gotham
-
-    l.TextXAlignment = Enum.TextXAlignment.Left
-
-    l.Position = pos or UDim2.new()
-
-    l.Size = UDim2.new(1,0,0,24)
-
-    l.Parent = parent
-
-    return l
-
-end
-
-
-local function Button(parent,text,pos,size)
-
-    local b = Instance.new("TextButton")
-
-    b.Text = text
-    b.Font = Enum.Font.GothamBold
-    b.TextSize = 13
-
-    b.TextColor3 = Color3.fromRGB(240,240,245)
-
-    b.BackgroundColor3 = Color3.fromRGB(35,35,48)
-
-    b.Position = pos
-    b.Size = size
-
-    b.AutoButtonColor = false
-
-    b.Parent = parent
-
-    Corner(b,10)
-
-    Stroke(
-        b,
-        Color3.fromRGB(70,70,90),
-        0.2
-    )
-
-    return b
-
-end
-
---========================================================--
--- MAIN
---========================================================--
-
-local main = Instance.new("Frame")
-
-main.Size = UDim2.fromOffset(650,410)
-
-main.Position =
-    UDim2.new(
-        0.5,
-        -325,
-        0.5,
-        -205
-    )
-
-main.BackgroundColor3 =
-    Color3.fromRGB(17,17,24)
-
-main.Parent = gui
-
-Corner(main,18)
-
-Stroke(
-    main,
-    Color3.fromRGB(75,75,100),
-    0.15
-)
-
---========================================================--
--- DRAG MENU
---========================================================--
-
-do
-
-    local dragging = false
-    local dragStart
-    local startPos
-
-    main.InputBegan:Connect(function(input)
-
-        if input.UserInputType ==
-            Enum.UserInputType.MouseButton1
-            or
-            input.UserInputType ==
-            Enum.UserInputType.Touch
-        then
-
-            dragging = true
-
-            dragStart = input.Position
-            startPos = main.Position
-
-            input.Changed:Connect(function()
-
-                if input.UserInputState ==
-                    Enum.UserInputState.End
-                then
-
-                    dragging = false
-
-                end
-
-            end)
-
-        end
-
-    end)
-
-
-    UserInputService.InputChanged:Connect(function(input)
-
-        if not dragging then
-            return
-        end
-
-        if input.UserInputType ==
-            Enum.UserInputType.MouseMovement
-            or
-            input.UserInputType ==
-            Enum.UserInputType.Touch
-        then
-
-            local delta =
-                input.Position - dragStart
-
-            main.Position =
-                UDim2.new(
-                    startPos.X.Scale,
-                    startPos.X.Offset + delta.X,
-                    startPos.Y.Scale,
-                    startPos.Y.Offset + delta.Y
-                )
-
-        end
-
-    end)
-
-end
-
---========================================================--
--- TOP BAR
---========================================================--
-
-local top = Instance.new("Frame")
-
-top.BackgroundTransparency = 1
-top.Size = UDim2.new(1,0,0,62)
-
-top.Parent = main
-
-
-local avatar = Instance.new("ImageLabel")
-
-avatar.BackgroundTransparency = 1
-
-avatar.Size =
-    UDim2.fromOffset(42,42)
-
-avatar.Position =
-    UDim2.fromOffset(16,10)
-
-avatar.Parent = top
-
-Corner(avatar,12)
-
-
-local thumbOK,thumb =
-    pcall(function()
-
-        return Players:GetUserThumbnailAsync(
-            LocalPlayer.UserId,
-            Enum.ThumbnailType.HeadShot,
-            Enum.ThumbnailSize.Size100x100
-        )
-
-    end)
-
-if thumbOK then
-    avatar.Image = thumb
-end
-
-
-local nameText =
-    Label(
-        top,
-        LocalPlayer.DisplayName,
-        16,
-        UDim2.fromOffset(70,9),
-        Enum.Font.GothamBold
-    )
-
-nameText.Size =
-    UDim2.new(1,-170,0,22)
-
-
-local userText =
-    Label(
-        top,
-        "@" .. LocalPlayer.Name,
-        12,
-        UDim2.fromOffset(70,31)
-    )
-
-userText.TextColor3 =
-    Color3.fromRGB(145,145,165)
-
-
-local close =
-    Button(
-        top,
-        "×",
-        UDim2.new(1,-54,0,13),
-        UDim2.fromOffset(38,36)
-    )
-
-close.TextSize = 20
-
-close.MouseButton1Click:Connect(function()
-
-    main.Visible = false
-
+RefreshRemotes()
+
+ReplicatedStorage.ChildAdded:Connect(function(child)
+	if child.Name == "DuyRemotes" then
+		task.wait()
+		RefreshRemotes()
+	end
 end)
 
---========================================================--
--- SIDE MENU
---========================================================--
+--========================================================
+-- GUI
+--========================================================
 
-local side = Instance.new("Frame")
+local Old = PlayerGui:FindFirstChild("ModernDuyDashboard")
+if Old then
+	Old:Destroy()
+end
 
-side.Position =
-    UDim2.fromOffset(12,72)
+local Gui = Instance.new("ScreenGui")
+Gui.Name = "ModernDuyDashboard"
+Gui.ResetOnSpawn = false
+Gui.IgnoreGuiInset = true
+Gui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+Gui.Parent = PlayerGui
 
-side.Size =
-    UDim2.fromOffset(130,320)
+--========================================================
+-- HELPERS
+--========================================================
 
-side.BackgroundColor3 =
-    Color3.fromRGB(23,23,32)
+local function Corner(obj, radius)
+	local c = Instance.new("UICorner")
+	c.CornerRadius = UDim.new(0, radius or 10)
+	c.Parent = obj
+end
 
-side.Parent = main
+local function Border(obj, color, transparency)
+	local s = Instance.new("UIStroke")
+	s.Color = color or Colors.Border
+	s.Transparency = transparency or 0
+	s.Thickness = 1
+	s.Parent = obj
+end
 
-Corner(side,14)
+local function MakeLabel(parent, text, size, pos, font)
+	local l = Instance.new("TextLabel")
+	l.BackgroundTransparency = 1
+	l.Text = text
+	l.TextColor3 = Colors.Text
+	l.TextSize = size or 14
+	l.Font = font or Enum.Font.Gotham
+	l.TextXAlignment = Enum.TextXAlignment.Left
+	l.Position = pos or UDim2.new()
+	l.Size = UDim2.new(1,0,0,25)
+	l.Parent = parent
+	return l
+end
 
+local function MakeButton(parent, text, pos, size)
+	local b = Instance.new("TextButton")
+	b.Text = text
+	b.TextColor3 = Colors.Text
+	b.TextSize = 13
+	b.Font = Enum.Font.GothamBold
+	b.BackgroundColor3 = Colors.Panel2
+	b.AutoButtonColor = false
+	b.Position = pos
+	b.Size = size
+	b.Parent = parent
 
-local content = Instance.new("Frame")
+	Corner(b, 10)
+	Border(b, Colors.Border, .25)
 
-content.Position =
-    UDim2.fromOffset(154,72)
+	b.MouseEnter:Connect(function()
+		b.BackgroundColor3 = Theme
+	end)
 
-content.Size =
-    UDim2.new(1,-166,1,-86)
+	b.MouseLeave:Connect(function()
+		if b ~= SelectedNav then
+			b.BackgroundColor3 = Colors.Panel2
+		end
+	end)
 
-content.BackgroundColor3 =
-    Color3.fromRGB(21,21,29)
+	return b
+end
 
-content.Parent = main
+--========================================================
+-- MAIN
+--========================================================
 
-Corner(content,14)
+local Main = Instance.new("Frame")
+Main.Name = "Main"
+Main.Size = UDim2.fromOffset(700,440)
+Main.Position = UDim2.new(.5,-350,.5,-220)
+Main.BackgroundColor3 = Colors.Background
+Main.Parent = Gui
 
-Stroke(
-    content,
-    Color3.fromRGB(55,55,75),
-    0.35
+Corner(Main,18)
+Border(Main,Colors.Border,.15)
+
+--========================================================
+-- DRAG MAIN
+--========================================================
+
+do
+	local dragging = false
+	local startPos
+	local startInput
+
+	Main.InputBegan:Connect(function(input)
+		if input.UserInputType == Enum.UserInputType.MouseButton1
+			or input.UserInputType == Enum.UserInputType.Touch then
+
+			dragging = true
+			startInput = input.Position
+			startPos = Main.Position
+
+			input.Changed:Connect(function()
+				if input.UserInputState == Enum.UserInputState.End then
+					dragging = false
+				end
+			end)
+		end
+	end)
+
+	UserInputService.InputChanged:Connect(function(input)
+		if not dragging then return end
+
+		if input.UserInputType == Enum.UserInputType.MouseMovement
+			or input.UserInputType == Enum.UserInputType.Touch then
+
+			local delta = input.Position - startInput
+
+			Main.Position = UDim2.new(
+				startPos.X.Scale,
+				startPos.X.Offset + delta.X,
+				startPos.Y.Scale,
+				startPos.Y.Offset + delta.Y
+			)
+		end
+	end)
+end
+
+--========================================================
+-- TOP PROFILE
+--========================================================
+
+local Avatar = Instance.new("ImageLabel")
+Avatar.BackgroundTransparency = 1
+Avatar.Size = UDim2.fromOffset(44,44)
+Avatar.Position = UDim2.fromOffset(15,10)
+Avatar.Parent = Main
+Corner(Avatar,13)
+
+pcall(function()
+	Avatar.Image = Players:GetUserThumbnailAsync(
+		LocalPlayer.UserId,
+		Enum.ThumbnailType.HeadShot,
+		Enum.ThumbnailSize.Size100x100
+	)
+end)
+
+MakeLabel(
+	Main,
+	LocalPlayer.DisplayName,
+	16,
+	UDim2.fromOffset(70,8),
+	Enum.Font.GothamBold
 )
 
---========================================================--
+local UserNameLabel = MakeLabel(
+	Main,
+	"@" .. LocalPlayer.Name,
+	11,
+	UDim2.fromOffset(70,31)
+)
+
+UserNameLabel.TextColor3 = Colors.SubText
+
+local Close = MakeButton(
+	Main,
+	"×",
+	UDim2.new(1,-52,0,10),
+	UDim2.fromOffset(38,38)
+)
+
+Close.TextSize = 21
+
+--========================================================
+-- SIDEBAR
+--========================================================
+
+local Sidebar = Instance.new("Frame")
+Sidebar.Position = UDim2.fromOffset(12,70)
+Sidebar.Size = UDim2.fromOffset(145,355)
+Sidebar.BackgroundColor3 = Colors.Panel
+Sidebar.Parent = Main
+Corner(Sidebar,14)
+
+--========================================================
+-- CONTENT
+--========================================================
+
+local Content = Instance.new("Frame")
+Content.Position = UDim2.fromOffset(168,70)
+Content.Size = UDim2.new(1,-180,1,-82)
+Content.BackgroundColor3 = Colors.Panel
+Content.Parent = Main
+Corner(Content,14)
+
+--========================================================
 -- PAGES
---========================================================--
+--========================================================
 
 local Pages = {}
 
-local function CreatePage(name)
+local function NewPage(name)
+	local page = Instance.new("Frame")
+	page.Name = name
+	page.BackgroundTransparency = 1
+	page.Size = UDim2.new(1,-20,1,-20)
+	page.Position = UDim2.fromOffset(10,10)
+	page.Visible = false
+	page.Parent = Content
 
-    local page = Instance.new("Frame")
+	Pages[name] = page
 
-    page.Name = name
-
-    page.Size =
-        UDim2.new(1,-20,1,-20)
-
-    page.Position =
-        UDim2.fromOffset(10,10)
-
-    page.BackgroundTransparency = 1
-
-    page.Visible = false
-
-    page.Parent = content
-
-    Pages[name] = page
-
-    return page
-
+	return page
 end
 
+local Home = NewPage("Home")
+local PlayersPage = NewPage("Players")
+local ServerPage = NewPage("ServerHop")
+local TelePage = NewPage("Teleport")
+local SettingsPage = NewPage("Settings")
 
-local Home =
-    CreatePage("Home")
-
-local PlayersPage =
-    CreatePage("Players")
-
-local HopPage =
-    CreatePage("ServerHop")
-
-local SettingsPage =
-    CreatePage("Settings")
-
-
-local CurrentPage
+--========================================================
+-- NAVIGATION
+--========================================================
 
 local NavButtons = {}
+local SelectedNav
 
 local function ShowPage(name)
+	for pageName,page in pairs(Pages) do
+		page.Visible = pageName == name
+	end
 
-    for pageName,page in pairs(Pages) do
-
-        page.Visible =
-            pageName == name
-
-    end
-
-    CurrentPage = name
-
-    for pageName,button in pairs(NavButtons) do
-
-        if pageName == name then
-
-            button.BackgroundColor3 =
-                CONFIG.Theme
-
-        else
-
-            button.BackgroundColor3 =
-                Color3.fromRGB(30,30,42)
-
-        end
-
-    end
-
+	for pageName,button in pairs(NavButtons) do
+		if pageName == name then
+			button.BackgroundColor3 = Theme
+			SelectedNav = button
+		else
+			button.BackgroundColor3 = Colors.Panel2
+		end
+	end
 end
 
---========================================================--
--- NAVIGATION
---========================================================--
+local function AddNav(name, icon, y, page)
+	local b = MakeButton(
+		Sidebar,
+		icon .. "  " .. name,
+		UDim2.fromOffset(8,y),
+		UDim2.new(1,-16,0,43)
+	)
 
-local function Nav(name,y,icon)
+	b.TextXAlignment = Enum.TextXAlignment.Left
+	b.TextSize = 12
 
-    local pageName = name
+	NavButtons[page] = b
 
-    if name == "Server Hop" then
-        pageName = "ServerHop"
-    end
-
-    local b =
-        Button(
-            side,
-            icon .. "  " .. name,
-            UDim2.fromOffset(8,y),
-            UDim2.new(1,-16,0,42)
-        )
-
-    b.TextXAlignment =
-        Enum.TextXAlignment.Left
-
-    b.TextSize = 12
-
-    b.MouseButton1Click:Connect(function()
-
-        ShowPage(pageName)
-
-    end)
-
-    NavButtons[pageName] = b
-
+	b.MouseButton1Click:Connect(function()
+		ShowPage(page)
+	end)
 end
 
+AddNav("Home","⌂",10,"Home")
+AddNav("Players","♟",60,"Players")
+AddNav("Server Hop","↻",110,"ServerHop")
+AddNav("Tele Player","➤",160,"Teleport")
+AddNav("Settings","⚙",210,"Settings")
 
-Nav("Home",12,"⌂")
-Nav("Players",60,"♟")
-Nav("Server Hop",108,"↻")
-Nav("Settings",156,"⚙")
-
---========================================================--
+--========================================================
 -- HOME
---========================================================--
+--========================================================
 
-Label(
-    Home,
-    "DASHBOARD",
-    21,
-    UDim2.fromOffset(8,4),
-    Enum.Font.GothamBold
+MakeLabel(
+	Home,
+	"HOME",
+	22,
+	UDim2.fromOffset(8,3),
+	Enum.Font.GothamBold
 )
 
+local HomeSub = MakeLabel(
+	Home,
+	"Thông tin phiên hiện tại",
+	12,
+	UDim2.fromOffset(8,33)
+)
 
-local homeSub =
-    Label(
-        Home,
-        "Thông tin phiên hiện tại",
-        12,
-        UDim2.fromOffset(8,32)
-    )
+HomeSub.TextColor3 = Colors.SubText
 
-homeSub.TextColor3 =
-    Color3.fromRGB(140,140,160)
+local AvatarHome = Instance.new("ImageLabel")
+AvatarHome.BackgroundTransparency = 1
+AvatarHome.Size = UDim2.fromOffset(80,80)
+AvatarHome.Position = UDim2.fromOffset(8,72)
+AvatarHome.Image = Avatar.Image
+AvatarHome.Parent = Home
+Corner(AvatarHome,20)
 
+MakeLabel(
+	Home,
+	LocalPlayer.DisplayName,
+	17,
+	UDim2.fromOffset(102,72),
+	Enum.Font.GothamBold
+)
 
-local FPSLabel =
-    Label(
-        Home,
-        "FPS: ...",
-        16,
-        UDim2.fromOffset(8,78),
-        Enum.Font.GothamBold
-    )
+local HomeUsername = MakeLabel(
+	Home,
+	"@" .. LocalPlayer.Name,
+	12,
+	UDim2.fromOffset(102,98)
+)
 
+HomeUsername.TextColor3 = Colors.SubText
 
-local PingLabel =
-    Label(
-        Home,
-        "MS: ...",
-        16,
-        UDim2.fromOffset(8,110),
-        Enum.Font.GothamBold
-    )
+local FPSLabel = MakeLabel(
+	Home,
+	"FPS: --",
+	15,
+	UDim2.fromOffset(8,175),
+	Enum.Font.GothamBold
+)
 
+local PingLabel = MakeLabel(
+	Home,
+	"MS: --",
+	15,
+	UDim2.fromOffset(8,207),
+	Enum.Font.GothamBold
+)
 
-local PlayerCountLabel =
-    Label(
-        Home,
-        "Players: 0",
-        16,
-        UDim2.fromOffset(8,142),
-        Enum.Font.GothamBold
-    )
+local CountLabel = MakeLabel(
+	Home,
+	"Players: --",
+	15,
+	UDim2.fromOffset(8,239),
+	Enum.Font.GothamBold
+)
 
+local UserIDLabel = MakeLabel(
+	Home,
+	"User ID: " .. LocalPlayer.UserId,
+	11,
+	UDim2.fromOffset(8,278)
+)
 
-local JobLabel =
-    Label(
-        Home,
-        "Job ID: " ..
-        string.sub(game.JobId,1,16) ..
-        "...",
-        12,
-        UDim2.fromOffset(8,180)
-    )
+UserIDLabel.TextColor3 = Colors.SubText
 
-JobLabel.TextColor3 =
-    Color3.fromRGB(145,145,165)
+local JobLabel = MakeLabel(
+	Home,
+	"Job ID: " .. (game.JobId ~= "" and string.sub(game.JobId,1,22) .. "..." or "Studio"),
+	11,
+	UDim2.fromOffset(8,303)
+)
 
+JobLabel.TextColor3 = Colors.SubText
 
-local UserIDLabel =
-    Label(
-        Home,
-        "User ID: " ..
-        tostring(LocalPlayer.UserId),
-        12,
-        UDim2.fromOffset(8,210)
-    )
-
-UserIDLabel.TextColor3 =
-    Color3.fromRGB(145,145,165)
-
---========================================================--
+--========================================================
 -- PLAYERS
---========================================================--
+--========================================================
 
-Label(
-    PlayersPage,
-    "PLAYERS",
-    21,
-    UDim2.fromOffset(8,4),
-    Enum.Font.GothamBold
+MakeLabel(
+	PlayersPage,
+	"PLAYERS",
+	21,
+	UDim2.fromOffset(8,3),
+	Enum.Font.GothamBold
 )
 
-
-local PlayerList =
-    Instance.new("ScrollingFrame")
-
-PlayerList.Position =
-    UDim2.fromOffset(8,42)
-
-PlayerList.Size =
-    UDim2.new(1,-16,1,-50)
-
-PlayerList.BackgroundTransparency = 1
-
-PlayerList.ScrollBarThickness = 4
-
-PlayerList.CanvasSize =
-    UDim2.new()
-
-PlayerList.Parent =
-    PlayersPage
-
-
-local PlayerLayout =
-    Instance.new("UIListLayout")
-
-PlayerLayout.Padding =
-    UDim.new(0,7)
-
-PlayerLayout.Parent =
-    PlayerList
-
-
-local function RebuildPlayers()
-
-    for _,object in
-        ipairs(PlayerList:GetChildren())
-    do
-
-        if object:IsA("Frame") then
-
-            object:Destroy()
-
-        end
-
-    end
-
-
-    for _,player in
-        ipairs(Players:GetPlayers())
-    do
-
-        local row =
-            Instance.new("Frame")
-
-        row.Size =
-            UDim2.new(1,-8,0,54)
-
-        row.BackgroundColor3 =
-            Color3.fromRGB(30,30,42)
-
-        row.Parent =
-            PlayerList
-
-        Corner(row,10)
-
-
-        local image =
-            Instance.new("ImageLabel")
-
-        image.BackgroundTransparency = 1
-
-        image.Size =
-            UDim2.fromOffset(40,40)
-
-        image.Position =
-            UDim2.fromOffset(7,7)
-
-        image.Parent =
-            row
-
-        Corner(image,10)
-
-
-        task.spawn(function()
-
-            local ok,url =
-                pcall(function()
-
-                    return Players:GetUserThumbnailAsync(
-                        player.UserId,
-                        Enum.ThumbnailType.HeadShot,
-                        Enum.ThumbnailSize.Size100x100
-                    )
-
-                end)
-
-            if ok then
-                image.Image = url
-            end
-
-        end)
-
-
-        local display =
-            Label(
-                row,
-                player.DisplayName,
-                13,
-                UDim2.fromOffset(56,5),
-                Enum.Font.GothamBold
-            )
-
-        display.Size =
-            UDim2.new(1,-145,0,20)
-
-
-        local username =
-            Label(
-                row,
-                "@" .. player.Name,
-                11,
-                UDim2.fromOffset(56,27)
-            )
-
-        username.TextColor3 =
-            Color3.fromRGB(140,140,160)
-
-
-        -- TELE chỉ hoạt động nếu game của bạn có TeleportPlayer RemoteFunction
-        if TeleportPlayer then
-
-            local Tele =
-                Button(
-                    row,
-                    "TELE",
-                    UDim2.new(1,-76,0,9),
-                    UDim2.fromOffset(66,36)
-                )
-
-            Tele.MouseButton1Click:Connect(function()
-
-                local ok,result =
-                    pcall(function()
-
-                        return TeleportPlayer:InvokeServer(
-                            player.UserId
-                        )
-
-                    end)
-
-                if not ok or
-                    not result or
-                    not result.ok
-                then
-
-                    Tele.Text = "ERR"
-
-                    task.delay(
-                        1.2,
-                        function()
-
-                            if Tele.Parent then
-                                Tele.Text = "TELE"
-                            end
-
-                        end
-                    )
-
-                end
-
-            end)
-
-        end
-
-    end
-
-
-    task.defer(function()
-
-        PlayerList.CanvasSize =
-            UDim2.fromOffset(
-                0,
-                PlayerLayout.AbsoluteContentSize.Y + 8
-            )
-
-    end)
-
+local PlayerScroll = Instance.new("ScrollingFrame")
+PlayerScroll.Position = UDim2.fromOffset(8,42)
+PlayerScroll.Size = UDim2.new(1,-16,1,-50)
+PlayerScroll.BackgroundTransparency = 1
+PlayerScroll.ScrollBarThickness = 4
+PlayerScroll.Parent = PlayersPage
+
+local PlayerLayout = Instance.new("UIListLayout")
+PlayerLayout.Padding = UDim.new(0,7)
+PlayerLayout.Parent = PlayerScroll
+
+local function BuildPlayers()
+	for _,v in ipairs(PlayerScroll:GetChildren()) do
+		if v:IsA("Frame") then
+			v:Destroy()
+		end
+	end
+
+	for _,player in ipairs(Players:GetPlayers()) do
+		local Row = Instance.new("Frame")
+		Row.Size = UDim2.new(1,-8,0,55)
+		Row.BackgroundColor3 = Colors.Panel2
+		Row.Parent = PlayerScroll
+		Corner(Row,10)
+
+		local Img = Instance.new("ImageLabel")
+		Img.BackgroundTransparency = 1
+		Img.Size = UDim2.fromOffset(41,41)
+		Img.Position = UDim2.fromOffset(7,7)
+		Img.Parent = Row
+		Corner(Img,11)
+
+		task.spawn(function()
+			local ok,image = pcall(function()
+				return Players:GetUserThumbnailAsync(
+					player.UserId,
+					Enum.ThumbnailType.HeadShot,
+					Enum.ThumbnailSize.Size100x100
+				)
+			end)
+
+			if ok then
+				Img.Image = image
+			end
+		end)
+
+		local N = MakeLabel(
+			Row,
+			player.DisplayName,
+			13,
+			UDim2.fromOffset(58,5),
+			Enum.Font.GothamBold
+		)
+
+		N.Size = UDim2.new(1,-150,0,20)
+
+		local U = MakeLabel(
+			Row,
+			"@" .. player.Name,
+			10,
+			UDim2.fromOffset(58,27)
+		)
+
+		U.TextColor3 = Colors.SubText
+
+		local Tele = MakeButton(
+			Row,
+			"TELE",
+			UDim2.new(1,-80,0,9),
+			UDim2.fromOffset(70,37)
+		)
+
+		Tele.BackgroundColor3 = Theme
+
+		Tele.MouseButton1Click:Connect(function()
+			if TeleportPlayer then
+				Tele.Text = "..."
+				local ok = pcall(function()
+					return TeleportPlayer:InvokeServer(player.UserId)
+				end)
+
+				if ok then
+					Tele.Text = "TELE"
+				else
+					Tele.Text = "ERR"
+					task.delay(1,function()
+						if Tele.Parent then
+							Tele.Text = "TELE"
+						end
+					end)
+				end
+			end
+		end)
+	end
+
+	task.defer(function()
+		PlayerScroll.CanvasSize = UDim2.fromOffset(
+			0,
+			PlayerLayout.AbsoluteContentSize.Y + 10
+		)
+	end)
 end
 
+Players.PlayerAdded:Connect(BuildPlayers)
+Players.PlayerRemoving:Connect(BuildPlayers)
 
-Players.PlayerAdded:Connect(
-    RebuildPlayers
-)
+BuildPlayers()
 
-Players.PlayerRemoving:Connect(
-    RebuildPlayers
-)
-
-RebuildPlayers()
-
---========================================================--
+--========================================================
 -- SERVER HOP
---========================================================--
+--========================================================
 
-Label(
-    HopPage,
-    "SERVER HOP",
-    21,
-    UDim2.fromOffset(8,4),
-    Enum.Font.GothamBold
+MakeLabel(
+	ServerPage,
+	"SERVER HOP",
+	21,
+	UDim2.fromOffset(8,3),
+	Enum.Font.GothamBold
 )
 
+local ServerStatus = MakeLabel(
+	ServerPage,
+	"Tìm server có tối đa 1 người",
+	11,
+	UDim2.fromOffset(8,33)
+)
 
-local HopStatus =
-    Label(
-        HopPage,
-        "Tìm server ≤ 1 người",
-        12,
-        UDim2.fromOffset(8,34)
-    )
+ServerStatus.TextColor3 = Colors.SubText
 
-HopStatus.TextColor3 =
-    Color3.fromRGB(145,145,165)
+local SearchServer = MakeButton(
+	ServerPage,
+	"⌕  TÌM SERVER",
+	UDim2.fromOffset(8,63),
+	UDim2.fromOffset(180,43)
+)
 
+SearchServer.BackgroundColor3 = Theme
 
-local SearchButton =
-    Button(
-        HopPage,
-        "⌕  TÌM SERVER",
-        UDim2.fromOffset(8,68),
-        UDim2.fromOffset(170,44)
-    )
+local ServerScroll = Instance.new("ScrollingFrame")
+ServerScroll.Position = UDim2.fromOffset(8,118)
+ServerScroll.Size = UDim2.new(1,-16,1,-126)
+ServerScroll.BackgroundTransparency = 1
+ServerScroll.ScrollBarThickness = 4
+ServerScroll.Parent = ServerPage
 
-SearchButton.BackgroundColor3 =
-    CONFIG.Theme
-
-
-local HopButton =
-    Button(
-        HopPage,
-        "↻  HOP SERVER",
-        UDim2.fromOffset(188,68),
-        UDim2.fromOffset(170,44)
-    )
-
-HopButton.BackgroundColor3 =
-    CONFIG.Theme
-
-
-local ServerList =
-    Instance.new("ScrollingFrame")
-
-ServerList.Position =
-    UDim2.fromOffset(8,124)
-
-ServerList.Size =
-    UDim2.new(1,-16,1,-132)
-
-ServerList.BackgroundTransparency = 1
-
-ServerList.ScrollBarThickness = 4
-
-ServerList.Parent =
-    HopPage
-
-
-local ServerLayout =
-    Instance.new("UIListLayout")
-
-ServerLayout.Padding =
-    UDim.new(0,7)
-
-ServerLayout.Parent =
-    ServerList
-
-
-local CachedServers = {}
+local ServerLayout = Instance.new("UIListLayout")
+ServerLayout.Padding = UDim.new(0,7)
+ServerLayout.Parent = ServerScroll
 
 local Searching = false
+local CachedServers = {}
 
-
-local function ClearServerRows()
-
-    for _,object in
-        ipairs(ServerList:GetChildren())
-    do
-
-        if object:IsA("Frame") then
-
-            object:Destroy()
-
-        end
-
-    end
-
+local function ClearServers()
+	for _,v in ipairs(ServerScroll:GetChildren()) do
+		if v:IsA("Frame") then
+			v:Destroy()
+		end
+	end
 end
 
+local function DisplayServers(servers)
+	ClearServers()
 
-local function RenderServers(servers)
+	CachedServers = servers or {}
 
-    ClearServerRows()
+	if #CachedServers == 0 then
+		ServerStatus.Text = "Không tìm thấy server."
+		return
+	end
 
-    CachedServers = servers or {}
+	ServerStatus.Text = "Tìm thấy " .. #CachedServers .. " server."
 
+	for _,server in ipairs(CachedServers) do
+		local Row = Instance.new("Frame")
+		Row.Size = UDim2.new(1,-8,0,58)
+		Row.BackgroundColor3 = Colors.Panel2
+		Row.Parent = ServerScroll
+		Corner(Row,10)
 
-    if #CachedServers == 0 then
+		local Info = MakeLabel(
+			Row,
+			"Server  •  " ..
+				tostring(server.playing) ..
+				"/" ..
+				tostring(server.maxPlayers),
+			13,
+			UDim2.fromOffset(12,6),
+			Enum.Font.GothamBold
+		)
 
-        HopStatus.Text =
-            "Không tìm thấy server 1 người."
+		Info.Size = UDim2.new(1,-130,0,21)
 
-        return
+		local ID = MakeLabel(
+			Row,
+			string.sub(server.id,1,20) .. "...",
+			10,
+			UDim2.fromOffset(12,30)
+		)
 
-    end
+		ID.TextColor3 = Colors.SubText
 
+		local Join = MakeButton(
+			Row,
+			"JOIN",
+			UDim2.new(1,-92,0,10),
+			UDim2.fromOffset(80,38)
+		)
 
-    HopStatus.Text =
-        "Tìm thấy " ..
-        tostring(#CachedServers) ..
-        " server 1 người."
+		Join.BackgroundColor3 = Theme
 
+		Join.MouseButton1Click:Connect(function()
+			RefreshRemotes()
 
-    for _,server in
-        ipairs(CachedServers)
-    do
+			if not JoinServer then
+				ServerStatus.Text = "DuyServer chưa được kết nối."
+				return
+			end
 
-        local row =
-            Instance.new("Frame")
+			Join.Text = "..."
 
-        row.Size =
-            UDim2.new(1,-8,0,55)
+			local ok,result = pcall(function()
+				return JoinServer:InvokeServer(server.id)
+			end)
 
-        row.BackgroundColor3 =
-            Color3.fromRGB(30,30,42)
+			if not ok or not result or not result.ok then
+				Join.Text = "JOIN"
+				ServerStatus.Text =
+					(result and result.error)
+					or "Không thể vào server."
+			end
+		end)
+	end
 
-        row.Parent =
-            ServerList
-
-        Corner(row,10)
-
-
-        local info =
-            Label(
-                row,
-                "Server • " ..
-                tostring(server.playing) ..
-                "/" ..
-                tostring(server.maxPlayers),
-                13,
-                UDim2.fromOffset(12,7),
-                Enum.Font.GothamBold
-            )
-
-        info.Size =
-            UDim2.new(1,-125,0,22)
-
-
-        local id =
-            Label(
-                row,
-                string.sub(
-                    server.id,
-                    1,
-                    18
-                ) .. "...",
-                10,
-                UDim2.fromOffset(12,29)
-            )
-
-        id.TextColor3 =
-            Color3.fromRGB(120,120,140)
-
-
-        local Join =
-            Button(
-                row,
-                "JOIN",
-                UDim2.new(1,-95,0,9),
-                UDim2.fromOffset(82,37)
-            )
-
-        Join.BackgroundColor3 =
-            CONFIG.Theme
-
-
-        Join.MouseButton1Click:Connect(function()
-
-            Join.Text = "..."
-
-            local ok,result =
-                pcall(function()
-
-                    return JoinServer:InvokeServer(
-                        server.id
-                    )
-
-                end)
-
-
-            if not ok or
-                not result or
-                not result.ok
-            then
-
-                Join.Text = "ERR"
-
-                HopStatus.Text =
-                    (
-                        result
-                        and result.error
-                    )
-                    or
-                    "Không thể vào server."
-
-
-                task.delay(
-                    1.2,
-                    function()
-
-                        if Join.Parent then
-                            Join.Text = "JOIN"
-                        end
-
-                    end
-                )
-
-            end
-
-        end)
-
-    end
-
-
-    task.defer(function()
-
-        ServerList.CanvasSize =
-            UDim2.fromOffset(
-                0,
-                ServerLayout.AbsoluteContentSize.Y + 8
-            )
-
-    end)
-
+	task.defer(function()
+		ServerScroll.CanvasSize = UDim2.fromOffset(
+			0,
+			ServerLayout.AbsoluteContentSize.Y + 10
+		)
+	end)
 end
 
-
---========================================================--
--- FIND SERVER 1 PLAYER
---========================================================--
-
-local function FindServers()
-
-    if Searching then
-        return
-    end
-
-    Searching = true
-
-    SearchButton.Text =
-        "ĐANG TÌM..."
-
-    HopStatus.Text =
-        "Đang tìm server ≤ 1 người..."
-
-
-    local success,result =
-        pcall(function()
-
-            return GetServers:InvokeServer(1)
-
-        end)
-
-
-    if not success or not result then
-
-        HopStatus.Text =
-            "Không kết nối được ServerScript."
-
-        SearchButton.Text =
-            "⌕  TÌM SERVER"
-
-        Searching = false
-
-        return
-
-    end
-
-
-    if not result.ok then
-
-        HopStatus.Text =
-            result.error
-            or
-            "Không tìm thấy server."
-
-        ClearServerRows()
-
-        SearchButton.Text =
-            "⌕  TÌM SERVER"
-
-        Searching = false
-
-        return
-
-    end
-
-
-    local found = {}
-
-
-    for _,server in
-        ipairs(result.servers or {})
-    do
-
-        local players =
-            tonumber(server.playing)
-            or 0
-
-
-        if players <= 1 then
-
-            table.insert(
-                found,
-                server
-            )
-
-        end
-
-    end
-
-
-    table.sort(
-        found,
-        function(a,b)
-
-            return a.playing <
-                b.playing
-
-        end
-    )
-
-
-    RenderServers(found)
-
-
-    SearchButton.Text =
-        "⌕  TÌM SERVER"
-
-    Searching = false
-
-end
-
-
-SearchButton.MouseButton1Click:Connect(
-    FindServers
-)
-
---========================================================--
--- HOP SERVER
---========================================================--
-
-HopButton.MouseButton1Click:Connect(function()
-
-    if Searching then
-        return
-    end
-
-
-    FindServers()
-
-
-    task.spawn(function()
-
-        local timeout =
-            os.clock() + 8
-
-
-        while Searching
-            and os.clock() < timeout
-        do
-
-            task.wait(0.1)
-
-        end
-
-
-        if CachedServers[1] then
-
-            JoinServer:InvokeServer(
-                CachedServers[1].id
-            )
-
-        end
-
-    end)
-
+SearchServer.MouseButton1Click:Connect(function()
+	if Searching then return end
+
+	Searching = true
+	SearchServer.Text = "ĐANG TÌM..."
+	ServerStatus.Text = "Đang tìm server..."
+
+	RefreshRemotes()
+
+	if not GetServers then
+		ServerStatus.Text = "DuyServer chưa được kết nối."
+		SearchServer.Text = "⌕  TÌM SERVER"
+		Searching = false
+		return
+	end
+
+	local ok,result = pcall(function()
+		return GetServers:InvokeServer(1)
+	end)
+
+	if not ok or not result then
+		ServerStatus.Text = "Lỗi kết nối."
+	else
+		if result.ok then
+			DisplayServers(result.servers or {})
+		else
+			ServerStatus.Text = result.error or "Không tìm thấy server."
+		end
+	end
+
+	SearchServer.Text = "⌕  TÌM SERVER"
+	Searching = false
 end)
 
---========================================================--
+--========================================================
+-- TELE PLAYER
+--========================================================
+
+MakeLabel(
+	TelePage,
+	"TELE ĐẾN NGƯỜI CHƠI",
+	21,
+	UDim2.fromOffset(8,3),
+	Enum.Font.GothamBold
+)
+
+local TeleInfo = MakeLabel(
+	TelePage,
+	"Nhập username dạng @username",
+	11,
+	UDim2.fromOffset(8,35)
+)
+
+TeleInfo.TextColor3 = Colors.SubText
+
+local UserBox = Instance.new("TextBox")
+UserBox.PlaceholderText = "@username"
+UserBox.Text = ""
+UserBox.ClearTextOnFocus = false
+UserBox.TextColor3 = Colors.Text
+UserBox.PlaceholderColor3 = Colors.SubText
+UserBox.TextSize = 13
+UserBox.Font = Enum.Font.Gotham
+UserBox.BackgroundColor3 = Colors.Panel2
+UserBox.Position = UDim2.fromOffset(8,67)
+UserBox.Size = UDim2.new(1,-16,0,44)
+UserBox.Parent = TelePage
+Corner(UserBox,10)
+Border(UserBox,Colors.Border,.2)
+
+local FindPlayerButton = MakeButton(
+	TelePage,
+	"TÌM NGƯỜI CHƠI",
+	UDim2.fromOffset(8,120),
+	UDim2.fromOffset(170,42)
+)
+
+FindPlayerButton.BackgroundColor3 = Theme
+
+local TargetFrame = Instance.new("Frame")
+TargetFrame.Position = UDim2.fromOffset(8,175)
+TargetFrame.Size = UDim2.new(1,-16,0,90)
+TargetFrame.BackgroundColor3 = Colors.Panel2
+TargetFrame.Parent = TelePage
+Corner(TargetFrame,12)
+
+local TargetAvatar = Instance.new("ImageLabel")
+TargetAvatar.BackgroundTransparency = 1
+TargetAvatar.Size = UDim2.fromOffset(65,65)
+TargetAvatar.Position = UDim2.fromOffset(12,12)
+TargetAvatar.Parent = TargetFrame
+Corner(TargetAvatar,16)
+
+local TargetName = MakeLabel(
+	TargetFrame,
+	"Chưa chọn người chơi",
+	15,
+	UDim2.fromOffset(92,18),
+	Enum.Font.GothamBold
+)
+
+local TargetUser = MakeLabel(
+	TargetFrame,
+	"",
+	11,
+	UDim2.fromOffset(92,44)
+)
+
+TargetUser.TextColor3 = Colors.SubText
+
+local TeleTargetButton = MakeButton(
+	TargetFrame,
+	"TELE",
+	UDim2.new(1,-92,0,25),
+	UDim2.fromOffset(80,40)
+)
+
+TeleTargetButton.BackgroundColor3 = Theme
+
+local TargetPlayer = nil
+
+local function FindTarget()
+	local text = UserBox.Text:gsub("%s+","")
+
+	if text:sub(1,1) == "@" then
+		text = text:sub(2)
+	end
+
+	if text == "" then
+		TargetName.Text = "Nhập username trước"
+		TargetPlayer = nil
+		return
+	end
+
+	for _,player in ipairs(Players:GetPlayers()) do
+		if string.lower(player.Name) == string.lower(text) then
+			TargetPlayer = player
+			TargetName.Text = player.DisplayName
+			TargetUser.Text = "@" .. player.Name
+
+			pcall(function()
+				TargetAvatar.Image = Players:GetUserThumbnailAsync(
+					player.UserId,
+					Enum.ThumbnailType.HeadShot,
+					Enum.ThumbnailSize.Size100x100
+				)
+			end)
+
+			return
+		end
+	end
+
+	TargetPlayer = nil
+	TargetName.Text = "Không tìm thấy người chơi"
+	TargetUser.Text = ""
+end
+
+FindPlayerButton.MouseButton1Click:Connect(FindTarget)
+
+TeleTargetButton.MouseButton1Click:Connect(function()
+	if not TargetPlayer then
+		TargetName.Text = "Hãy tìm người chơi trước"
+		return
+	end
+
+	RefreshRemotes()
+
+	if not TeleportPlayer then
+		TargetName.Text = "Teleport chưa được bật"
+		return
+	end
+
+	TeleTargetButton.Text = "..."
+
+	local ok,result = pcall(function()
+		return TeleportPlayer:InvokeServer(TargetPlayer.UserId)
+	end)
+
+	if ok and result and result.ok then
+		TeleTargetButton.Text = "TELE"
+	else
+		TeleTargetButton.Text = "ERR"
+
+		task.delay(1,function()
+			if TeleTargetButton.Parent then
+				TeleTargetButton.Text = "TELE"
+			end
+		end)
+	end
+end)
+
+--========================================================
 -- SETTINGS
---========================================================--
+--========================================================
 
-Label(
-    SettingsPage,
-    "SETTINGS",
-    21,
-    UDim2.fromOffset(8,4),
-    Enum.Font.GothamBold
+MakeLabel(
+	SettingsPage,
+	"SETTINGS",
+	21,
+	UDim2.fromOffset(8,3),
+	Enum.Font.GothamBold
 )
 
-
-Label(
-    SettingsPage,
-    "Màu giao diện",
-    13,
-    UDim2.fromOffset(8,45),
-    Enum.Font.GothamBold
+MakeLabel(
+	SettingsPage,
+	"Màu giao diện",
+	13,
+	UDim2.fromOffset(8,42),
+	Enum.Font.GothamBold
 )
 
-
-local Themes = {
-
-    {
-        "Tím",
-        Color3.fromRGB(115,75,255)
-    },
-
-    {
-        "Xanh",
-        Color3.fromRGB(35,145,255)
-    },
-
-    {
-        "Đỏ",
-        Color3.fromRGB(230,65,75)
-    },
-
-    {
-        "Xanh lá",
-        Color3.fromRGB(50,190,105)
-    },
-
-    {
-        "Cam",
-        Color3.fromRGB(245,135,45)
-    }
-
+local ThemeList = {
+	{"Tím",Color3.fromRGB(115,75,255)},
+	{"Xanh",Color3.fromRGB(35,145,255)},
+	{"Đỏ",Color3.fromRGB(225,65,75)},
+	{"Xanh lá",Color3.fromRGB(45,190,105)},
+	{"Cam",Color3.fromRGB(245,135,45)},
+	{"Hồng",Color3.fromRGB(235,70,155)}
 }
 
+local function ApplyTheme(color)
+	Theme = color
 
-for i,theme in
-    ipairs(Themes)
-do
+	SearchServer.BackgroundColor3 = Theme
+	FindPlayerButton.BackgroundColor3 = Theme
+	TeleTargetButton.BackgroundColor3 = Theme
 
-    local b =
-        Button(
-            SettingsPage,
-            theme[1],
-            UDim2.fromOffset(
-                8 + ((i-1)%3)*110,
-                78 + math.floor((i-1)/3)*50
-            ),
-            UDim2.fromOffset(100,40)
-        )
-
-
-    b.MouseButton1Click:Connect(function()
-
-        CONFIG.Theme =
-            theme[2]
-
-
-        SearchButton.BackgroundColor3 =
-            CONFIG.Theme
-
-        HopButton.BackgroundColor3 =
-            CONFIG.Theme
-
-
-        for pageName,button in
-            pairs(NavButtons)
-        do
-
-            if pageName ==
-                CurrentPage
-            then
-
-                button.BackgroundColor3 =
-                    CONFIG.Theme
-
-            end
-
-        end
-
-    end)
-
+	for _,button in pairs(NavButtons) do
+		if button == SelectedNav then
+			button.BackgroundColor3 = Theme
+		end
+	end
 end
 
---========================================================--
--- FLOATING ICON
---========================================================--
+for i,data in ipairs(ThemeList) do
+	local name,color = data[1],data[2]
 
-local OpenButton =
-    Instance.new("ImageButton")
+	local b = MakeButton(
+		SettingsPage,
+		name,
+		UDim2.fromOffset(
+			8 + ((i-1)%3)*112,
+			72 + math.floor((i-1)/3)*50
+		),
+		UDim2.fromOffset(102,40)
+	)
 
-OpenButton.Name =
-    "OpenButton"
+	b.MouseButton1Click:Connect(function()
+		ApplyTheme(color)
+	end)
+end
 
-OpenButton.Size =
-    UDim2.fromOffset(58,58)
+--========================================================
+-- FLOATING AVATAR BUTTON
+--========================================================
 
-OpenButton.Position =
-    UDim2.new(1,-76,1,-78)
+local Floating = Instance.new("ImageButton")
+Floating.Name = "FloatingAvatar"
+Floating.Size = UDim2.fromOffset(60,60)
+Floating.Position = UDim2.new(1,-76,1,-80)
+Floating.BackgroundColor3 = Theme
+Floating.Image = Avatar.Image
+Floating.Parent = Gui
+Corner(Floating,18)
+Border(Floating,Color3.fromRGB(255,255,255),.45)
 
-OpenButton.BackgroundColor3 =
-    CONFIG.Theme
-
-OpenButton.Image =
-    avatar.Image
-
-OpenButton.Parent =
-    gui
-
-Corner(OpenButton,18)
-
-Stroke(
-    OpenButton,
-    Color3.fromRGB(255,255,255),
-    0.45
-)
-
-
-OpenButton.MouseButton1Click:Connect(function()
-
-    main.Visible =
-        not main.Visible
-
+Close.MouseButton1Click:Connect(function()
+	Main.Visible = false
 end)
 
---========================================================--
--- DRAG FLOATING ICON
---========================================================--
+Floating.MouseButton1Click:Connect(function()
+	Main.Visible = not Main.Visible
+end)
+
+--========================================================
+-- DRAG FLOATING BUTTON
+--========================================================
 
 do
+	local dragging = false
+	local startInput
+	local startPos
 
-    local dragging = false
-    local dragStart
-    local startPos
+	Floating.InputBegan:Connect(function(input)
+		if input.UserInputType == Enum.UserInputType.MouseButton1
+			or input.UserInputType == Enum.UserInputType.Touch then
 
+			dragging = true
+			startInput = input.Position
+			startPos = Floating.Position
 
-    OpenButton.InputBegan:Connect(function(input)
+			input.Changed:Connect(function()
+				if input.UserInputState == Enum.UserInputState.End then
+					dragging = false
+				end
+			end)
+		end
+	end)
 
-        if input.UserInputType ==
-            Enum.UserInputType.MouseButton1
-            or
-            input.UserInputType ==
-            Enum.UserInputType.Touch
-        then
+	UserInputService.InputChanged:Connect(function(input)
+		if not dragging then return end
 
-            dragging = true
+		if input.UserInputType == Enum.UserInputType.MouseMovement
+			or input.UserInputType == Enum.UserInputType.Touch then
 
-            dragStart =
-                input.Position
+			local delta = input.Position - startInput
 
-            startPos =
-                OpenButton.Position
-
-
-            input.Changed:Connect(function()
-
-                if input.UserInputState ==
-                    Enum.UserInputState.End
-                then
-
-                    dragging = false
-
-                end
-
-            end)
-
-        end
-
-    end)
-
-
-    UserInputService.InputChanged:Connect(function(input)
-
-        if not dragging then
-            return
-        end
-
-
-        if input.UserInputType ==
-            Enum.UserInputType.MouseMovement
-            or
-            input.UserInputType ==
-            Enum.UserInputType.Touch
-        then
-
-            local delta =
-                input.Position -
-                dragStart
-
-
-            OpenButton.Position =
-                UDim2.new(
-                    startPos.X.Scale,
-                    startPos.X.Offset + delta.X,
-                    startPos.Y.Scale,
-                    startPos.Y.Offset + delta.Y
-                )
-
-        end
-
-    end)
-
+			Floating.Position = UDim2.new(
+				startPos.X.Scale,
+				startPos.X.Offset + delta.X,
+				startPos.Y.Scale,
+				startPos.Y.Offset + delta.Y
+			)
+		end
+	end)
 end
 
---========================================================--
--- FPS + PING
---========================================================--
+--========================================================
+-- FPS / PING
+--========================================================
 
-local Frames = 0
-local LastTime = os.clock()
-
+local frames = 0
+local last = os.clock()
 
 RunService.RenderStepped:Connect(function()
+	frames += 1
 
-    Frames += 1
+	if os.clock() - last >= 1 then
+		FPSLabel.Text = "FPS: " .. frames
+		CountLabel.Text = "Players: " .. #Players:GetPlayers()
 
-    local now =
-        os.clock()
+		local ping = 0
 
+		pcall(function()
+			ping = math.floor(
+				Stats.Network.ServerStatsItem["Data Ping"]:GetValue()
+			)
+		end)
 
-    if now - LastTime >= 1 then
+		PingLabel.Text = "MS: " .. ping
 
-        FPSLabel.Text =
-            "FPS: " ..
-            tostring(Frames)
-
-        Frames = 0
-        LastTime = now
-
-
-        local ping = 0
-
-
-        pcall(function()
-
-            ping =
-                math.floor(
-                    Stats
-                    .Network
-                    .ServerStatsItem
-                    ["Data Ping"]
-                    :GetValue()
-                )
-
-        end)
-
-
-        PingLabel.Text =
-            "MS: " ..
-            tostring(ping)
-
-
-        PlayerCountLabel.Text =
-            "Players: " ..
-            tostring(
-                #Players:GetPlayers()
-            )
-
-    end
-
+		frames = 0
+		last = os.clock()
+	end
 end)
 
---========================================================--
+--========================================================
 -- START
---========================================================--
+--========================================================
 
 ShowPage("Home")
+Main.Visible = true
+Floating.Visible = true
