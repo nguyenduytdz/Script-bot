@@ -1,5 +1,5 @@
 --========================================================
--- MODERN ROBLOX DASHBOARD
+-- MODERN ROBLOX DASHBOARD (FIXED SERVER HOP)
 -- HOME + SERVER HOP + PLAYER TELEPORT + SETTINGS
 -- LocalScript -> StarterPlayer > StarterPlayerScripts
 --========================================================
@@ -10,7 +10,6 @@ local RunService = game:GetService("RunService")
 local Stats = game:GetService("Stats")
 local HttpService = game:GetService("HttpService")
 local TeleportService = game:GetService("TeleportService")
-local TweenService = game:GetService("TweenService")
 
 local LocalPlayer = Players.LocalPlayer
 local PlayerGui = LocalPlayer:WaitForChild("PlayerGui")
@@ -23,7 +22,7 @@ local CONFIG = {
     MaxWidth = 900,
     MinHeight = 350,
     MaxHeight = 650,
-    MaxServerPlayers = 1,
+    MaxServerPlayers = 3, -- Cho phép hiển thị server từ 1 đến 3 người nếu quá ít server 1 người
     UseRobloxAvatarForIcon = true,
     AnimeIcon = "",
     TeleportOffset = 5,
@@ -357,9 +356,9 @@ HomePlace.TextSize = 10
 HomePlace.Font = Enum.Font.Gotham
 HomePlace.TextXAlignment = Enum.TextXAlignment.Left
 
--- ========================================================
+-- ==========================================================
 -- 2. PLAYERS PAGE
--- ========================================================
+-- ==========================================================
 PageTitle(PlayersPage,"Players 👥","Người chơi hiện tại trong server")
 
 local PlayerList = Instance.new("ScrollingFrame")
@@ -482,11 +481,10 @@ Players.PlayerRemoving:Connect(function()
 end)
 
 -- ========================================================
--- 3. SERVER HOP PAGE
+-- 3. SERVER HOP PAGE (OPTIMIZED & AUTO RETRY)
 -- ========================================================
-PageTitle(ServerPage,"Server Hop 🌐","Danh sách server 1 người chơi")
+PageTitle(ServerPage,"Server Hop 🌐","Danh sách server có ít người chơi nhất")
 
--- Nút Hop nằm bên trái
 local HopButton = Instance.new("TextButton")
 HopButton.Parent = ServerPage
 HopButton.Size = UDim2.new(0,110,0,42)
@@ -499,7 +497,6 @@ HopButton.TextSize = 13
 HopButton.Font = Enum.Font.GothamBold
 Corner(HopButton,10)
 
--- Nút TÌM LẠI SERVER
 local FindServers = Instance.new("TextButton")
 FindServers.Parent = ServerPage
 FindServers.Size = UDim2.new(1,-125,0,42)
@@ -546,45 +543,62 @@ local function ClearServers()
     end
 end
 
+local function FetchServerPage(Cursor)
+    local URL = "https://games.roblox.com/v1/games/"..game.PlaceId.."/servers/Public?sortOrder=Asc&limit=100"
+    if Cursor then
+        URL = URL.."&cursor="..HttpService:UrlEncode(Cursor)
+    end
+
+    local Success, Response
+    for attempt = 1, 3 do
+        Success, Response = pcall(function()
+            return game:HttpGet(URL)
+        end)
+        if Success and Response then break end
+        task.wait(0.2)
+    end
+
+    if not Success or not Response then return nil end
+
+    local DecodeSuccess, Data = pcall(function()
+        return HttpService:JSONDecode(Response)
+    end)
+
+    if DecodeSuccess and Data then
+        return Data
+    end
+    return nil
+end
+
 local function GetServers()
     local Servers = {}
     local Cursor = nil
+    local PagesScanned = 0
 
-    for page = 1, 25 do
-        local URL =
-            "https://games.roblox.com/v1/games/"..
-            game.PlaceId..
-            "/servers/Public?sortOrder=Asc&limit=100"
+    while PagesScanned < 15 do
+        PagesScanned += 1
+        local Data = FetchServerPage(Cursor)
 
-        if Cursor then
-            URL = URL.."&cursor="..HttpService:UrlEncode(Cursor)
-        end
+        if not Data or not Data.data then break end
 
-        local Success,Response = pcall(function()
-            return HttpService:GetAsync(URL)
-        end)
-
-        if not Success then break end
-
-        local Data
-        local DecodeSuccess = pcall(function()
-            Data = HttpService:JSONDecode(Response)
-        end)
-
-        if not DecodeSuccess or not Data then break end
-
-        for _,Server in ipairs(Data.data or {}) do
+        for _, Server in ipairs(Data.data) do
             local Playing = tonumber(Server.playing) or 999
-
-            if Server.id ~= game.JobId and Playing == 1 then
+            
+            -- Ưu tiên server ít người (<= CONFIG.MaxServerPlayers)
+            if Server.id ~= game.JobId and Playing <= CONFIG.MaxServerPlayers and Playing > 0 then
                 table.insert(Servers, Server)
             end
         end
 
         Cursor = Data.nextPageCursor
         if not Cursor then break end
-        task.wait(0.05)
+        task.wait(0.1)
     end
+
+    -- Sắp xếp ưu tiên server 1 người lên đầu
+    table.sort(Servers, function(a, b)
+        return (tonumber(a.playing) or 999) < (tonumber(b.playing) or 999)
+    end)
 
     return Servers
 end
@@ -605,7 +619,7 @@ local function AddServer(Server, Index)
     Info.Size = UDim2.new(1,-85,1,0)
     Info.Position = UDim2.fromOffset(12,0)
     Info.BackgroundTransparency = 1
-    Info.Text = "SERVER #"..Index.." (1 NGƯỜI)\n👥 "..Playing.." / "..MaxPlayers
+    Info.Text = "SERVER #"..Index.." ("..Playing.." NGƯỜI)\n👥 "..Playing.." / "..MaxPlayers
     Info.TextColor3 = Color3.new(1,1,1)
     Info.TextSize = 11
     Info.Font = Enum.Font.GothamMedium
@@ -643,16 +657,16 @@ FindServers.MouseButton1Click:Connect(function()
     SearchingServers = true
     ClearServers()
 
-    FindServers.Text = "⏳  ĐANG QUÉT..."
-    ServerStatus.Text = "Đang duyệt tất cả các trang server..."
+    FindServers.Text = "⏳  ĐANG TÌM..."
+    ServerStatus.Text = "Đang quét danh sách server..."
 
     task.spawn(function()
         CurrentFoundServers = GetServers()
 
         if #CurrentFoundServers == 0 then
-            ServerStatus.Text = "❌ Không tìm thấy server 1 người chơi nào"
+            ServerStatus.Text = "❌ Chưa tìm thấy server ít người (Hãy bấm thử lại sau vài giây)"
         else
-            ServerStatus.Text = "✓ Tìm thấy "..#CurrentFoundServers.." server 1 người"
+            ServerStatus.Text = "✓ Tìm thấy "..#CurrentFoundServers.." server ít người nhất"
             for i, Server in ipairs(CurrentFoundServers) do
                 AddServer(Server, i)
             end
@@ -672,7 +686,7 @@ HopButton.MouseButton1Click:Connect(function()
             LocalPlayer
         )
     else
-        ServerStatus.Text = "⚠️ Hãy bấm 'TÌM LẠI SERVER' để lấy danh sách trước!"
+        ServerStatus.Text = "⚠️ Bấm 'TÌM LẠI SERVER' để lấy danh sách trước!"
     end
 end)
 
@@ -738,7 +752,7 @@ for Name,Color in pairs(THEMES) do
     end)
 end
 
--- NAVIGATION LOGIC
+-- LOGIC ĐỔI TRANG
 local function ShowPage(Name)
     for PageName,Page in pairs(Pages) do
         Page.Visible = PageName == Name
@@ -764,7 +778,7 @@ SettingsNav.MouseButton1Click:Connect(function() ShowPage("Settings") end)
 
 ShowPage("Home")
 
--- SYSTEM STATS LOOP
+-- VÒNG LẶP CẬP NHẬT FPS & PING
 local Frames = 0
 local LastFPS = os.clock()
 
@@ -784,8 +798,7 @@ task.spawn(function()
         local Ping = 0
 
         pcall(function()
-            Ping =
-                Stats.Network.ServerStatsItem["Data Ping"]:GetValue()
+            Ping = Stats.Network.ServerStatsItem["Data Ping"]:GetValue()
         end)
 
         PingValue.Text = math.floor(Ping).." ms"
@@ -799,7 +812,7 @@ Icon.MouseButton1Click:Connect(function()
     Menu.Visible = not Menu.Visible
 end)
 
--- DRAG ICON
+-- KÉO DI CHUYỂN ICON
 local DraggingIcon = false
 local IconDragStart
 local IconStartPosition
@@ -839,7 +852,7 @@ UserInputService.InputEnded:Connect(function(Input)
     end
 end)
 
--- RESIZE MENU
+-- CO GIÃN MENU
 local Resize = Instance.new("TextButton")
 Resize.Parent = Menu
 Resize.Size = UDim2.fromOffset(30,30)
@@ -898,4 +911,4 @@ UserInputService.InputEnded:Connect(function(Input)
     end
 end)
 
-print("Modern Dashboard loaded")
+print("Modern Dashboard loaded successfully!")
