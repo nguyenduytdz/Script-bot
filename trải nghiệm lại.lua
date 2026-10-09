@@ -23,7 +23,7 @@ local CONFIG = {
     MaxWidth = 900,
     MinHeight = 350,
     MaxHeight = 650,
-    MaxServerPlayers = 1, -- Giới hạn server 1 người
+    MaxServerPlayers = 1,
     UseRobloxAvatarForIcon = true,
     AnimeIcon = "",
     TeleportOffset = 5,
@@ -109,7 +109,7 @@ Menu.ClipsDescendants = true
 Corner(Menu,18)
 local MenuStroke = Stroke(Menu,Accent,2)
 
--- SIDEBAR (GIỮ NGUYÊN BÊN TRÁI MENU)
+-- SIDEBAR MENU BÊN TRÁI
 local Sidebar = Instance.new("Frame")
 Sidebar.Parent = Menu
 Sidebar.Size = UDim2.new(0,155,1,0)
@@ -264,6 +264,9 @@ local function PageTitle(Page,Main,Sub)
     Subtitle.TextXAlignment = Enum.TextXAlignment.Left
 end
 
+-- ========================================================
+-- 1. HOME PAGE
+-- ========================================================
 PageTitle(HomePage,"Welcome back 👋","Thông tin tài khoản và hiệu năng")
 
 local function StatCard(Page,X,Y,W,Label)
@@ -354,6 +357,9 @@ HomePlace.TextSize = 10
 HomePlace.Font = Enum.Font.Gotham
 HomePlace.TextXAlignment = Enum.TextXAlignment.Left
 
+-- ========================================================
+-- 2. PLAYERS PAGE
+-- ========================================================
 PageTitle(PlayersPage,"Players 👥","Người chơi hiện tại trong server")
 
 local PlayerList = Instance.new("ScrollingFrame")
@@ -476,11 +482,11 @@ Players.PlayerRemoving:Connect(function()
 end)
 
 -- ========================================================
--- PHẦN SERVER HOP
+-- 3. SERVER HOP PAGE
 -- ========================================================
-PageTitle(ServerPage,"Server Hop 🌐","Tìm server có 1 người chơi")
+PageTitle(ServerPage,"Server Hop 🌐","Danh sách server 1 người chơi")
 
--- Nút HOP (Nằm bên trái nút TÌM LẠI SERVER)
+-- Nút Hop nằm bên trái
 local HopButton = Instance.new("TextButton")
 HopButton.Parent = ServerPage
 HopButton.Size = UDim2.new(0,110,0,42)
@@ -544,7 +550,7 @@ local function GetServers()
     local Servers = {}
     local Cursor = nil
 
-    for _ = 1,10 do
+    for page = 1, 25 do
         local URL =
             "https://games.roblox.com/v1/games/"..
             game.PlaceId..
@@ -570,25 +576,20 @@ local function GetServers()
         for _,Server in ipairs(Data.data or {}) do
             local Playing = tonumber(Server.playing) or 999
 
-            -- Chỉ chọn server có đúng 1 người chơi
             if Server.id ~= game.JobId and Playing == 1 then
-                table.insert(Servers,Server)
+                table.insert(Servers, Server)
             end
         end
 
         Cursor = Data.nextPageCursor
         if not Cursor then break end
-        task.wait(0.1)
+        task.wait(0.05)
     end
-
-    table.sort(Servers,function(A,B)
-        return (tonumber(A.playing) or 999) < (tonumber(B.playing) or 999)
-    end)
 
     return Servers
 end
 
-local function AddServer(Server)
+local function AddServer(Server, Index)
     local Playing = tonumber(Server.playing) or 0
     local MaxPlayers = tonumber(Server.maxPlayers) or 0
 
@@ -604,13 +605,12 @@ local function AddServer(Server)
     Info.Size = UDim2.new(1,-85,1,0)
     Info.Position = UDim2.fromOffset(12,0)
     Info.BackgroundTransparency = 1
-    Info.Text = "SERVER 1 NGƯỜI\n👥 "..Playing.." / "..MaxPlayers
+    Info.Text = "SERVER #"..Index.." (1 NGƯỜI)\n👥 "..Playing.." / "..MaxPlayers
     Info.TextColor3 = Color3.new(1,1,1)
     Info.TextSize = 11
     Info.Font = Enum.Font.GothamMedium
     Info.TextXAlignment = Enum.TextXAlignment.Left
 
-    -- Nút Join dạng Icon 🚀
     local Join = Instance.new("TextButton")
     Join.Parent = Row
     Join.Size = UDim2.fromOffset(60,40)
@@ -643,8 +643,8 @@ FindServers.MouseButton1Click:Connect(function()
     SearchingServers = true
     ClearServers()
 
-    FindServers.Text = "⏳  ĐANG TÌM..."
-    ServerStatus.Text = "Đang tìm kiếm server 1 người..."
+    FindServers.Text = "⏳  ĐANG QUÉT..."
+    ServerStatus.Text = "Đang duyệt tất cả các trang server..."
 
     task.spawn(function()
         CurrentFoundServers = GetServers()
@@ -653,8 +653,8 @@ FindServers.MouseButton1Click:Connect(function()
             ServerStatus.Text = "❌ Không tìm thấy server 1 người chơi nào"
         else
             ServerStatus.Text = "✓ Tìm thấy "..#CurrentFoundServers.." server 1 người"
-            for _,Server in ipairs(CurrentFoundServers) do
-                AddServer(Server)
+            for i, Server in ipairs(CurrentFoundServers) do
+                AddServer(Server, i)
             end
         end
 
@@ -663,7 +663,6 @@ FindServers.MouseButton1Click:Connect(function()
     end)
 end)
 
--- Nút Hop thực hiện chuyển tới server 1 người đầu tiên tìm thấy
 HopButton.MouseButton1Click:Connect(function()
     if #CurrentFoundServers > 0 then
         HopButton.Text = "⏳..."
@@ -673,12 +672,12 @@ HopButton.MouseButton1Click:Connect(function()
             LocalPlayer
         )
     else
-        ServerStatus.Text = "⚠️ Bấm 'TÌM LẠI SERVER' trước để quét danh sách server!"
+        ServerStatus.Text = "⚠️ Hãy bấm 'TÌM LẠI SERVER' để lấy danh sách trước!"
     end
 end)
 
 -- ========================================================
--- SETTINGS PAGE
+-- 4. SETTINGS PAGE
 -- ========================================================
 PageTitle(SettingsPage,"Settings ⚙️","Tùy chỉnh giao diện")
 
@@ -739,6 +738,7 @@ for Name,Color in pairs(THEMES) do
     end)
 end
 
+-- NAVIGATION LOGIC
 local function ShowPage(Name)
     for PageName,Page in pairs(Pages) do
         Page.Visible = PageName == Name
@@ -764,6 +764,7 @@ SettingsNav.MouseButton1Click:Connect(function() ShowPage("Settings") end)
 
 ShowPage("Home")
 
+-- SYSTEM STATS LOOP
 local Frames = 0
 local LastFPS = os.clock()
 
