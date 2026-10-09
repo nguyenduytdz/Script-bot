@@ -23,7 +23,7 @@ local CONFIG = {
     MaxWidth = 900,
     MinHeight = 350,
     MaxHeight = 650,
-    MaxServerPlayers = 3,
+    MaxServerPlayers = 1, -- Giới hạn server 1 người
     UseRobloxAvatarForIcon = true,
     AnimeIcon = "",
     TeleportOffset = 5,
@@ -109,6 +109,7 @@ Menu.ClipsDescendants = true
 Corner(Menu,18)
 local MenuStroke = Stroke(Menu,Accent,2)
 
+-- SIDEBAR (GIỮ NGUYÊN BÊN TRÁI MENU)
 local Sidebar = Instance.new("Frame")
 Sidebar.Parent = Menu
 Sidebar.Size = UDim2.new(0,155,1,0)
@@ -474,15 +475,32 @@ Players.PlayerRemoving:Connect(function()
     RefreshPlayers()
 end)
 
-PageTitle(ServerPage,"Server Hop 🌐","Tìm server có ít người")
+-- ========================================================
+-- PHẦN SERVER HOP
+-- ========================================================
+PageTitle(ServerPage,"Server Hop 🌐","Tìm server có 1 người chơi")
 
+-- Nút HOP (Nằm bên trái nút TÌM LẠI SERVER)
+local HopButton = Instance.new("TextButton")
+HopButton.Parent = ServerPage
+HopButton.Size = UDim2.new(0,110,0,42)
+HopButton.Position = UDim2.fromOffset(5,65)
+HopButton.BackgroundColor3 = Accent
+HopButton.BorderSizePixel = 0
+HopButton.Text = "Hop"
+HopButton.TextColor3 = Color3.new(1,1,1)
+HopButton.TextSize = 13
+HopButton.Font = Enum.Font.GothamBold
+Corner(HopButton,10)
+
+-- Nút TÌM LẠI SERVER
 local FindServers = Instance.new("TextButton")
 FindServers.Parent = ServerPage
-FindServers.Size = UDim2.new(1,-10,0,42)
-FindServers.Position = UDim2.fromOffset(5,65)
+FindServers.Size = UDim2.new(1,-125,0,42)
+FindServers.Position = UDim2.fromOffset(120,65)
 FindServers.BackgroundColor3 = Accent
 FindServers.BorderSizePixel = 0
-FindServers.Text = "🔎  TÌM SERVER ÍT NGƯỜI"
+FindServers.Text = "🔄  TÌM LẠI SERVER"
 FindServers.TextColor3 = Color3.new(1,1,1)
 FindServers.TextSize = 12
 FindServers.Font = Enum.Font.GothamBold
@@ -552,7 +570,8 @@ local function GetServers()
         for _,Server in ipairs(Data.data or {}) do
             local Playing = tonumber(Server.playing) or 999
 
-            if Server.id ~= game.JobId and Playing <= CONFIG.MaxServerPlayers then
+            -- Chỉ chọn server có đúng 1 người chơi
+            if Server.id ~= game.JobId and Playing == 1 then
                 table.insert(Servers,Server)
             end
         end
@@ -582,24 +601,25 @@ local function AddServer(Server)
 
     local Info = Instance.new("TextLabel")
     Info.Parent = Row
-    Info.Size = UDim2.new(1,-105,1,0)
+    Info.Size = UDim2.new(1,-85,1,0)
     Info.Position = UDim2.fromOffset(12,0)
     Info.BackgroundTransparency = 1
-    Info.Text = "SERVER\n👥 "..Playing.." / "..MaxPlayers
+    Info.Text = "SERVER 1 NGƯỜI\n👥 "..Playing.." / "..MaxPlayers
     Info.TextColor3 = Color3.new(1,1,1)
     Info.TextSize = 11
     Info.Font = Enum.Font.GothamMedium
     Info.TextXAlignment = Enum.TextXAlignment.Left
 
+    -- Nút Join dạng Icon 🚀
     local Join = Instance.new("TextButton")
     Join.Parent = Row
-    Join.Size = UDim2.fromOffset(80,40)
-    Join.Position = UDim2.new(1,-88,0.5,-20)
+    Join.Size = UDim2.fromOffset(60,40)
+    Join.Position = UDim2.new(1,-68,0.5,-20)
     Join.BackgroundColor3 = Accent
     Join.BorderSizePixel = 0
-    Join.Text = "JOIN"
+    Join.Text = "🚀"
     Join.TextColor3 = Color3.new(1,1,1)
-    Join.TextSize = 11
+    Join.TextSize = 18
     Join.Font = Enum.Font.GothamBold
     Corner(Join,8)
 
@@ -615,6 +635,7 @@ local function AddServer(Server)
 end
 
 local SearchingServers = false
+local CurrentFoundServers = {}
 
 FindServers.MouseButton1Click:Connect(function()
     if SearchingServers then return end
@@ -623,16 +644,16 @@ FindServers.MouseButton1Click:Connect(function()
     ClearServers()
 
     FindServers.Text = "⏳  ĐANG TÌM..."
-    ServerStatus.Text = "Đang quét server..."
+    ServerStatus.Text = "Đang tìm kiếm server 1 người..."
 
     task.spawn(function()
-        local Servers = GetServers()
+        CurrentFoundServers = GetServers()
 
-        if #Servers == 0 then
-            ServerStatus.Text = "❌ Không tìm thấy server phù hợp"
+        if #CurrentFoundServers == 0 then
+            ServerStatus.Text = "❌ Không tìm thấy server 1 người chơi nào"
         else
-            ServerStatus.Text = "✓ Tìm thấy "..#Servers.." server"
-            for _,Server in ipairs(Servers) do
+            ServerStatus.Text = "✓ Tìm thấy "..#CurrentFoundServers.." server 1 người"
+            for _,Server in ipairs(CurrentFoundServers) do
                 AddServer(Server)
             end
         end
@@ -642,6 +663,23 @@ FindServers.MouseButton1Click:Connect(function()
     end)
 end)
 
+-- Nút Hop thực hiện chuyển tới server 1 người đầu tiên tìm thấy
+HopButton.MouseButton1Click:Connect(function()
+    if #CurrentFoundServers > 0 then
+        HopButton.Text = "⏳..."
+        TeleportService:TeleportToPlaceInstance(
+            game.PlaceId,
+            CurrentFoundServers[1].id,
+            LocalPlayer
+        )
+    else
+        ServerStatus.Text = "⚠️ Bấm 'TÌM LẠI SERVER' trước để quét danh sách server!"
+    end
+end)
+
+-- ========================================================
+-- SETTINGS PAGE
+-- ========================================================
 PageTitle(SettingsPage,"Settings ⚙️","Tùy chỉnh giao diện")
 
 local ThemeLabel = Instance.new("TextLabel")
@@ -691,6 +729,7 @@ for Name,Color in pairs(THEMES) do
         PlayerList.ScrollBarImageColor3 = Accent
         ServerList.ScrollBarImageColor3 = Accent
         FindServers.BackgroundColor3 = Accent
+        HopButton.BackgroundColor3 = Accent
 
         for PageName,Nav in pairs(NavButtons) do
             if Pages[PageName].Visible then
@@ -759,10 +798,7 @@ Icon.MouseButton1Click:Connect(function()
     Menu.Visible = not Menu.Visible
 end)
 
---========================================================
 -- DRAG ICON
---========================================================
-
 local DraggingIcon = false
 local IconDragStart
 local IconStartPosition
@@ -802,10 +838,7 @@ UserInputService.InputEnded:Connect(function(Input)
     end
 end)
 
---========================================================
 -- RESIZE MENU
---========================================================
-
 local Resize = Instance.new("TextButton")
 Resize.Parent = Menu
 Resize.Size = UDim2.fromOffset(30,30)
@@ -865,6 +898,3 @@ UserInputService.InputEnded:Connect(function(Input)
 end)
 
 print("Modern Dashboard loaded")
-print("Display Name:",DisplayName)
-print("Username:",Username)
-print("User ID:",UserId)
