@@ -266,7 +266,7 @@ end
 -- ========================================================
 -- 1. HOME PAGE
 -- ========================================================
-PageTitle(HomePage,"Welcome back 👋","Thông tin tài khoản và hiệu năng")
+PageTitle(HomePage,"Welcome","Thông tin tài khoản và hiệu năng")
 
 local function StatCard(Page,X,Y,W,Label)
     local Card = Instance.new("Frame")
