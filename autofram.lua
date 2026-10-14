@@ -1,12 +1,12 @@
--- [[ BLOX FRUIT - REDZ & BANANA REAL CORE ENGINE ]] --
+-- [[ BLOX FRUIT - BANANA METAMETHOD HOOK ENGINE ]] --
 
 local SuccessUI, Fluent = pcall(function()
     return loadstring(game:HttpGet("https://github.com/dawid-scripts/Fluent/releases/latest/download/main.lua"))()
 end)
 
 local Window = Fluent:CreateWindow({
-    Title = "Blox Fruits - Real Redz/Banana Core",
-    SubTitle = "Fixed Standing NPC Issue",
+    Title = "Blox Fruits - Pro Custom Farm",
+    SubTitle = "Metamethod Hook Engine",
     TabWidth = 160,
     Size = UDim2.fromOffset(520, 360),
     Theme = "Dark",
@@ -21,70 +21,90 @@ getgenv().SafeHeight = 15
 local Players = game:GetService("Players")
 local LocalPlayer = Players.LocalPlayer
 local TweenService = game:GetService("TweenService")
+local RunService = game:GetService("RunService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local CommF = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("CommF_")
 
--- [[ CORE ENGINE CỦA REDZ & BANANA HUB ]] --
+-- [[ 1. METAMETHOD HOOK BYPASS - CHẶN SERVER KHÓA CHUYỂN ĐỘNG ]] --
+local rawmetatable = getrawmetatable(game)
+local oldNamecall = rawmetatable.__namecall
+setreadonly(rawmetatable, false)
 
--- 1. Bỏ qua hoàn toàn hiệu ứng đóng băng/khóa nhân vật của NPC (Dialogue Bypass)
-local function ForceUnfreeze()
-    pcall(function()
-        if LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Humanoid") then
-            LocalPlayer.Character.Humanoid.WalkSpeed = 16
-            LocalPlayer.Character.Humanoid.PlatformStand = false
+rawmetatable.__namecall = newcclosure(function(self, ...)
+    local method = getnamecallmethod()
+    local args = {...}
+    
+    -- Nếu Game gửi lệnh đóng băng hoặc bật Dialogue -> Bỏ qua lệnh đó
+    if tostring(method) == "FireServer" or tostring(method) == "InvokeServer" then
+        if self.Name == "CommF_" and args[1] == "StartQuest" then
+            -- Tự động giải phóng giao diện thoại ngay khi bấm nhận quest
+            task.spawn(function()
+                task.wait(0.05)
+                pcall(function()
+                    if LocalPlayer.PlayerGui.Main:FindFirstChild("Dialogue") then
+                        LocalPlayer.PlayerGui.Main.Dialogue.Visible = false
+                    end
+                end)
+            end)
         end
-        local mainGui = LocalPlayer.PlayerGui:FindFirstChild("Main")
-        if mainGui then
-            if mainGui:FindFirstChild("Dialogue") then mainGui.Dialogue.Visible = false end
-            if mainGui:FindFirstChild("Interacted") then mainGui.Interacted.Value = false end
-        end
-    end)
+    end
+    return oldNamecall(self, ...)
+end)
+setreadonly(rawmetatable, true)
+
+-- [[ 2. NOCLIP & STEERING ENGINE ]] --
+local NoclipConnection = nil
+local function EnableNoclip()
+    if not NoclipConnection then
+        NoclipConnection = RunService.Stepped:Connect(function()
+            if getgenv().AutoFarmEnabled and LocalPlayer.Character then
+                for _, part in pairs(LocalPlayer.Character:GetChildren()) do
+                    if part:IsA("BasePart") then
+                        part.CanCollide = false
+                    end
+                end
+            end
+        end)
+    end
 end
 
--- 2. Hệ thống Giữ trọng lực lơ lửng & Tắt va chạm (Fly/Noclip)
+local function DisableNoclip()
+    if NoclipConnection then
+        NoclipConnection:Disconnect()
+        NoclipConnection = nil
+    end
+end
+
 local function ApplyBodyVelocity(hrp)
-    if not hrp:FindFirstChild("RedzVelocity") then
+    if not hrp:FindFirstChild("BananaVelocity") then
         local bv = Instance.new("BodyVelocity")
-        bv.Name = "RedzVelocity"
+        bv.Name = "BananaVelocity"
         bv.Velocity = Vector3.new(0, 0, 0)
         bv.MaxForce = Vector3.new(math.huge, math.huge, math.huge)
         bv.Parent = hrp
     end
-    local char = LocalPlayer.Character
-    if char then
-        for _, v in pairs(char:GetChildren()) do
-            if v:IsA("BasePart") then v.CanCollide = false end
-        end
-    end
 end
 
-local function RemoveBodyVelocity(hrp)
-    if hrp and hrp:FindFirstChild("RedzVelocity") then
-        hrp.RedzVelocity:Destroy()
-    end
-end
-
--- 3. Tween Engine chuẩn từ Banana Hub (Quản lý luồng bay mượt)
 local currentTween = nil
-local function RedzTween(targetCFrame, speed)
+local function BananaTween(targetCFrame, speed)
     local char = LocalPlayer.Character
     if not char or not char:FindFirstChild("HumanoidRootPart") then return end
     local hrp = char.HumanoidRootPart
     
     ApplyBodyVelocity(hrp)
+    EnableNoclip()
     
     local distance = (hrp.Position - targetCFrame.Position).Magnitude
-    local time = distance / (speed or 300)
+    local duration = distance / (speed or 300)
     
     if currentTween then currentTween:Cancel() end
     
-    local tweenInfo = TweenInfo.new(time, Enum.EasingStyle.Linear)
+    local tweenInfo = TweenInfo.new(duration, Enum.EasingStyle.Linear)
     currentTween = TweenService:Create(hrp, tweenInfo, {CFrame = targetCFrame})
     currentTween:Play()
     return currentTween
 end
 
--- 4. Trang bị vũ khí
 local function EquipWeapon()
     local char = LocalPlayer.Character
     if char and not char:FindFirstChildOfClass("Tool") then
@@ -100,7 +120,7 @@ local function EquipWeapon()
     end
 end
 
--- [[ VÒNG LẶP FARM CHÍNH ]] --
+-- [[ 3. VÒNG LẶP AUTO FARM CHÍNH ]] --
 task.spawn(function()
     while task.wait(0.05) do
         if getgenv().AutoFarmEnabled then
@@ -112,28 +132,22 @@ task.spawn(function()
                 local level = LocalPlayer.Data.Level.Value
                 local isQuestActive = LocalPlayer.PlayerGui.Main.Quest.Visible
                 
-                -- Level 1 - 14 (Bandit Island)
+                -- Level 1 - 14 (Bandit)
                 if level < 15 then
                     if not isQuestActive then
-                        -- Bước A: Bay tới sát vạch nhận Quest (Không đứng đè NPC)
-                        local questNPCPos = CFrame.new(1059, 16, 1549)
-                        if (hrp.Position - questNPCPos.Position).Magnitude > 15 then
-                            RedzTween(questNPCPos, 300)
+                        local npcPos = CFrame.new(1059, 16, 1549)
+                        if (hrp.Position - npcPos.Position).Magnitude > 12 then
+                            BananaTween(npcPos, 300)
                         else
                             if currentTween then currentTween:Cancel() end
-                            -- Bấm nhận Quest & Giải phóng trạng thái nhân vật tức thì
                             CommF:InvokeServer("StartQuest", "BanditQuest1", 1)
-                            ForceUnfreeze()
                             
-                            -- ĐẨY NHÂN VẬT RA BÃI QUÁI NGAY TẬP TRUNG KHÔNG ĐỢI GAME RESPONSE
+                            -- ĐẨY DỰ DỰ BỘ TỌA ĐỘ VỀ BÃI QUÁI NGAY TẬP TRUNG
                             hrp.CFrame = CFrame.new(1145, 25, 1634)
-                            task.wait(0.2)
+                            task.wait(0.1)
                         end
                     else
-                        -- Bước B: Đã có Quest -> Giải phóng UI & Bay thẳng vào bãi đánh
-                        ForceUnfreeze()
                         EquipWeapon()
-                        
                         local targetMob = nil
                         for _, v in pairs(workspace.Enemies:GetChildren()) do
                             if (v.Name == "Bandit" or string.find(v.Name, "Bandit")) and v:FindFirstChild("HumanoidRootPart") and v:FindFirstChildOfClass("Humanoid").Health > 0 then
@@ -144,37 +158,32 @@ task.spawn(function()
                         
                         if targetMob and targetMob:FindFirstChild("HumanoidRootPart") then
                             ApplyBodyVelocity(hrp)
+                            EnableNoclip()
                             if currentTween then currentTween:Cancel() end
                             
-                            -- Bay lên không trung lơ lửng trên quái
-                            local safeCFrame = targetMob.HumanoidRootPart.CFrame + Vector3.new(0, getgenv().SafeHeight, 0)
-                            hrp.CFrame = safeCFrame
+                            local safePos = targetMob.HumanoidRootPart.CFrame + Vector3.new(0, getgenv().SafeHeight, 0)
+                            hrp.CFrame = safePos
                             
-                            -- Gom quái
-                            targetMob.HumanoidRootPart.CFrame = safeCFrame - Vector3.new(0, getgenv().SafeHeight, 0)
+                            targetMob.HumanoidRootPart.CFrame = safePos - Vector3.new(0, getgenv().SafeHeight, 0)
                             targetMob.HumanoidRootPart.CanCollide = false
                             
-                            -- Tự động đánh
                             local tool = char:FindFirstChildOfClass("Tool")
                             if tool then tool:Activate() end
                         else
-                            -- Nếu chưa có quái -> Đứng lơ lửng chờ bãi quái
-                            RedzTween(CFrame.new(1145, 25, 1634), 250)
+                            BananaTween(CFrame.new(1145, 25, 1634), 280)
                         end
                     end
                 end
             end)
         else
-            if LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
-                RemoveBodyVelocity(LocalPlayer.Character.HumanoidRootPart)
-            end
+            DisableNoclip()
             if currentTween then currentTween:Cancel() end
         end
     end
 end)
 
--- Menu Toggle
-local Toggle = Tabs.Main:AddToggle("AutoFarmToggle", { Title = "🚀 BẬT AUTO FARM (REAL CORE)", Default = getgenv().AutoFarmEnabled })
+-- Toggle Menu
+local Toggle = Tabs.Main:AddToggle("AutoFarmToggle", { Title = "🚀 BẬT AUTO FARM (HOOK BYPASS)", Default = getgenv().AutoFarmEnabled })
 Toggle:OnChanged(function(Value)
     getgenv().AutoFarmEnabled = Value
 end)
