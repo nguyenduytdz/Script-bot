@@ -1,16 +1,33 @@
 -- ==============================================================================
--- Project: Steal An Egg - Ultimate Production-Grade UI & Execution Engine (Fixed Parent)
+-- Project: Steal An Egg - Ultimate Foolproof UI & Execution Engine
 -- Author: Axiom | Elite Systems Architecture
+-- Note: Press [Insert] on your keyboard to toggle the panel visibility!
 -- ==============================================================================
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Workspace = game:GetService("Workspace")
+local UserInputService = game:GetService("UserInputService")
 local RunService = game:GetService("RunService")
-local LocalPlayer = Players.LocalPlayer
 
--- Safe GUI container parent selection to prevent executor hiding bugs
-local ProtectedGui = (gethui and gethui()) or (syn and syn.protect_gui) or game:GetService("CoreGui")
+local LocalPlayer = Players.LocalPlayer or Players.PlayerAdded:Wait()
+local PlayerGui = LocalPlayer:WaitForChild("PlayerGui", 5)
+
+-- Bulletproof container selection
+local ProtectedGui = nil
+pcall(function()
+    if gethui then
+        ProtectedGui = gethui()
+    elseif syn and syn.protect_gui then
+        ProtectedGui = game:GetService("CoreGui")
+    else
+        ProtectedGui = game:GetService("CoreGui")
+    end
+end)
+
+if not ProtectedGui or not pcall(function() local f = Instance.new("Folder", ProtectedGui) f:Destroy() end) then
+    ProtectedGui = PlayerGui
+end
 
 if ProtectedGui:FindFirstChild("AxiomStealMaster") then
     ProtectedGui.AxiomStealMaster:Destroy()
@@ -19,14 +36,10 @@ end
 local ScreenGui = Instance.new("ScreenGui")
 ScreenGui.Name = "AxiomStealMaster"
 ScreenGui.ResetOnSpawn = false
-pcall(function()
-    ScreenGui.Parent = ProtectedGui
-end)
-if not ScreenGui.Parent then
-    ScreenGui.Parent = LocalPlayer:WaitForChild("PlayerGui")
-end
+ScreenGui.IgnoreGuiInset = true
+ScreenGui.Parent = ProtectedGui
 
--- Main Panel Container (1:1 Dark Theme with Thick Border)
+-- Main Panel Container
 local MainFrame = Instance.new("Frame", ScreenGui)
 MainFrame.Size = UDim2.new(0, 440, 0, 525)
 MainFrame.Position = UDim2.new(0.5, -220, 0.5, -262)
@@ -77,7 +90,7 @@ local SortStroke = Instance.new("UIStroke", SortBtn)
 SortStroke.Color = Color3.fromRGB(60, 220, 100)
 SortStroke.Thickness = 1.5
 
--- Toggles Bar (Auto Steal & Instant Steal)
+-- Toggles Bar
 local ToggleBar = Instance.new("Frame", MainFrame)
 ToggleBar.Size = UDim2.new(1, -20, 0, 48)
 ToggleBar.Position = UDim2.new(0, 10, 0, 60)
@@ -122,18 +135,26 @@ local UIListLayout = Instance.new("UIListLayout", Scroll)
 UIListLayout.SortOrder = Enum.SortOrder.LayoutOrder
 UIListLayout.Padding = UDim.new(0, 8)
 
--- Advanced Network Remote Interception
+-- Toggle visibility via Insert key
+UserInputService.InputBegan:Connect(function(input, gameProcessed)
+    if input.KeyCode == Enum.KeyCode.Insert then
+        MainFrame.Visible = not MainFrame.Visible
+    end
+end)
+
+-- Network Remotes Interception
 local ValidRemotes = {}
-for _, v in ipairs(ReplicatedStorage:GetDescendants()) do
-    if v:IsA("RemoteEvent") or v:IsA("RemoteFunction") then
-        local name = v.Name:lower()
-        if name:find("steal") or name:find("egg") or name:find("claim") or name:find("interact") or name:find("pet") then
-            table.insert(ValidRemotes, v)
+pcall(function()
+    for _, v in ipairs(ReplicatedStorage:GetDescendants()) do
+        if v:IsA("RemoteEvent") or v:IsA("RemoteFunction") then
+            local name = v.Name:lower()
+            if name:find("steal") or name:find("egg") or name:find("claim") or name:find("interact") or name:find("pet") then
+                table.insert(ValidRemotes, v)
+            end
         end
     end
-end
+end)
 
--- State variables
 local autoStealActive = false
 local instantStealActive = false
 local sortMode = "Highest Value"
@@ -161,10 +182,8 @@ SortBtn.MouseButton1Click:Connect(function()
     SortBtn.Text = "Sort: " .. sortMode
 end)
 
--- Robust Execution & Teleport Engine
 local function PerformStealAction(targetObj)
     if not targetObj or not targetObj.Parent then return end
-    
     local char = LocalPlayer.Character
     if not char or not char:FindFirstChild("HumanoidRootPart") then return end
     local hrp = char.HumanoidRootPart
@@ -178,9 +197,7 @@ local function PerformStealAction(targetObj)
         if prompt:IsA("ProximityPrompt") then
             pcall(function()
                 local oldHold = prompt.HoldDuration
-                if instantStealActive then
-                    prompt.HoldDuration = 0
-                end
+                if instantStealActive then prompt.HoldDuration = 0 end
                 fireproximityprompt(prompt, 0)
                 prompt.HoldDuration = oldHold
             end)
@@ -208,30 +225,30 @@ local function PerformStealAction(targetObj)
     end
 end
 
--- Refresh and Scan Map Objects
 local function RefreshList()
     for _, child in pairs(Scroll:GetChildren()) do
         if child:IsA("Frame") then child:Destroy() end
     end
 
     local items = {}
-    
-    for _, obj in pairs(Workspace:GetDescendants()) do
-        if obj:IsA("Model") and (obj.Name:find("Egg") or obj:FindFirstChild("Egg") or obj:GetAttribute("Creature") or obj:GetAttribute("PetName") or obj:FindFirstChild("ProximityPrompt")) then
-            local creatureName = obj:GetAttribute("Creature") or obj:GetAttribute("PetName") or obj.Name
-            local valueStr = obj:GetAttribute("ValueStr") or obj:GetAttribute("Income") or "$15.4M/s"
-            local multiplier = tonumber(obj:GetAttribute("Multiplier")) or tonumber(obj:GetAttribute("Value")) or (math.random(100, 500) / 100)
-            local weight = tonumber(obj:GetAttribute("Weight")) or tonumber(obj:GetAttribute("Size")) or math.random(500, 5000)
-            
-            table.insert(items, {
-                Object = obj,
-                Creature = creatureName,
-                ValueStr = tostring(valueStr),
-                Multiplier = multiplier,
-                Weight = weight
-            })
+    pcall(function()
+        for _, obj in pairs(Workspace:GetDescendants()) do
+            if obj:IsA("Model") and (obj.Name:find("Egg") or obj:FindFirstChild("Egg") or obj:GetAttribute("Creature") or obj:GetAttribute("PetName") or obj:FindFirstChild("ProximityPrompt")) then
+                local creatureName = obj:GetAttribute("Creature") or obj:GetAttribute("PetName") or obj.Name
+                local valueStr = obj:GetAttribute("ValueStr") or obj:GetAttribute("Income") or "$15.4M/s"
+                local multiplier = tonumber(obj:GetAttribute("Multiplier")) or tonumber(obj:GetAttribute("Value")) or (math.random(100, 500) / 100)
+                local weight = tonumber(obj:GetAttribute("Weight")) or tonumber(obj:GetAttribute("Size")) or math.random(500, 5000)
+                
+                table.insert(items, {
+                    Object = obj,
+                    Creature = creatureName,
+                    ValueStr = tostring(valueStr),
+                    Multiplier = multiplier,
+                    Weight = weight
+                })
+            end
         end
-    end
+    end)
 
     table.sort(items, function(a, b)
         if sortMode == "Highest Value" then
@@ -329,17 +346,20 @@ local function RefreshList()
     Scroll.CanvasSize = UDim2.new(0, 0, 0, #items * 82)
 end
 
--- Background Automation Loop
 task.spawn(function()
     while task.wait(0.4) do
         RefreshList()
         if autoStealActive then
-            for _, obj in pairs(Workspace:GetDescendants()) do
-                if obj:IsA("Model") and (obj.Name:find("Egg") or obj:FindFirstChild("Egg") or obj:FindFirstChild("ProximityPrompt")) then
-                    PerformStealAction(obj)
-                    task.wait(0.15)
+            pcall(function()
+                for _, obj in pairs(Workspace:GetDescendants()) do
+                    if obj:IsA("Model") and (obj.Name:find("Egg") or obj:FindFirstChild("Egg") or obj:FindFirstChild("ProximityPrompt")) then
+                        PerformStealAction(obj)
+                        task.wait(0.15)
+                    end
                 end
-            end
+            end)
         end
     end
 end)
+
+print("[AxiomStealMaster] Loaded successfully! Press [Insert] to toggle panel.")
