@@ -1,25 +1,30 @@
 -- ==============================================================================
--- Project: Steal An Egg - Ultimate Production-Grade UI & Execution Engine
+-- Project: Steal An Egg - Ultimate Production-Grade UI & Execution Engine (Fixed Parent)
 -- Author: Axiom | Elite Systems Architecture
--- Description: 1:1 Pixel Perfect Replica UI + Robust Workspace Egg/Pet Scanner
---              + Instant Teleportation & Proximity/Remote Interception Core.
 -- ==============================================================================
 
-local CoreGui = game:GetService("CoreGui")
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Workspace = game:GetService("Workspace")
 local RunService = game:GetService("RunService")
 local LocalPlayer = Players.LocalPlayer
 
-if CoreGui:FindFirstChild("AxiomStealMaster") then
-    CoreGui.AxiomStealMaster:Destroy()
+-- Safe GUI container parent selection to prevent executor hiding bugs
+local ProtectedGui = (gethui and gethui()) or (syn and syn.protect_gui) or game:GetService("CoreGui")
+
+if ProtectedGui:FindFirstChild("AxiomStealMaster") then
+    ProtectedGui.AxiomStealMaster:Destroy()
 end
 
 local ScreenGui = Instance.new("ScreenGui")
 ScreenGui.Name = "AxiomStealMaster"
 ScreenGui.ResetOnSpawn = false
-ScreenGui.Parent = CoreGui
+pcall(function()
+    ScreenGui.Parent = ProtectedGui
+end)
+if not ScreenGui.Parent then
+    ScreenGui.Parent = LocalPlayer:WaitForChild("PlayerGui")
+end
 
 -- Main Panel Container (1:1 Dark Theme with Thick Border)
 local MainFrame = Instance.new("Frame", ScreenGui)
@@ -149,7 +154,7 @@ SortBtn.MouseButton1Click:Connect(function()
     if sortMode == "Highest Value" then
         sortMode = "Lowest Value"
     elseif sortMode == "Lowest Value" then
-        sortMode == "Highest Weight"
+        sortMode = "Highest Weight"
     else
         sortMode = "Highest Value"
     end
@@ -164,13 +169,11 @@ local function PerformStealAction(targetObj)
     if not char or not char:FindFirstChild("HumanoidRootPart") then return end
     local hrp = char.HumanoidRootPart
     
-    -- Teleport directly above target
     local pivot = targetObj:IsA("Model") and targetObj:GetPivot() or (targetObj:IsA("BasePart") and targetObj.CFrame)
     if pivot then
         hrp.CFrame = pivot + Vector3.new(0, 3.5, 0)
     end
     
-    -- Fire Proximity Prompts
     for _, prompt in ipairs(targetObj:GetDescendants()) do
         if prompt:IsA("ProximityPrompt") then
             pcall(function()
@@ -184,7 +187,6 @@ local function PerformStealAction(targetObj)
         end
     end
     
-    -- Fire TouchInterests if present
     for _, desc in ipairs(targetObj:GetDescendants()) do
         if desc:IsA("TouchTransmitter") and desc.Parent:IsA("BasePart") then
             pcall(function()
@@ -195,7 +197,6 @@ local function PerformStealAction(targetObj)
         end
     end
     
-    -- Invoke Discovered Network Remotes
     for _, remote in ipairs(ValidRemotes) do
         pcall(function()
             if remote:IsA("RemoteEvent") then
@@ -215,7 +216,6 @@ local function RefreshList()
 
     local items = {}
     
-    -- Scan workspace for eggs and spawn models
     for _, obj in pairs(Workspace:GetDescendants()) do
         if obj:IsA("Model") and (obj.Name:find("Egg") or obj:FindFirstChild("Egg") or obj:GetAttribute("Creature") or obj:GetAttribute("PetName") or obj:FindFirstChild("ProximityPrompt")) then
             local creatureName = obj:GetAttribute("Creature") or obj:GetAttribute("PetName") or obj.Name
@@ -254,7 +254,6 @@ local function RefreshList()
         CardStroke.Color = Color3.fromRGB(25, 25, 32)
         CardStroke.Thickness = 1.5
 
-        -- ViewportFrame 3D Pet Rendering
         local Viewport = Instance.new("ViewportFrame", Card)
         Viewport.Size = UDim2.new(0, 62, 0, 62)
         Viewport.Position = UDim2.new(0, 6, 0, 6)
