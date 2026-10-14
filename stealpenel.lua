@@ -1,117 +1,121 @@
 -- ==============================================================================
--- Project: Steal An Egg - Ultimate Integrated GUI & Execution Engine
--- Author: Axiom | Elite Systems Architecture
--- Description: Merges high-end Viewport pet inspector GUI with native un-obfuscated
---              remote routing and instant-steal automation core.
+-- Project: Steal An Egg - 1:1 Pixel Perfect Replica UI & Execution Core
+-- Author: Axiom | Elite UI Systems Architecture
 -- ==============================================================================
 
 local CoreGui = game:GetService("CoreGui")
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local RunService = game:GetService("RunService")
 local Workspace = game:GetService("Workspace")
 local LocalPlayer = Players.LocalPlayer
 
-if CoreGui:FindFirstChild("AxiomStealMaster") then
-    CoreGui.AxiomStealMaster:Destroy()
+if CoreGui:FindFirstChild("AxiomExactStealPanel") then
+    CoreGui.AxiomExactStealPanel:Destroy()
 end
 
 local ScreenGui = Instance.new("ScreenGui")
-ScreenGui.Name = "AxiomStealMaster"
+ScreenGui.Name = "AxiomExactStealPanel"
 ScreenGui.ResetOnSpawn = false
 ScreenGui.Parent = CoreGui
 
--- Main Panel
-local MainFrame = Instance.new("Frame")
-MainFrame.Size = UDim2.new(0, 440, 0, 520)
-MainFrame.Position = UDim2.new(0.5, -220, 0.5, -260)
-MainFrame.BackgroundColor3 = Color3.fromRGB(25, 25, 32)
+-- Main Panel (Exact Dark Grey Container with Thick Bevel Border)
+local MainFrame = Instance.new("Frame", ScreenGui)
+MainFrame.Size = UDim2.new(0, 440, 0, 525)
+MainFrame.Position = UDim2.new(0.5, -220, 0.5, -262)
+MainFrame.BackgroundColor3 = Color3.fromRGB(32, 32, 40)
 MainFrame.BorderSizePixel = 0
 MainFrame.Active = true
 MainFrame.Draggable = true
-MainFrame.Parent = ScreenGui
 
-Instance.new("UICorner", MainFrame).CornerRadius = UDim.new(0, 10)
-local UIStroke = Instance.new("UIStroke", MainFrame)
-UIStroke.Color = Color3.fromRGB(50, 50, 65)
-UIStroke.Thickness = 2
+Instance.new("UICorner", MainFrame).CornerRadius = UDim.new(0, 8)
+local MainStroke = Instance.new("UIStroke", MainFrame)
+MainStroke.Color = Color3.fromRGB(15, 15, 20)
+MainStroke.Thickness = 3
 
--- Header
-local Header = Instance.new("Frame")
+-- Top Red Header Bar
+local Header = Instance.new("Frame", MainFrame)
 Header.Size = UDim2.new(1, 0, 0, 50)
-Header.BackgroundColor3 = Color3.fromRGB(210, 35, 35)
+Header.BackgroundColor3 = Color3.fromRGB(215, 30, 30)
 Header.BorderSizePixel = 0
-Header.Parent = MainFrame
+Instance.new("UICorner", Header).CornerRadius = UDim.new(0, 8)
 
-Instance.new("UICorner", Header).CornerRadius = UDim.new(0, 10)
+-- Header Cover to square off top corners if needed
 local HeaderCover = Instance.new("Frame", Header)
-HeaderCover.Size = UDim2.new(1, 0, 0, 15)
-HeaderCover.Position = UDim2.new(0, 0, 1, -15)
-HeaderCover.BackgroundColor3 = Color3.fromRGB(210, 35, 35)
+HeaderCover.Size = UDim2.new(1, 0, 0, 10)
+HeaderCover.Position = UDim2.new(0, 0, 1, -10)
+HeaderCover.BackgroundColor3 = Color3.fromRGB(215, 30, 30)
 HeaderCover.BorderSizePixel = 0
 
 local TitleLabel = Instance.new("TextLabel", Header)
 TitleLabel.Size = UDim2.new(0.5, 0, 1, 0)
-TitleLabel.Position = UDim2.new(0, 15, 0, 0)
+TitleLabel.Position = UDim2.new(0, 12, 0, 0)
 TitleLabel.BackgroundTransparency = 1
-TitleLabel.Text = "Steal Master Panel"
+TitleLabel.Text = "Steal Panel"
 TitleLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
 TitleLabel.Font = Enum.Font.FredokaOne
 TitleLabel.TextSize = 24
 TitleLabel.TextXAlignment = Enum.TextXAlignment.Left
 
--- Sort Button
+-- Green Sort Button inside Header area
 local SortBtn = Instance.new("TextButton", Header)
-SortBtn.Size = UDim2.new(0, 180, 0, 34)
-SortBtn.Position = UDim2.new(1, -195, 0, 8)
-SortBtn.BackgroundColor3 = Color3.fromRGB(40, 170, 75)
+SortBtn.Size = UDim2.new(0, 185, 0, 36)
+SortBtn.Position = UDim2.new(1, -195, 0, 7)
+SortBtn.BackgroundColor3 = Color3.fromRGB(35, 185, 75)
 SortBtn.Text = "Sort: Highest Value"
 SortBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
 SortBtn.Font = Enum.Font.SourceSansBold
 SortBtn.TextSize = 14
 Instance.new("UICorner", SortBtn).CornerRadius = UDim.new(0, 6)
+local SortStroke = Instance.new("UIStroke", SortBtn)
+SortStroke.Color = Color3.fromRGB(60, 220, 100)
+SortStroke.Thickness = 1.5
 
--- Toggles Bar
+-- Toggles Container Bar
 local ToggleBar = Instance.new("Frame", MainFrame)
-ToggleBar.Size = UDim2.new(1, -20, 0, 45)
+ToggleBar.Size = UDim2.new(1, -20, 0, 48)
 ToggleBar.Position = UDim2.new(0, 10, 0, 60)
 ToggleBar.BackgroundTransparency = 1
 
 local AutoStealBtn = Instance.new("TextButton", ToggleBar)
-AutoStealBtn.Size = UDim2.new(0.48, 0, 1, 0)
-AutoStealBtn.BackgroundColor3 = Color3.fromRGB(20, 130, 50)
+AutoStealBtn.Size = UDim2.new(0.485, 0, 1, 0)
+AutoStealBtn.BackgroundColor3 = Color3.fromRGB(15, 125, 45)
 AutoStealBtn.Text = "Auto Steal: OFF"
 AutoStealBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
 AutoStealBtn.Font = Enum.Font.SourceSansBold
 AutoStealBtn.TextSize = 15
 Instance.new("UICorner", AutoStealBtn).CornerRadius = UDim.new(0, 6)
-Instance.new("UIStroke", AutoStealBtn).Color = Color3.fromRGB(60, 200, 90)
+local AutoStroke = Instance.new("UIStroke", AutoStealBtn)
+AutoStroke.Color = Color3.fromRGB(50, 205, 85)
+AutoStroke.Thickness = 2
 
 local InstantStealBtn = Instance.new("TextButton", ToggleBar)
-InstantStealBtn.Size = UDim2.new(0.48, 0, 1, 0)
-InstantStealBtn.Position = UDim2.new(0.52, 0, 0, 0)
-InstantStealBtn.BackgroundColor3 = Color3.fromRGB(180, 30, 30)
+InstantStealBtn.Size = UDim2.new(0.485, 0, 1, 0)
+InstantStealBtn.Position = UDim2.new(0.515, 0, 0, 0)
+InstantStealBtn.BackgroundColor3 = Color3.fromRGB(180, 25, 25)
 InstantStealBtn.Text = "Instant Steal: OFF"
 InstantStealBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
 InstantStealBtn.Font = Enum.Font.SourceSansBold
 InstantStealBtn.TextSize = 15
 Instance.new("UICorner", InstantStealBtn).CornerRadius = UDim.new(0, 6)
-Instance.new("UIStroke", InstantStealBtn).Color = Color3.fromRGB(240, 70, 70)
+local InstantStroke = Instance.new("UIStroke", InstantStealBtn)
+InstantStroke.Color = Color3.fromRGB(240, 65, 65)
+InstantStroke.Thickness = 2
 
--- Scrolling Container
+-- Scrolling List Frame
 local Scroll = Instance.new("ScrollingFrame", MainFrame)
-Scroll.Size = UDim2.new(1, -20, 1, -120)
-Scroll.Position = UDim2.new(0, 10, 0, 110)
+Scroll.Size = UDim2.new(1, -20, 1, -125)
+Scroll.Position = UDim2.new(0, 10, 0, 115)
 Scroll.BackgroundTransparency = 1
 Scroll.BorderSizePixel = 0
 Scroll.CanvasSize = UDim2.new(0, 0, 0, 0)
 Scroll.ScrollBarThickness = 6
+Scroll.ScrollBarImageColor3 = Color3.fromRGB(80, 80, 100)
 
 local UIListLayout = Instance.new("UIListLayout", Scroll)
 UIListLayout.SortOrder = Enum.SortOrder.LayoutOrder
 UIListLayout.Padding = UDim.new(0, 8)
 
--- Network Remotes Cache
+-- Network Remotes Discovery
 local DiscoveredRemotes = {}
 for _, v in ipairs(ReplicatedStorage:GetDescendants()) do
     if v:IsA("RemoteEvent") or v:IsA("RemoteFunction") then
@@ -122,7 +126,7 @@ for _, v in ipairs(ReplicatedStorage:GetDescendants()) do
     end
 end
 
--- State variables
+-- States
 local autoStealActive = false
 local instantStealActive = false
 local sortMode = "Highest Value"
@@ -130,13 +134,13 @@ local sortMode = "Highest Value"
 AutoStealBtn.MouseButton1Click:Connect(function()
     autoStealActive = not autoStealActive
     AutoStealBtn.Text = "Auto Steal: " .. (autoStealActive and "ON" or "OFF")
-    AutoStealBtn.BackgroundColor3 = autoStealActive and Color3.fromRGB(30, 190, 70) or Color3.fromRGB(20, 130, 50)
+    AutoStealBtn.BackgroundColor3 = autoStealActive and Color3.fromRGB(30, 175, 70) or Color3.fromRGB(15, 125, 45)
 end)
 
 InstantStealBtn.MouseButton1Click:Connect(function()
     instantStealActive = not instantStealActive
     InstantStealBtn.Text = "Instant Steal: " .. (instantStealActive and "ON" or "OFF")
-    InstantStealBtn.BackgroundColor3 = instantStealActive and Color3.fromRGB(220, 40, 40) or Color3.fromRGB(180, 30, 30)
+    InstantStealBtn.BackgroundColor3 = instantStealActive and Color3.fromRGB(220, 35, 35) or Color3.fromRGB(180, 25, 25)
 end)
 
 SortBtn.MouseButton1Click:Connect(function()
@@ -150,10 +154,9 @@ SortBtn.MouseButton1Click:Connect(function()
     SortBtn.Text = "Sort: " .. sortMode
 end)
 
--- Unified Execution Engine
+-- Execution function
 local function ExecuteSteal(targetObject)
     if not targetObject or not targetObject.Parent then return end
-    
     local char = LocalPlayer.Character
     if not char or not char:FindFirstChild("HumanoidRootPart") then return end
     local hrp = char.HumanoidRootPart
@@ -185,6 +188,7 @@ local function ExecuteSteal(targetObject)
     end
 end
 
+-- Refresh List
 local function RefreshList()
     for _, child in pairs(Scroll:GetChildren()) do
         if child:IsA("Frame") then child:Destroy() end
@@ -219,16 +223,24 @@ local function RefreshList()
     end)
 
     for _, data in ipairs(items) do
+        -- Card Row Container (Exact dark card style with dark border)
         local Card = Instance.new("Frame", Scroll)
-        Card.Size = UDim2.new(1, -5, 0, 72)
-        Card.BackgroundColor3 = Color3.fromRGB(38, 38, 48)
+        Card.Size = UDim2.new(1, -4, 0, 74)
+        Card.BackgroundColor3 = Color3.fromRGB(42, 42, 52)
         Card.BorderSizePixel = 0
-        Instance.new("UICorner", Card).CornerRadius = UDim.new(0, 8)
+        Instance.new("UICorner", Card).CornerRadius = UDim.new(0, 6)
+        
+        local CardStroke = Instance.new("UIStroke", Card)
+        CardStroke.Color = Color3.fromRGB(25, 25, 32)
+        CardStroke.Thickness = 1.5
 
+        -- ViewportFrame for 3D Pet/Egg icon on left
         local Viewport = Instance.new("ViewportFrame", Card)
-        Viewport.Size = UDim2.new(0, 60, 0, 60)
+        Viewport.Size = UDim2.new(0, 62, 0, 62)
         Viewport.Position = UDim2.new(0, 6, 0, 6)
-        Viewport.BackgroundTransparency = 1
+        Viewport.BackgroundColor3 = Color3.fromRGB(20, 20, 26)
+        Viewport.BorderSizePixel = 0
+        Instance.new("UICorner", Viewport).CornerRadius = UDim.new(0, 5)
 
         if data.Object:IsA("Model") then
             local clone = data.Object:Clone()
@@ -243,19 +255,21 @@ local function RefreshList()
             cam.CFrame = CFrame.new(cf.Position + Vector3.new(0, maxDim * 1.2, maxDim * 2), cf.Position)
         end
 
+        -- Pet / Egg Name (Purple/Red bold styling matching reference)
         local NameLabel = Instance.new("TextLabel", Card)
-        NameLabel.Size = UDim2.new(0.5, 0, 0, 24)
-        NameLabel.Position = UDim2.new(0, 75, 0, 8)
+        NameLabel.Size = UDim2.new(0.45, 0, 0, 24)
+        NameLabel.Position = UDim2.new(0, 76, 0, 8)
         NameLabel.BackgroundTransparency = 1
         NameLabel.Text = data.Creature
-        NameLabel.TextColor3 = Color3.fromRGB(200, 110, 255)
+        NameLabel.TextColor3 = Color3.fromRGB(195, 105, 255)
         NameLabel.Font = Enum.Font.SourceSansBold
-        NameLabel.TextSize = 18
+        NameLabel.TextSize = 17
         NameLabel.TextXAlignment = Enum.TextXAlignment.Left
 
+        -- Stats Label (Green value + Multiplier / Weight)
         local StatsLabel = Instance.new("TextLabel", Card)
-        StatsLabel.Size = UDim2.new(0.5, 0, 0, 32)
-        StatsLabel.Position = UDim2.new(0, 75, 0, 30)
+        StatsLabel.Size = UDim2.new(0.45, 0, 0, 32)
+        StatsLabel.Position = UDim2.new(0, 76, 0, 32)
         StatsLabel.BackgroundTransparency = 1
         StatsLabel.Text = string.format("<font color='#00FF88'>%s</font>\nx%.2f • %d Kg", data.ValueStr, data.Multiplier, data.Weight)
         StatsLabel.TextColor3 = Color3.fromRGB(210, 210, 210)
@@ -264,22 +278,38 @@ local function RefreshList()
         StatsLabel.TextSize = 14
         StatsLabel.TextXAlignment = Enum.TextXAlignment.Left
 
+        -- Bright Green Steal Button with Border
         local StealBtn = Instance.new("TextButton", Card)
-        StealBtn.Size = UDim2.new(0, 80, 0, 38)
-        StealBtn.Position = UDim2.new(1, -125, 0, 17)
-        StealBtn.BackgroundColor3 = Color3.fromRGB(35, 190, 75)
+        StealBtn.Size = UDim2.new(0, 85, 0, 42)
+        StealBtn.Position = UDim2.new(1, -128, 0, 16)
+        StealBtn.BackgroundColor3 = Color3.fromRGB(35, 195, 75)
         StealBtn.Text = "Steal"
         StealBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
         StealBtn.Font = Enum.Font.SourceSansBold
-        StealBtn.TextSize = 16
+        StealBtn.TextSize = 18
         Instance.new("UICorner", StealBtn).CornerRadius = UDim.new(0, 6)
+        
+        local StealStroke = Instance.new("UIStroke", StealBtn)
+        StealStroke.Color = Color3.fromRGB(65, 230, 105)
+        StealStroke.Thickness = 1.5
+
+        -- Star / Favorite Button on the right
+        local StarBtn = Instance.new("TextButton", Card)
+        StarBtn.Size = UDim2.new(0, 36, 0, 42)
+        StarBtn.Position = UDim2.new(1, -38, 0, 16)
+        StarBtn.BackgroundColor3 = Color3.fromRGB(60, 60, 75)
+        StarBtn.Text = "⭐"
+        StarBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+        StarBtn.Font = Enum.Font.SourceSans
+        StarBtn.TextSize = 14
+        Instance.new("UICorner", StarBtn).CornerRadius = UDim.new(0, 6)
 
         StealBtn.MouseButton1Click:Connect(function()
             ExecuteSteal(data.Object)
         end)
     end
 
-    Scroll.CanvasSize = UDim2.new(0, 0, 0, #items * 80)
+    Scroll.CanvasSize = UDim2.new(0, 0, 0, #items * 82)
 end
 
 -- Background Automation Loop
