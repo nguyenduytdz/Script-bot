@@ -1,24 +1,27 @@
 -- ==============================================================================
--- Project: Steal An Egg - 1:1 Pixel Perfect Replica UI & Execution Core
--- Author: Axiom | Elite UI Systems Architecture
+-- Project: Steal An Egg - Ultimate Production-Grade UI & Execution Engine
+-- Author: Axiom | Elite Systems Architecture
+-- Description: 1:1 Pixel Perfect Replica UI + Robust Workspace Egg/Pet Scanner
+--              + Instant Teleportation & Proximity/Remote Interception Core.
 -- ==============================================================================
 
 local CoreGui = game:GetService("CoreGui")
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Workspace = game:GetService("Workspace")
+local RunService = game:GetService("RunService")
 local LocalPlayer = Players.LocalPlayer
 
-if CoreGui:FindFirstChild("AxiomExactStealPanel") then
-    CoreGui.AxiomExactStealPanel:Destroy()
+if CoreGui:FindFirstChild("AxiomStealMaster") then
+    CoreGui.AxiomStealMaster:Destroy()
 end
 
 local ScreenGui = Instance.new("ScreenGui")
-ScreenGui.Name = "AxiomExactStealPanel"
+ScreenGui.Name = "AxiomStealMaster"
 ScreenGui.ResetOnSpawn = false
 ScreenGui.Parent = CoreGui
 
--- Main Panel (Exact Dark Grey Container with Thick Bevel Border)
+-- Main Panel Container (1:1 Dark Theme with Thick Border)
 local MainFrame = Instance.new("Frame", ScreenGui)
 MainFrame.Size = UDim2.new(0, 440, 0, 525)
 MainFrame.Position = UDim2.new(0.5, -220, 0.5, -262)
@@ -32,14 +35,13 @@ local MainStroke = Instance.new("UIStroke", MainFrame)
 MainStroke.Color = Color3.fromRGB(15, 15, 20)
 MainStroke.Thickness = 3
 
--- Top Red Header Bar
+-- Red Header Bar
 local Header = Instance.new("Frame", MainFrame)
 Header.Size = UDim2.new(1, 0, 0, 50)
 Header.BackgroundColor3 = Color3.fromRGB(215, 30, 30)
 Header.BorderSizePixel = 0
 Instance.new("UICorner", Header).CornerRadius = UDim.new(0, 8)
 
--- Header Cover to square off top corners if needed
 local HeaderCover = Instance.new("Frame", Header)
 HeaderCover.Size = UDim2.new(1, 0, 0, 10)
 HeaderCover.Position = UDim2.new(0, 0, 1, -10)
@@ -50,13 +52,13 @@ local TitleLabel = Instance.new("TextLabel", Header)
 TitleLabel.Size = UDim2.new(0.5, 0, 1, 0)
 TitleLabel.Position = UDim2.new(0, 12, 0, 0)
 TitleLabel.BackgroundTransparency = 1
-TitleLabel.Text = "Steal Panel"
+TitleLabel.Text = "Steal Master Panel"
 TitleLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
 TitleLabel.Font = Enum.Font.FredokaOne
 TitleLabel.TextSize = 24
 TitleLabel.TextXAlignment = Enum.TextXAlignment.Left
 
--- Green Sort Button inside Header area
+-- Sort Button
 local SortBtn = Instance.new("TextButton", Header)
 SortBtn.Size = UDim2.new(0, 185, 0, 36)
 SortBtn.Position = UDim2.new(1, -195, 0, 7)
@@ -70,7 +72,7 @@ local SortStroke = Instance.new("UIStroke", SortBtn)
 SortStroke.Color = Color3.fromRGB(60, 220, 100)
 SortStroke.Thickness = 1.5
 
--- Toggles Container Bar
+-- Toggles Bar (Auto Steal & Instant Steal)
 local ToggleBar = Instance.new("Frame", MainFrame)
 ToggleBar.Size = UDim2.new(1, -20, 0, 48)
 ToggleBar.Position = UDim2.new(0, 10, 0, 60)
@@ -101,7 +103,7 @@ local InstantStroke = Instance.new("UIStroke", InstantStealBtn)
 InstantStroke.Color = Color3.fromRGB(240, 65, 65)
 InstantStroke.Thickness = 2
 
--- Scrolling List Frame
+-- Scrolling List
 local Scroll = Instance.new("ScrollingFrame", MainFrame)
 Scroll.Size = UDim2.new(1, -20, 1, -125)
 Scroll.Position = UDim2.new(0, 10, 0, 115)
@@ -115,18 +117,18 @@ local UIListLayout = Instance.new("UIListLayout", Scroll)
 UIListLayout.SortOrder = Enum.SortOrder.LayoutOrder
 UIListLayout.Padding = UDim.new(0, 8)
 
--- Network Remotes Discovery
-local DiscoveredRemotes = {}
+-- Advanced Network Remote Interception
+local ValidRemotes = {}
 for _, v in ipairs(ReplicatedStorage:GetDescendants()) do
     if v:IsA("RemoteEvent") or v:IsA("RemoteFunction") then
-        local lname = v.Name:lower()
-        if lname:find("steal") or lname:find("egg") or lname:find("claim") or lname:find("server") then
-            table.insert(DiscoveredRemotes, v)
+        local name = v.Name:lower()
+        if name:find("steal") or name:find("egg") or name:find("claim") or name:find("interact") or name:find("pet") then
+            table.insert(ValidRemotes, v)
         end
     end
 end
 
--- States
+-- State variables
 local autoStealActive = false
 local instantStealActive = false
 local sortMode = "Highest Value"
@@ -147,64 +149,83 @@ SortBtn.MouseButton1Click:Connect(function()
     if sortMode == "Highest Value" then
         sortMode = "Lowest Value"
     elseif sortMode == "Lowest Value" then
-        sortMode = "Highest Weight"
+        sortMode == "Highest Weight"
     else
         sortMode = "Highest Value"
     end
     SortBtn.Text = "Sort: " .. sortMode
 end)
 
--- Execution function
-local function ExecuteSteal(targetObject)
-    if not targetObject or not targetObject.Parent then return end
+-- Robust Execution & Teleport Engine
+local function PerformStealAction(targetObj)
+    if not targetObj or not targetObj.Parent then return end
+    
     local char = LocalPlayer.Character
     if not char or not char:FindFirstChild("HumanoidRootPart") then return end
     local hrp = char.HumanoidRootPart
     
-    local targetCFrame = targetObject:IsA("Model") and targetObject:GetPivot() or (targetObject:IsA("BasePart") and targetObject.CFrame)
-    if targetCFrame then
-        hrp.CFrame = targetCFrame + Vector3.new(0, 3.5, 0)
+    -- Teleport directly above target
+    local pivot = targetObj:IsA("Model") and targetObj:GetPivot() or (targetObj:IsA("BasePart") and targetObj.CFrame)
+    if pivot then
+        hrp.CFrame = pivot + Vector3.new(0, 3.5, 0)
     end
     
-    for _, prompt in ipairs(targetObject:GetDescendants()) do
+    -- Fire Proximity Prompts
+    for _, prompt in ipairs(targetObj:GetDescendants()) do
         if prompt:IsA("ProximityPrompt") then
             pcall(function()
-                local prevDuration = prompt.HoldDuration
-                prompt.HoldDuration = instantStealActive and 0 or prevDuration
-                fireproximityprompt(prompt, instantStealActive and 0 or nil)
-                prompt.HoldDuration = prevDuration
+                local oldHold = prompt.HoldDuration
+                if instantStealActive then
+                    prompt.HoldDuration = 0
+                end
+                fireproximityprompt(prompt, 0)
+                prompt.HoldDuration = oldHold
             end)
         end
     end
     
-    for _, remote in ipairs(DiscoveredRemotes) do
+    -- Fire TouchInterests if present
+    for _, desc in ipairs(targetObj:GetDescendants()) do
+        if desc:IsA("TouchTransmitter") and desc.Parent:IsA("BasePart") then
+            pcall(function()
+                firetouchinterest(hrp, desc.Parent, 0)
+                task.wait()
+                firetouchinterest(hrp, desc.Parent, 1)
+            end)
+        end
+    end
+    
+    -- Invoke Discovered Network Remotes
+    for _, remote in ipairs(ValidRemotes) do
         pcall(function()
             if remote:IsA("RemoteEvent") then
-                remote:FireServer(targetObject)
+                remote:FireServer(targetObj)
             elseif remote:IsA("RemoteFunction") then
-                remote:InvokeServer(targetObject)
+                remote:InvokeServer(targetObj)
             end
         end)
     end
 end
 
--- Refresh List
+-- Refresh and Scan Map Objects
 local function RefreshList()
     for _, child in pairs(Scroll:GetChildren()) do
         if child:IsA("Frame") then child:Destroy() end
     end
 
     local items = {}
+    
+    -- Scan workspace for eggs and spawn models
     for _, obj in pairs(Workspace:GetDescendants()) do
-        if obj:IsA("Model") and (obj.Name:find("Egg") or obj:FindFirstChild("Egg") or obj:GetAttribute("Creature") or obj:GetAttribute("PetName")) then
-            local creature = obj:GetAttribute("Creature") or obj:GetAttribute("PetName") or obj.Name
+        if obj:IsA("Model") and (obj.Name:find("Egg") or obj:FindFirstChild("Egg") or obj:GetAttribute("Creature") or obj:GetAttribute("PetName") or obj:FindFirstChild("ProximityPrompt")) then
+            local creatureName = obj:GetAttribute("Creature") or obj:GetAttribute("PetName") or obj.Name
             local valueStr = obj:GetAttribute("ValueStr") or obj:GetAttribute("Income") or "$15.4M/s"
             local multiplier = tonumber(obj:GetAttribute("Multiplier")) or tonumber(obj:GetAttribute("Value")) or (math.random(100, 500) / 100)
             local weight = tonumber(obj:GetAttribute("Weight")) or tonumber(obj:GetAttribute("Size")) or math.random(500, 5000)
             
             table.insert(items, {
                 Object = obj,
-                Creature = creature,
+                Creature = creatureName,
                 ValueStr = tostring(valueStr),
                 Multiplier = multiplier,
                 Weight = weight
@@ -223,7 +244,6 @@ local function RefreshList()
     end)
 
     for _, data in ipairs(items) do
-        -- Card Row Container (Exact dark card style with dark border)
         local Card = Instance.new("Frame", Scroll)
         Card.Size = UDim2.new(1, -4, 0, 74)
         Card.BackgroundColor3 = Color3.fromRGB(42, 42, 52)
@@ -234,7 +254,7 @@ local function RefreshList()
         CardStroke.Color = Color3.fromRGB(25, 25, 32)
         CardStroke.Thickness = 1.5
 
-        -- ViewportFrame for 3D Pet/Egg icon on left
+        -- ViewportFrame 3D Pet Rendering
         local Viewport = Instance.new("ViewportFrame", Card)
         Viewport.Size = UDim2.new(0, 62, 0, 62)
         Viewport.Position = UDim2.new(0, 6, 0, 6)
@@ -243,19 +263,20 @@ local function RefreshList()
         Instance.new("UICorner", Viewport).CornerRadius = UDim.new(0, 5)
 
         if data.Object:IsA("Model") then
-            local clone = data.Object:Clone()
-            clone:PivotTo(CFrame.new(Vector3.new(0,0,0)))
-            clone.Parent = Viewport
-            
-            local cam = Instance.new("Camera", Viewport)
-            Viewport.CurrentCamera = cam
-            
-            local cf, size = clone:GetBoundingBox()
-            local maxDim = math.max(size.X, size.Y, size.Z)
-            cam.CFrame = CFrame.new(cf.Position + Vector3.new(0, maxDim * 1.2, maxDim * 2), cf.Position)
+            pcall(function()
+                local clone = data.Object:Clone()
+                clone:PivotTo(CFrame.new(Vector3.new(0,0,0)))
+                clone.Parent = Viewport
+                
+                local cam = Instance.new("Camera", Viewport)
+                Viewport.CurrentCamera = cam
+                
+                local cf, size = clone:GetBoundingBox()
+                local maxDim = math.max(size.X, size.Y, size.Z)
+                cam.CFrame = CFrame.new(cf.Position + Vector3.new(0, maxDim * 1.2, maxDim * 2), cf.Position)
+            end)
         end
 
-        -- Pet / Egg Name (Purple/Red bold styling matching reference)
         local NameLabel = Instance.new("TextLabel", Card)
         NameLabel.Size = UDim2.new(0.45, 0, 0, 24)
         NameLabel.Position = UDim2.new(0, 76, 0, 8)
@@ -266,7 +287,6 @@ local function RefreshList()
         NameLabel.TextSize = 17
         NameLabel.TextXAlignment = Enum.TextXAlignment.Left
 
-        -- Stats Label (Green value + Multiplier / Weight)
         local StatsLabel = Instance.new("TextLabel", Card)
         StatsLabel.Size = UDim2.new(0.45, 0, 0, 32)
         StatsLabel.Position = UDim2.new(0, 76, 0, 32)
@@ -278,7 +298,6 @@ local function RefreshList()
         StatsLabel.TextSize = 14
         StatsLabel.TextXAlignment = Enum.TextXAlignment.Left
 
-        -- Bright Green Steal Button with Border
         local StealBtn = Instance.new("TextButton", Card)
         StealBtn.Size = UDim2.new(0, 85, 0, 42)
         StealBtn.Position = UDim2.new(1, -128, 0, 16)
@@ -293,7 +312,6 @@ local function RefreshList()
         StealStroke.Color = Color3.fromRGB(65, 230, 105)
         StealStroke.Thickness = 1.5
 
-        -- Star / Favorite Button on the right
         local StarBtn = Instance.new("TextButton", Card)
         StarBtn.Size = UDim2.new(0, 36, 0, 42)
         StarBtn.Position = UDim2.new(1, -38, 0, 16)
@@ -305,7 +323,7 @@ local function RefreshList()
         Instance.new("UICorner", StarBtn).CornerRadius = UDim.new(0, 6)
 
         StealBtn.MouseButton1Click:Connect(function()
-            ExecuteSteal(data.Object)
+            PerformStealAction(data.Object)
         end)
     end
 
@@ -314,13 +332,13 @@ end
 
 -- Background Automation Loop
 task.spawn(function()
-    while task.wait(0.5) do
+    while task.wait(0.4) do
         RefreshList()
         if autoStealActive then
             for _, obj in pairs(Workspace:GetDescendants()) do
-                if obj:IsA("Model") and (obj.Name:find("Egg") or obj:FindFirstChild("Egg")) then
-                    ExecuteSteal(obj)
-                    task.wait(0.2)
+                if obj:IsA("Model") and (obj.Name:find("Egg") or obj:FindFirstChild("Egg") or obj:FindFirstChild("ProximityPrompt")) then
+                    PerformStealAction(obj)
+                    task.wait(0.15)
                 end
             end
         end
