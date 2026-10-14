@@ -1,12 +1,12 @@
--- [[ BLOX FRUIT AUTO FARM - FIX TWEEN MOVEMENT ]] --
+-- [[ BLOX FRUIT AUTO FARM - FIX LỖI KẸT HỘI THOẠI UI ]] --
 
 local SuccessUI, Fluent = pcall(function()
     return loadstring(game:HttpGet("https://github.com/dawid-scripts/Fluent/releases/latest/download/main.lua"))()
 end)
 
 local Window = Fluent:CreateWindow({
-    Title = "Blox Fruits - Smooth Tween Farm",
-    SubTitle = "Fixed Standing Issue",
+    Title = "Blox Fruits - Fix Dialogue Freeze",
+    SubTitle = "Auto Bypass Dialogue GUI",
     TabWidth = 160,
     Size = UDim2.fromOffset(500, 320),
     Theme = "Dark",
@@ -24,7 +24,22 @@ local TweenService = game:GetService("TweenService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local CommF = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("CommF_")
 
--- Hàm Di Chuyển Trượt Mượt (Tween) Giống Các Bản Hub
+-- Hàm tự động ẩn/đóng bảng hội thoại NPC của Blox Fruits
+local function CloseDialogueUI()
+    pcall(function()
+        local mainGui = LocalPlayer.PlayerGui:FindFirstChild("Main")
+        if mainGui then
+            if mainGui:FindFirstChild("Dialogue") then
+                mainGui.Dialogue.Visible = false
+            end
+            if mainGui:FindFirstChild("Interacted") then
+                mainGui.Interacted.Value = false
+            end
+        end
+    end)
+end
+
+-- Hàm di chuyển trượt mượt (Tween)
 local function TweenTo(targetCFrame, speed)
     local char = LocalPlayer.Character
     if not char or not char:FindFirstChild("HumanoidRootPart") then return end
@@ -33,7 +48,6 @@ local function TweenTo(targetCFrame, speed)
     local distance = (hrp.Position - targetCFrame.Position).Magnitude
     local time = distance / (speed or 250)
     
-    -- Tắt va chạm để không bị kẹt địa hình
     for _, part in pairs(char:GetChildren()) do
         if part:IsA("BasePart") then
             part.CanCollide = false
@@ -46,7 +60,7 @@ local function TweenTo(targetCFrame, speed)
     return tween
 end
 
--- Tự động lấy vũ khí
+-- Tự động cầm vũ khí
 local function EquipWeapon()
     local char = LocalPlayer.Character
     if char and not char:FindFirstChildOfClass("Tool") then
@@ -62,7 +76,7 @@ local function EquipWeapon()
     end
 end
 
--- Vòng lặp Farm
+-- Vòng lặp Farm chính
 task.spawn(function()
     while task.wait(0.1) do
         if getgenv().MasterAutoFarm then
@@ -77,18 +91,22 @@ task.spawn(function()
                 -- Farm Bandit (Level 1 - 14)
                 if level < 15 then
                     if not isQuestActive then
-                        -- Bay trượt đến NPC nhận Quest
-                        if (hrp.Position - Vector3.new(1059, 16, 1549)).Magnitude > 15 then
+                        -- 1. Trượt tới NPC
+                        if (hrp.Position - Vector3.new(1059, 16, 1549)).Magnitude > 12 then
                             TweenTo(CFrame.new(1059, 16, 1549), 300)
-                            task.wait(0.5)
+                            task.wait(0.3)
                         end
-                        CommF:InvokeServer("StartQuest", "BanditQuest1", 1)
-                        task.wait(0.8) -- Đợi game đóng hội thoại NPC
-                    else
-                        -- Đã nhận Quest -> Trượt thẳng ra bãi quái Bandit
-                        EquipWeapon()
-                        local targetMob = nil
                         
+                        -- 2. Gửi lệnh nhận Quest & Đóng bảng thoại ngay lập tức
+                        CommF:InvokeServer("StartQuest", "BanditQuest1", 1)
+                        CloseDialogueUI()
+                        task.wait(0.3)
+                    else
+                        -- 3. Đã nhận Quest -> Ép đóng UI lần nữa & Trượt thẳng ra bãi Bandit
+                        CloseDialogueUI()
+                        EquipWeapon()
+                        
+                        local targetMob = nil
                         for _, v in pairs(workspace.Enemies:GetChildren()) do
                             if (v.Name == "Bandit" or string.find(v.Name, "Bandit")) and v:FindFirstChild("HumanoidRootPart") and v:FindFirstChildOfClass("Humanoid").Health > 0 then
                                 targetMob = v
@@ -97,9 +115,8 @@ task.spawn(function()
                         end
                         
                         if targetMob and targetMob:FindFirstChild("HumanoidRootPart") then
-                            -- Bay đến trên đầu quái
-                            local targetPos = targetMob.HumanoidRootPart.CFrame + Vector3.new(0, getgenv().SafeHeight, 0)
-                            hrp.CFrame = targetPos
+                            -- Bay lên đầu quái
+                            hrp.CFrame = targetMob.HumanoidRootPart.CFrame + Vector3.new(0, getgenv().SafeHeight, 0)
                             
                             -- Gom quái & Đánh
                             targetMob.HumanoidRootPart.CFrame = hrp.CFrame - Vector3.new(0, getgenv().SafeHeight, 0)
@@ -108,7 +125,7 @@ task.spawn(function()
                             local tool = char:FindFirstChildOfClass("Tool")
                             if tool then tool:Activate() end
                         else
-                            -- Nếu chưa thấy quái -> Trượt mượt ra bãi Bandit ngồi chờ
+                            -- Nếu chưa có quái -> Trượt mượt ra bãi Bandit ngồi chờ
                             TweenTo(CFrame.new(1145, 20, 1634), 250)
                         end
                     end
@@ -119,7 +136,7 @@ task.spawn(function()
 end)
 
 -- Giao diện Toggle
-local Toggle = Tabs.Main:AddToggle("MasterAutoFarmToggle", { Title = "🚀 BẬT AUTO FARM (TWEEN MOVEMENT)", Default = getgenv().MasterAutoFarm })
+local Toggle = Tabs.Main:AddToggle("MasterAutoFarmToggle", { Title = "🚀 BẬT AUTO FARM (FIX LỖI KẸT UI)", Default = getgenv().MasterAutoFarm })
 Toggle:OnChanged(function(Value)
     getgenv().MasterAutoFarm = Value
 end)
