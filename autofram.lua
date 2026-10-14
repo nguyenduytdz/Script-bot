@@ -1,12 +1,12 @@
--- [[ BLOX FRUIT - CUSTOM SCRIPT (FIXED LEVEL 1-29) ]] --
+-- [[ AUTO FARM BLOX FRUIT - FIXED FULL BANANA ENGINE ]] --
 
 local SuccessUI, Fluent = pcall(function()
     return loadstring(game:HttpGet("https://github.com/dawid-scripts/Fluent/releases/latest/download/main.lua"))()
 end)
 
 local Window = Fluent:CreateWindow({
-    Title = "Blox Fruits - Pro Custom Farm",
-    SubTitle = "Fixed Level 1-29 Logic",
+    Title = "Blox Fruits - Fixed Auto Farm",
+    SubTitle = "Auto Weapon + Quest Engine",
     TabWidth = 160,
     Size = UDim2.fromOffset(520, 360),
     Theme = "Dark",
@@ -16,6 +16,7 @@ local Window = Fluent:CreateWindow({
 local Tabs = { Main = Window:AddTab({ Title = "Auto Farm", Icon = "home" }) }
 
 getgenv().AutoFarmEnabled = getgenv().AutoFarmEnabled or false
+getgenv().SelectWeapon = "Melee" -- Mặc định dùng Melee (Võ)
 getgenv().SafeHeight = 15
 
 local Players = game:GetService("Players")
@@ -25,32 +26,7 @@ local RunService = game:GetService("RunService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local CommF = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("CommF_")
 
--- [[ 1. METAMETHOD HOOK BYPASS - CHẶN SERVER KHÓA CHUYỂN ĐỘNG ]] --
-local rawmetatable = getrawmetatable(game)
-local oldNamecall = rawmetatable.__namecall
-setreadonly(rawmetatable, false)
-
-rawmetatable.__namecall = newcclosure(function(self, ...)
-    local method = getnamecallmethod()
-    local args = {...}
-    
-    if tostring(method) == "FireServer" or tostring(method) == "InvokeServer" then
-        if self.Name == "CommF_" and args[1] == "StartQuest" then
-            task.spawn(function()
-                task.wait(0.05)
-                pcall(function()
-                    if LocalPlayer.PlayerGui.Main:FindFirstChild("Dialogue") then
-                        LocalPlayer.PlayerGui.Main.Dialogue.Visible = false
-                    end
-                end)
-            end)
-        end
-    end
-    return oldNamecall(self, ...)
-end)
-setreadonly(rawmetatable, true)
-
--- [[ 2. NOCLIP & MOVEMENT ENGINE ]] --
+-- Tắt va chạm (Noclip) liên tục
 local NoclipConnection = nil
 local function EnableNoclip()
     if not NoclipConnection then
@@ -73,6 +49,7 @@ local function DisableNoclip()
     end
 end
 
+-- Triệt tiêu trọng lực
 local function ApplyBodyVelocity(hrp)
     if not hrp:FindFirstChild("BananaVelocity") then
         local bv = Instance.new("BodyVelocity")
@@ -103,13 +80,19 @@ local function BananaTween(targetCFrame, speed)
     return currentTween
 end
 
-local function EquipWeapon()
+-- Tự động cầm đúng vũ khí đã chọn
+local function EquipSelectedWeapon()
     local char = LocalPlayer.Character
-    if char and not char:FindFirstChildOfClass("Tool") then
+    if not char then return end
+    
+    local weaponType = getgenv().SelectWeapon
+    local currentTool = char:FindFirstChildOfClass("Tool")
+    
+    if not currentTool or (currentTool and currentTool.ToolTip ~= weaponType) then
         local backpack = LocalPlayer:FindFirstChild("Backpack")
         if backpack then
             for _, tool in pairs(backpack:GetChildren()) do
-                if tool:IsA("Tool") and (tool.ToolTip == "Melee" or tool.ToolTip == "Blox Fruit" or tool.ToolTip == "Sword") then
+                if tool:IsA("Tool") and (tool.ToolTip == weaponType or string.find(tool.Name, weaponType)) then
                     char.Humanoid:EquipTool(tool)
                     break
                 end
@@ -118,7 +101,7 @@ local function EquipWeapon()
     end
 end
 
--- [[ 3. VÒNG LẶP AUTO FARM CHÍNH (ĐÃ THÊM MỐC LEVEL 15+) ]] --
+-- Vòng lặp Farm chính
 task.spawn(function()
     while task.wait(0.05) do
         if getgenv().AutoFarmEnabled then
@@ -132,7 +115,7 @@ task.spawn(function()
                 
                 local questName, questLevel, npcPos, mobName, mobSpawnPos
                 
-                -- Phân chia nhiệm vụ theo Cấp độ
+                -- Phân chia bãi theo cấp độ chuẩn
                 if level >= 1 and level <= 14 then
                     questName, questLevel = "BanditQuest1", 1
                     npcPos = CFrame.new(1059, 16, 1549)
@@ -147,18 +130,21 @@ task.spawn(function()
                 
                 if questName then
                     if not isQuestActive then
+                        -- Chưa có Quest -> Bay đến NPC nhận
                         if (hrp.Position - npcPos.Position).Magnitude > 12 then
                             BananaTween(npcPos, 300)
                         else
                             if currentTween then currentTween:Cancel() end
                             CommF:InvokeServer("StartQuest", questName, questLevel)
                             
-                            -- Đẩy vị trí đệm ra xa NPC để nhận nhiệm vụ thành công
+                            -- Đẩy nhẹ CFrame ra khỏi NPC để không bị gank kẹt thoại
                             hrp.CFrame = mobSpawnPos
-                            task.wait(0.1)
+                            task.wait(0.15)
                         end
                     else
-                        EquipWeapon()
+                        -- Đã có Quest -> Cầm vũ khí & Bay đánh quái
+                        EquipSelectedWeapon()
+                        
                         local targetMob = nil
                         for _, v in pairs(workspace.Enemies:GetChildren()) do
                             if (v.Name == mobName or string.find(v.Name, mobName)) and v:FindFirstChild("HumanoidRootPart") and v:FindFirstChildOfClass("Humanoid").Health > 0 then
@@ -175,12 +161,14 @@ task.spawn(function()
                             local safePos = targetMob.HumanoidRootPart.CFrame + Vector3.new(0, getgenv().SafeHeight, 0)
                             hrp.CFrame = safePos
                             
+                            -- Gom quái & Đánh
                             targetMob.HumanoidRootPart.CFrame = safePos - Vector3.new(0, getgenv().SafeHeight, 0)
                             targetMob.HumanoidRootPart.CanCollide = false
                             
                             local tool = char:FindFirstChildOfClass("Tool")
                             if tool then tool:Activate() end
                         else
+                            -- Chưa thấy quái -> Đứng chờ ở bãi quái
                             BananaTween(mobSpawnPos, 280)
                         end
                     end
@@ -193,8 +181,17 @@ task.spawn(function()
     end
 end)
 
--- Toggle Menu
-local Toggle = Tabs.Main:AddToggle("AutoFarmToggle", { Title = "🚀 BẬT AUTO FARM (FIXED LVL 15)", Default = getgenv().AutoFarmEnabled })
+-- Tạo GUI điều khiển
+local WeaponDropdown = Tabs.Main:AddDropdown("WeaponSelect", {
+    Title = "Chọn vũ khí đánh",
+    Values = {"Melee", "Sword", "Blox Fruit"},
+    Default = "Melee",
+    Callback = function(Value)
+        getgenv().SelectWeapon = Value
+    end
+})
+
+local Toggle = Tabs.Main:AddToggle("AutoFarmToggle", { Title = "🚀 BẬT AUTO FARM LEVEL", Default = getgenv().AutoFarmEnabled })
 Toggle:OnChanged(function(Value)
     getgenv().AutoFarmEnabled = Value
 end)
