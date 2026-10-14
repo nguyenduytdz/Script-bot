@@ -1,4 +1,4 @@
--- [[ BLOX FRUIT AUTO FARM, STORE & HOP (FIXED JOIN DELAY) ]] --
+-- [[ BLOX FRUIT AUTO FARM, STORE & HOP - NO COMMON FRUITS ]] --
 
 local SuccessUI, Fluent = pcall(function()
     return loadstring(game:HttpGet("https://github.com/dawid-scripts/Fluent/releases/latest/download/main.lua"))()
@@ -7,8 +7,8 @@ end)
 local Window
 if SuccessUI and Fluent then
     Window = Fluent:CreateWindow({
-        Title = "Blox Fruits - Auto Fruit & Hop",
-        SubTitle = "Fixed Server Load Delay",
+        Title = "Blox Fruits - Auto Hop (No Common)",
+        SubTitle = "Bỏ Trái Rác (Rocket, Spin...)",
         TabWidth = 160,
         Size = UDim2.fromOffset(550, 380),
         Theme = "Dark",
@@ -23,10 +23,24 @@ end
 
 getgenv().AutoHopFruit = getgenv().AutoHopFruit or false
 
--- Biến kiểm tra để đảm bảo vừa vào server mới sẽ đứng đợi load đồ xong mới quét
+-- Danh sách các trái RÁC (Common) bị cấm nhặt
+local CommonBlacklist = {
+    "Rocket", "Spin", "Chop", "Spring", "Bomb", "Smoke", "Spike"
+}
+
+-- Kiểm tra xem trái có phải trái rác không
+local function IsCommonFruit(fruitName)
+    for _, name in ipairs(CommonBlacklist) do
+        if fruitName == name or string.find(fruitName, name) then
+            return true
+        end
+    end
+    return false
+end
+
 local HasLoadedServer = false
 
--- Hàm tìm Trái Ác Quỷ
+-- Hàm tìm Trái Ác Quỷ (Loại trừ trái rác và trái người chơi đang cầm)
 local function GetFruit()
     for _, v in pairs(workspace:GetDescendants()) do
         if v:IsA("Tool") and v:FindFirstChild("Handle") then
@@ -35,7 +49,10 @@ local function GetFruit()
             local isBackpack = parent and parent:IsA("Backpack")
             
             if not isPlayerChar and not isBackpack then
-                return v
+                -- BỎ QUA TRÁI RÁC!
+                if not IsCommonFruit(v.Name) then
+                    return v
+                end
             end
         end
     end
@@ -67,7 +84,7 @@ local function AutoStoreFruits()
     return storedSuccessfully
 end
 
--- Hàm chuyển Server thông minh & giữ trạng thái
+-- Hàm chuyển Server
 local function ServerHop()
     local TeleportService = game:GetService("TeleportService")
     local HttpService = game:GetService("HttpService")
@@ -95,18 +112,17 @@ local function ServerHop()
     end
 end
 
--- Đánh dấu trạng thái vừa vào game
+-- Đứng chờ 4s đầu khi vừa đổi server
 task.spawn(function()
     repeat task.wait() until game:IsLoaded()
-    task.wait(4) -- Đứng chờ 4 giây đầu tiên khi vừa vào server để map và đồ đạc load xong hoàn toàn
+    task.wait(4)
     HasLoadedServer = true
 end)
 
--- Vòng lặp chính xử lý
+-- Vòng lặp chính
 task.spawn(function()
     while task.wait(1) do
         if getgenv().AutoHopFruit then
-            -- Nếu chưa load xong server thì chưa làm gì cả, đứng đợi cho an toàn
             if not HasLoadedServer then continue end
             
             local player = game.Players.LocalPlayer
@@ -118,11 +134,10 @@ task.spawn(function()
             if fruit and hrp and fruit:FindFirstChild("Handle") then
                 local handle = fruit.Handle
                 
-                -- 1. Dịch chuyển tới trái ngay lập tức
+                -- Bay tới nhặt trái xịn
                 hrp.CFrame = handle.CFrame + Vector3.new(0, 3, 0)
                 task.wait(0.5)
                 
-                -- 2. Ép nhặt
                 pcall(function()
                     firetouchinterest(hrp, handle, 0)
                     firetouchinterest(hrp, handle, 1)
@@ -130,7 +145,7 @@ task.spawn(function()
                 
                 task.wait(2)
                 
-                -- 3. Cất vào kho
+                -- Cất kho
                 local stored = false
                 local attempts = 0
                 repeat
@@ -139,19 +154,17 @@ task.spawn(function()
                     task.wait(0.5)
                 until stored or attempts > 5
                 
-                -- 4. Cất xong mới hop sang server mới
+                -- Cất xong hop tiếp
                 task.wait(1)
-                HasLoadedServer = false -- Reset lại cờ chờ cho server tiếp theo
+                HasLoadedServer = false
                 ServerHop()
                 task.wait(10)
             else
-                -- Đứng lại ở server này kiểm tra kỹ trong 4 giây, nếu không có trái mới cho phép Hop
-                task.wait(4)
-                if not GetFruit() then
-                    HasLoadedServer = false
-                    ServerHop()
-                    task.wait(8)
-                end
+                -- Thấy trái rác hoặc không có trái -> Hop server ngay!
+                task.wait(2)
+                HasLoadedServer = false
+                ServerHop()
+                task.wait(8)
             end
         end
     end
@@ -159,11 +172,11 @@ end)
 
 -- Giao diện Menu
 if Window and Tabs.Main then
-    local Toggle = Tabs.Main:AddToggle("AutoFruitHop", { Title = "Auto Nhặt Mọi Trái & Hop Server", Default = getgenv().AutoHopFruit })
+    local Toggle = Tabs.Main:AddToggle("AutoFruitHop", { Title = "Auto Nhặt Trái Xịn (Bỏ Rocket, Spin...) & Hop", Default = getgenv().AutoHopFruit })
     Toggle:OnChanged(function(Value)
         getgenv().AutoHopFruit = Value
         if Value then
-            Fluent:Notify({ Title = "Blox Fruits", Content = "Đã BẬT! Sẵn sàng săn trái.", Duration = 3 })
+            Fluent:Notify({ Title = "Blox Fruits", Content = "Đã BẬT! Bỏ qua toàn bộ trái rác Common.", Duration = 3 })
         else
             Fluent:Notify({ Title = "Blox Fruits", Content = "Đã TẮT!", Duration = 3 })
         end
