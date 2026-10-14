@@ -1,12 +1,12 @@
--- [[ BLOX FRUIT - FULL SEA 1 AUTO FARM ENGINE ]] --
+-- [[ BLOX FRUIT - FIXED RUBBERBAND & AUTO ATTACK ENGINE ]] --
 
 local SuccessUI, Fluent = pcall(function()
     return loadstring(game:HttpGet("https://github.com/dawid-scripts/Fluent/releases/latest/download/main.lua"))()
 end)
 
 local Window = Fluent:CreateWindow({
-    Title = "Blox Fruits - Full Sea 1 Engine",
-    SubTitle = "Fixed Level 1 - 700+",
+    Title = "Blox Fruits - Pro Farm Engine",
+    SubTitle = "Fixed Rubberband & Auto Attack",
     TabWidth = 160,
     Size = UDim2.fromOffset(520, 360),
     Theme = "Dark",
@@ -23,18 +23,38 @@ local Players = game:GetService("Players")
 local LocalPlayer = Players.LocalPlayer
 local TweenService = game:GetService("TweenService")
 local RunService = game:GetService("RunService")
+local VirtualUser = game:GetService("VirtualUser")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local CommF = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("CommF_")
 
--- [[ NOCLIP & ANTI-GRAVITY ENGINE ]] --
-local NoclipConnection = nil
-local function EnableNoclip()
-    if not NoclipConnection then
-        NoclipConnection = RunService.Stepped:Connect(function()
+-- [[ 1. GIẢ LẬP ĐÁNH LIÊN TỤC (PREVENT AFK & AUTO ATTACK) ]] --
+LocalPlayer.Idled:Connect(function()
+    VirtualUser:Button2Down(Vector2.new(0, 0), workspace.CurrentCamera.CFrame)
+    task.wait(1)
+    VirtualUser:Button2Up(Vector2.new(0, 0), workspace.CurrentCamera.CFrame)
+end)
+
+-- [[ 2. NOCLIP & KHÔNG TRỌNG LỰC CHUẨN BANANA HUB ]] --
+local SteppedConnection = nil
+local function StartNoclipEngine()
+    if not SteppedConnection then
+        SteppedConnection = RunService.Stepped:Connect(function()
             if getgenv().AutoFarmEnabled and LocalPlayer.Character then
                 for _, part in pairs(LocalPlayer.Character:GetChildren()) do
                     if part:IsA("BasePart") then
                         part.CanCollide = false
+                    end
+                end
+                
+                local hrp = LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
+                if hrp then
+                    local bv = hrp:FindFirstChild("FarmVelocity")
+                    if not bv then
+                        bv = Instance.new("BodyVelocity")
+                        bv.Name = "FarmVelocity"
+                        bv.Velocity = Vector3.new(0, 0, 0)
+                        bv.MaxForce = Vector3.new(math.huge, math.huge, math.huge)
+                        bv.Parent = hrp
                     end
                 end
             end
@@ -42,35 +62,34 @@ local function EnableNoclip()
     end
 end
 
-local function DisableNoclip()
-    if NoclipConnection then
-        NoclipConnection:Disconnect()
-        NoclipConnection = nil
+local function StopNoclipEngine()
+    if SteppedConnection then
+        SteppedConnection:Disconnect()
+        SteppedConnection = nil
+    end
+    if LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
+        local bv = LocalPlayer.Character.HumanoidRootPart:FindFirstChild("FarmVelocity")
+        if bv then bv:Destroy() end
     end
 end
 
-local function ApplyBodyVelocity(hrp)
-    if not hrp:FindFirstChild("FarmVelocity") then
-        local bv = Instance.new("BodyVelocity")
-        bv.Name = "FarmVelocity"
-        bv.Velocity = Vector3.new(0, 0, 0)
-        bv.MaxForce = Vector3.new(math.huge, math.huge, math.huge)
-        bv.Parent = hrp
-    end
-end
-
+-- [[ 3. TWEEN DI CHUYỂN KHÔNG BỊ GIẬT LÙI ]] --
 local currentTween = nil
-local function SmoothTween(targetCFrame, speed)
+local function SmoothMove(targetCFrame, speed)
     local char = LocalPlayer.Character
     if not char or not char:FindFirstChild("HumanoidRootPart") then return end
     local hrp = char.HumanoidRootPart
     
-    ApplyBodyVelocity(hrp)
-    EnableNoclip()
+    StartNoclipEngine()
     
     local distance = (hrp.Position - targetCFrame.Position).Magnitude
-    local duration = distance / (speed or 300)
+    if distance < 8 then
+        if currentTween then currentTween:Cancel() currentTween = nil end
+        hrp.CFrame = targetCFrame
+        return
+    end
     
+    local duration = distance / (speed or 300)
     if currentTween then currentTween:Cancel() end
     
     local tweenInfo = TweenInfo.new(duration, Enum.EasingStyle.Linear)
@@ -96,7 +115,7 @@ local function EquipWeapon()
     end
 end
 
--- [[ BẢNG DỮ LIỆU ALL ĐẢO SEA 1 ]] --
+-- [[ 4. BẢNG DỮ LIỆU CẤP ĐỘ FULL SEA 1 ]] --
 local function GetQuestData()
     local level = LocalPlayer.Data.Level.Value
     
@@ -138,9 +157,9 @@ local function GetQuestData()
     return nil
 end
 
--- [[ VÒNG LẶP CHÍNH ]] --
+-- [[ 5. VÒNG LẶP CHÍNH CÓ KIỂM SOÁT TỐC ĐỘ ]] --
 task.spawn(function()
-    while task.wait(0.05) do
+    while task.wait(0.1) do
         if getgenv().AutoFarmEnabled then
             pcall(function()
                 local char = LocalPlayer.Character
@@ -153,16 +172,18 @@ task.spawn(function()
                 
                 if questName then
                     if not isQuestActive then
+                        -- Bay từ từ tới NPC nhận Quest
                         if (hrp.Position - npcPos.Position).Magnitude > 12 then
-                            SmoothTween(npcPos, 300)
+                            SmoothMove(npcPos, 300)
                         else
-                            if currentTween then currentTween:Cancel() end
+                            if currentTween then currentTween:Cancel() currentTween = nil end
                             CommF:InvokeServer("StartQuest", questName, questLevel)
-                            hrp.CFrame = mobSpawnPos
-                            task.wait(0.15)
+                            task.wait(0.2)
                         end
                     else
+                        -- Đã có Quest -> Bay tới bãi quái & Đánh
                         EquipWeapon()
+                        
                         local targetMob = nil
                         for _, v in pairs(workspace.Enemies:GetChildren()) do
                             if (v.Name == mobName or string.find(v.Name, mobName)) and v:FindFirstChild("HumanoidRootPart") and v:FindFirstChildOfClass("Humanoid").Health > 0 then
@@ -172,27 +193,36 @@ task.spawn(function()
                         end
                         
                         if targetMob and targetMob:FindFirstChild("HumanoidRootPart") then
-                            ApplyBodyVelocity(hrp)
-                            EnableNoclip()
-                            if currentTween then currentTween:Cancel() end
+                            StartNoclipEngine()
                             
-                            local safePos = targetMob.HumanoidRootPart.CFrame + Vector3.new(0, getgenv().SafeHeight, 0)
-                            hrp.CFrame = safePos
+                            local safePos = targetMob.HumanoidRootPart.CFrame * CFrame.new(0, getgenv().SafeHeight, 0)
                             
-                            targetMob.HumanoidRootPart.CFrame = safePos - Vector3.new(0, getgenv().SafeHeight, 0)
-                            targetMob.HumanoidRootPart.CanCollide = false
-                            
-                            local tool = char:FindFirstChildOfClass("Tool")
-                            if tool then tool:Activate() end
+                            -- Nếu cách xa quái thì bay lại gần, nếu đã gần thì khóa vị trí lơ lửng
+                            if (hrp.Position - safePos.Position).Magnitude > 10 then
+                                SmoothMove(safePos, 320)
+                            else
+                                if currentTween then currentTween:Cancel() currentTween = nil end
+                                hrp.CFrame = safePos
+                                
+                                -- Gom quái
+                                targetMob.HumanoidRootPart.CFrame = safePos * CFrame.new(0, -getgenv().SafeHeight, 0)
+                                targetMob.HumanoidRootPart.CanCollide = false
+                                
+                                -- Kích hoạt đòn đánh (Virtual Click)
+                                VirtualUser:Button1Down(Vector2.new(0, 0), workspace.CurrentCamera.CFrame)
+                                local tool = char:FindFirstChildOfClass("Tool")
+                                if tool then tool:Activate() end
+                            end
                         else
-                            SmoothTween(mobSpawnPos, 280)
+                            -- Nếu chưa có quái -> Bay lơ lửng ở bãi quái chờ quái hồi sinh
+                            SmoothMove(mobSpawnPos * CFrame.new(0, getgenv().SafeHeight, 0), 280)
                         end
                     end
                 end
             end)
         else
-            DisableNoclip()
-            if currentTween then currentTween:Cancel() end
+            StopNoclipEngine()
+            if currentTween then currentTween:Cancel() currentTween = nil end
         end
     end
 end)
@@ -205,7 +235,7 @@ local WeaponDropdown = Tabs.Main:AddDropdown("WeaponSelect", {
     Callback = function(Value) getgenv().SelectWeapon = Value end
 })
 
-local Toggle = Tabs.Main:AddToggle("AutoFarmToggle", { Title = "🚀 BẬT AUTO FARM FULL SEA 1", Default = getgenv().AutoFarmEnabled })
+local Toggle = Tabs.Main:AddToggle("AutoFarmToggle", { Title = "🚀 BẬT AUTO FARM FIXED", Default = getgenv().AutoFarmEnabled })
 Toggle:OnChanged(function(Value) getgenv().AutoFarmEnabled = Value end)
 
 Window:SelectTab(1)
