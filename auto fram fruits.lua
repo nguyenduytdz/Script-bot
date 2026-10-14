@@ -1,25 +1,37 @@
--- [[ BLOX FRUIT AUTO FARM, STORE & PERSISTENT HOP MENU ]] --
+-- [[ BLOX FRUIT AUTO FARM, STORE & PERSISTENT HOP MENU (FINAL FIXED) ]] --
 
 local Library = loadstring(game:HttpGet("https://raw.githubusercontent.com/xHeptc/Kavo-UI-Library/main/source.lua"))()
 local Window = Library.CreateLib("Blox Fruits - Auto Hop & Store Fruit", "DarkTheme")
 
--- Sử dụng getgenv() để lưu trạng thái xuyên suốt các Server khi Teleport
 getgenv().AutoHopFruit = getgenv().AutoHopFruit or false
 
 local MainTab = Window:NewTab("Main Menu")
 local MainSection = MainTab:NewSection("Auto Farm Fruit")
 
--- Hàm tìm Trái Ác Quỷ trong Workspace
+-- Hàm tìm Trái Ác Quỷ sâu bên trong Workspace (Quét toàn bộ Map)
 local function GetFruit()
-    for _, v in pairs(workspace:GetChildren()) do
-        if v:IsA("Tool") and string.find(v.Name, "Fruit") then
-            return v
+    for _, v in pairs(workspace:GetDescendants()) do
+        if (v:IsA("Tool") or v:IsA("Model")) and (string.find(v.Name, "Fruit") or v.Name == "Fruit ") then
+            -- Đảm bảo không lấy nhầm item đang nằm trên người người chơi khác
+            local playerParent = game.Players:GetPlayerFromCharacter(v.Parent)
+            local humanoidParent = v.Parent and v.Parent:FindFirstChildOfClass("Humanoid")
+            
+            if not playerParent and not humanoidParent then
+                if v:IsA("Tool") and v:FindFirstChild("Handle") then
+                    return v
+                elseif v:IsA("Model") then
+                    local part = v:FindFirstChild("Handle") or v.PrimaryPart or v:FindFirstChildOfClass("BasePart")
+                    if part then
+                        return v
+                    end
+                end
+            end
         end
     end
     return nil
 end
 
--- Hàm cất trái vào kho và trả về kết quả thành công
+-- Hàm cất trái vào kho
 local function AutoStoreFruits()
     local player = game.Players.LocalPlayer
     local remote = game:GetService("ReplicatedStorage"):FindFirstChild("Remotes") and game:GetService("ReplicatedStorage").Remotes:FindFirstChild("CommF_")
@@ -31,35 +43,32 @@ local function AutoStoreFruits()
     local function checkAndStore(container)
         if not container then return end
         for _, item in pairs(container:GetChildren()) do
-            if item:IsA("Tool") and string.find(item.Name, "Fruit") then
+            if item:IsA("Tool") and (string.find(item.Name, "Fruit") or item.Name == "Fruit ") then
                 pcall(function()
                     remote:InvokeServer("StoreFruit", item)
                 end)
                 storedSuccessfully = true
-                task.wait(1)
+                task.wait(0.5)
             end
         end
     end
     
-    -- Kiểm tra trong Balo và trên Nhân vật
     checkAndStore(player:FindFirstChild("Backpack"))
     checkAndStore(player.Character)
     
     return storedSuccessfully
 end
 
--- Hàm Server Hop kèm theo lệnh tự động chạy lại script ở server mới (Queue on Teleport)
+-- Hàm Server Hop kèm duy trì trạng thái
 local function ServerHop()
     local TeleportService = game:GetService("TeleportService")
     local HttpService = game:GetService("HttpService")
     local PlaceId = game.PlaceId
     
-    -- Tự động lưu trạng thái bật script cho Server tiếp theo
     local queuetype = queue_on_teleport or (syn and syn.queue_on_teleport)
     if queuetype and getgenv().AutoHopFruit then
         queuetype([[
             getgenv().AutoHopFruit = true
-            -- Script sẽ tự động chạy lại mã nguồn này ở server tiếp theo
             loadstring(game:HttpGet("ĐƯỜNG_LINK_SCRIPT_CỦA_BẠN"))()
         ]])
     end
@@ -78,7 +87,7 @@ local function ServerHop()
     end
 end
 
--- Vòng lặp chính với logic tuần tự nghiêm ngặt
+-- Vòng lặp xử lý chính
 task.spawn(function()
     while task.wait(1) do
         if getgenv().AutoHopFruit then
@@ -86,33 +95,37 @@ task.spawn(function()
             local hrp = game.Players.LocalPlayer.Character and game.Players.LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
             
             if fruit and hrp then
-                -- 1. Bay/Dịch chuyển đến vị trí trái ác quỷ
-                if fruit:FindFirstChild("Handle") then
-                    hrp.CFrame = fruit.Handle.CFrame
-                else
-                    hrp.CFrame = fruit:GetModelCFrame()
+                -- Lấy phần cơ sở để bay đến chính xác vị trí trái
+                local targetPart = nil
+                if fruit:IsA("Tool") then
+                    targetPart = fruit:FindFirstChild("Handle")
+                elseif fruit:IsA("Model") then
+                    targetPart = fruit:FindFirstChild("Handle") or fruit.PrimaryPart or fruit:FindFirstChildOfClass("BasePart")
                 end
                 
-                -- Đợi game xác nhận nhặt trái vào balo
-                task.wait(1.5)
+                if targetPart then
+                    -- Dịch chuyển ngay lập tức tới trái (cộng thêm chút độ cao để nhận diện va chạm tốt hơn)
+                    hrp.CFrame = targetPart.CFrame + Vector3.new(0, 3, 0)
+                end
                 
-                -- 2. Tiến hành cất trái vào kho (Lặp lại cho đến khi cất thành công hoàn toàn)
+                -- Đợi game xác nhận nhặt vào balo
+                task.wait(2)
+                
+                -- Tiến hành cất vào kho
                 local stored = false
                 local attempts = 0
                 repeat
                     stored = AutoStoreFruits()
                     attempts = attempts + 1
                     task.wait(0.5)
-                until stored or attempts > 6
+                until stored or attempts > 5
                 
-                -- 3. Đảm bảo đã lưu xong xuôi mới gọi lệnh chuyển sang Server khác
-                if stored then
-                    task.wait(1)
-                    ServerHop()
-                    task.wait(10)
-                end
+                -- Cất xong xuôi mới chuyển Server khác
+                task.wait(1)
+                ServerHop()
+                task.wait(10)
             else
-                -- Không có trái trong server -> Lập tức Hop sang Server khác tìm tiếp
+                -- Không tìm thấy trái trong map -> Chuyển sang Server mới ngay
                 ServerHop()
                 task.wait(8)
             end
@@ -120,13 +133,13 @@ task.spawn(function()
     end
 end)
 
--- Giao diện Toggle Bật/Tắt
-MainSection:NewToggle("Auto Fruit, Store & Hop", "Tự động nhặt, cất kho, duy trì khi đổi server", function(state)
+-- Giao diện Toggle
+MainSection:NewToggle("Auto Fruit, Store & Hop", "Tự động nhặt, cất kho, tự chạy lại khi đổi server", function(state)
     getgenv().AutoHopFruit = state
     if state then
         game:GetService("StarterGui"):SetCore("SendNotification", {
             Title = "Blox Fruits",
-            Text = "Đã BẬT! Script sẽ tự duy trì qua các Server.",
+            Text = "Đã BẬT! Sẵn sàng săn trái ác quỷ.",
             Duration = 3
         })
     else
@@ -138,7 +151,6 @@ MainSection:NewToggle("Auto Fruit, Store & Hop", "Tự động nhặt, cất kho
     end
 end)
 
--- Nút Chuyển Server Thủ Công
 MainSection:NewButton("Hop Server Ngay", "Chuyển server thủ công", function()
     ServerHop()
 end)
