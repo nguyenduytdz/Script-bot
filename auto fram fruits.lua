@@ -1,6 +1,5 @@
--- [[ BLOX FRUIT AUTO FARM & HOP (ULTIMATE FIXED VERSION) ]] --
+-- [[ BLOX FRUIT AUTO FARM, STORE & HOP (FULL FIX) ]] --
 
--- Bảo vệ load UI tránh lỗi chết script nếu mất kết nối
 local SuccessUI, Fluent = pcall(function()
     return loadstring(game:HttpGet("https://github.com/dawid-scripts/Fluent/releases/latest/download/main.lua"))()
 end)
@@ -8,8 +7,8 @@ end)
 local Window
 if SuccessUI and Fluent then
     Window = Fluent:CreateWindow({
-        Title = "Blox Fruits - Auto Fruit & Hop",
-        SubTitle = "Fixed Version",
+        Title = "Blox Fruits - Auto Fruit & Hop (Full)",
+        SubTitle = "Fixed Workspace Detection",
         TabWidth = 160,
         Size = UDim2.fromOffset(550, 380),
         Theme = "Dark",
@@ -23,17 +22,9 @@ if Window then
 end
 
 getgenv().AutoHopFruit = getgenv().AutoHopFruit or false
-getgenv().FruitFilter = getgenv().FruitFilter or "Tất cả"
+getgenv().FruitFilter = getgenv().FruitFilter or "Tất cả (Full mọi loại trái)"
 
--- Danh sách toàn bộ tên Trái Ác Quỷ chuẩn trong Blox Fruits
-local AllFruits = {
-    "Rocket", "Spin", "Blade", "Spring", "Bomb", "Smoke", "Spike",
-    "Flame", "Falcon", "Ice", "Sand", "Dark", "Diamond", "Light",
-    "Rubber", "Barrier", "Ghost", "Magma", "Quake", "Buddha",
-    "Love", "Spider", "Sound", "Phoenix", "Portal", "Rumble", "Pain", "Gravity",
-    "Blizzard", "Mammoth", "T-Rex", "Dough", "Shadow", "Venom", "Control", "Spirit", "Leopard", "Kitsune", "Gas", "Yeti", "Dragon"
-}
-
+-- Danh sách phân loại độ hiếm
 local MythicalFruits = {
     "Kitsune", "Leopard", "Dragon", "T-Rex", "Dough", "Spirit", 
     "Control", "Venom", "Shadow", "Mammoth", "Gas", "Yeti"
@@ -44,26 +35,16 @@ local LegendaryFruits = {
     "Sound", "Quake", "Pain", "Gravity", "Spider"
 }
 
--- Kiểm tra xem tên vật thể có khớp với tên Trái Ác Quỷ thật không
-local function IsValidFruitName(name)
-    for _, fruit in ipairs(AllFruits) do
-        if name == fruit or string.find(name, fruit) then
-            return true
-        end
-    end
-    return false
-end
-
--- Bộ lọc độ hiếm
+-- Hàm kiểm tra bộ lọc độ hiếm
 local function IsAllowedByFilter(name)
     local filter = getgenv().FruitFilter
-    if filter == "Tất cả" then
+    if filter == "Tất cả (Full mọi loại trái)" then
         return true
     elseif filter == "Chỉ Mythical" then
         for _, m in ipairs(MythicalFruits) do
             if name == m or string.find(name, m) then return true end
         end
-    elseif filter == "Mythical & Legendary" then
+    elseif filter == "Chỉ Mythical & Legendary" then
         for _, m in ipairs(MythicalFruits) do
             if name == m or string.find(name, m) then return true end
         end
@@ -74,22 +55,17 @@ local function IsAllowedByFilter(name)
     return false
 end
 
--- Hàm tìm Trái Ác Quỷ chính xác trong Map
+-- Hàm tìm Trái Ác Quỷ (Quét tất cả Tool/Model có Handle trên map, loại trừ đồ của người chơi)
 local function GetFruit()
     for _, v in pairs(workspace:GetDescendants()) do
-        if (v:IsA("Tool") or v:IsA("Model")) and IsValidFruitName(v.Name) then
-            -- Tránh lấy nhầm trái đang ở trong balo/trên tay người chơi khác
+        if (v:IsA("Tool") or v:IsA("Model")) and v:FindFirstChild("Handle") then
+            -- Kiểm tra xem vật thể có đang nằm trong nhân vật của người chơi khác không
             local playerParent = game.Players:GetPlayerFromCharacter(v.Parent)
             local humanoidParent = v.Parent and v.Parent:FindFirstChildOfClass("Humanoid")
             
             if not playerParent and not humanoidParent then
                 if IsAllowedByFilter(v.Name) then
-                    if v:IsA("Tool") and v:FindFirstChild("Handle") then
-                        return v
-                    elseif v:IsA("Model") then
-                        local part = v:FindFirstChild("Handle") or v.PrimaryPart or v:FindFirstChildOfClass("BasePart")
-                        if part then return v end
-                    end
+                    return v
                 end
             end
         end
@@ -107,7 +83,7 @@ local function AutoStoreFruits()
     local function checkAndStore(container)
         if not container then return end
         for _, item in pairs(container:GetChildren()) do
-            if item:IsA("Tool") and IsValidFruitName(item.Name) then
+            if item:IsA("Tool") and item:FindFirstChild("Handle") then
                 pcall(function()
                     remote:InvokeServer("StoreFruit", item)
                 end)
@@ -163,15 +139,16 @@ task.spawn(function()
             local fruit = GetFruit()
             
             if fruit and hrp then
-                local targetPart = fruit:IsA("Tool") and fruit:FindFirstChild("Handle") or (fruit:IsA("Model") and (fruit:FindFirstChild("Handle") or fruit.PrimaryPart or fruit:FindFirstChildOfClass("BasePart")))
+                local targetPart = fruit:FindFirstChild("Handle") or (fruit:IsA("Model") and (fruit.PrimaryPart or fruit:FindFirstChildOfClass("BasePart")))
                 
                 if targetPart then
-                    hrp.CFrame = targetPart.CFrame + Vector3.new(0, 3, 0) -- Bay đến vị trí trái
+                    -- Bay/Dịch chuyển tức thì đến vị trí trái
+                    hrp.CFrame = targetPart.CFrame + Vector3.new(0, 3, 0)
                 end
                 
-                task.wait(2) -- Chờ để nhặt vào balo
+                task.wait(2) -- Đợi game nhận diện nhặt vào balo
                 
-                -- Cất vào kho
+                -- Cất vào kho cho đến khi xong
                 local stored = false
                 local attempts = 0
                 repeat
@@ -180,11 +157,12 @@ task.spawn(function()
                     task.wait(0.5)
                 until stored or attempts > 5
                 
+                -- Cất xong mới hop sang server mới
                 task.wait(1)
                 ServerHop()
                 task.wait(10)
             else
-                -- Chờ 3 giây ở server mới để map load dữ liệu xong rồi mới tìm trái / hop tiếp
+                -- Chờ 3 giây ở server mới để game kịp load map, nếu không thấy trái mới hop
                 task.wait(3)
                 ServerHop()
                 task.wait(8)
@@ -193,20 +171,26 @@ task.spawn(function()
     end
 end)
 
--- Tạo giao diện menu nếu load thành công
+-- Tạo giao diện Menu
 if Window and Tabs.Main then
     Tabs.Main:AddDropdown("RarityFilter", {
         Title = "Lọc Độ Hiếm Trái Ác Quỷ",
-        Values = {"Tất cả", "Mythical & Legendary", "Chỉ Mythical"},
+        Values = {"Tất cả (Full mọi loại trái)", "Chỉ Mythical & Legendary", "Chỉ Mythical"},
         Default = getgenv().FruitFilter,
         Callback = function(Value)
             getgenv().FruitFilter = Value
+            Fluent:Notify({ Title = "Cài đặt", Content = "Đã chuyển lọc thành: " .. Value, Duration = 2 })
         end
     })
 
-    local Toggle = Tabs.Main:AddToggle("AutoFruitHop", { Title = "Auto Nhặt Trái & Hop Server", Default = getgenv().AutoHopFruit })
+    local Toggle = Tabs.Main:AddToggle("AutoFruitHop", { Title = "Auto Nhặt Trái (Full) & Hop Server", Default = getgenv().AutoHopFruit })
     Toggle:OnChanged(function(Value)
         getgenv().AutoHopFruit = Value
+        if Value then
+            Fluent:Notify({ Title = "Blox Fruits", Content = "Đã BẬT! Bắt đầu săn trái ác quỷ.", Duration = 3 })
+        else
+            Fluent:Notify({ Title = "Blox Fruits", Content = "Đã TẮT!", Duration = 3 })
+        end
     end)
 
     Tabs.Main:AddButton({
@@ -218,4 +202,3 @@ if Window and Tabs.Main then
 
     Window:SelectTab(1)
 end
-                
