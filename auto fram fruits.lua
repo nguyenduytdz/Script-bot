@@ -1,4 +1,4 @@
--- [[ BLOX FRUIT AUTO FARM, STORE & HOP (FULL FIX) ]] --
+-- [[ BLOX FRUIT AUTO FARM, STORE & HOP (CLEAN VERSION) ]] --
 
 local SuccessUI, Fluent = pcall(function()
     return loadstring(game:HttpGet("https://github.com/dawid-scripts/Fluent/releases/latest/download/main.lua"))()
@@ -7,10 +7,10 @@ end)
 local Window
 if SuccessUI and Fluent then
     Window = Fluent:CreateWindow({
-        Title = "Blox Fruits - Auto Fruit & Hop (Full)",
-        SubTitle = "Fixed Workspace Detection",
+        Title = "Blox Fruits - Auto Fruit & Hop",
+        SubTitle = "Simple & Fast",
         TabWidth = 160,
-        Size = UDim2.fromOffset(550, 380),
+        Size = UDim2.fromOffset(500, 320),
         Theme = "Dark",
         MinimizeKey = Enum.KeyCode.RightControl -- Nhấn Right Ctrl để ẩn/hiện menu
     })
@@ -22,58 +22,24 @@ if Window then
 end
 
 getgenv().AutoHopFruit = getgenv().AutoHopFruit or false
-getgenv().FruitFilter = getgenv().FruitFilter or "Tất cả (Full mọi loại trái)"
 
--- Danh sách phân loại độ hiếm
-local MythicalFruits = {
-    "Kitsune", "Leopard", "Dragon", "T-Rex", "Dough", "Spirit", 
-    "Control", "Venom", "Shadow", "Mammoth", "Gas", "Yeti"
-}
-
-local LegendaryFruits = {
-    "Buddha", "Portal", "Rumble", "Blizzard", "Phoenix", 
-    "Sound", "Quake", "Pain", "Gravity", "Spider"
-}
-
--- Hàm kiểm tra bộ lọc độ hiếm
-local function IsAllowedByFilter(name)
-    local filter = getgenv().FruitFilter
-    if filter == "Tất cả (Full mọi loại trái)" then
-        return true
-    elseif filter == "Chỉ Mythical" then
-        for _, m in ipairs(MythicalFruits) do
-            if name == m or string.find(name, m) then return true end
-        end
-    elseif filter == "Chỉ Mythical & Legendary" then
-        for _, m in ipairs(MythicalFruits) do
-            if name == m or string.find(name, m) then return true end
-        end
-        for _, l in ipairs(LegendaryFruits) do
-            if name == l or string.find(name, l) then return true end
-        end
-    end
-    return false
-end
-
--- Hàm tìm Trái Ác Quỷ (Quét tất cả Tool/Model có Handle trên map, loại trừ đồ của người chơi)
+-- Hàm tìm Trái Ác Quỷ (Bất kỳ trái nào rơi trên map có Handle và không nằm trong người chơi khác)
 local function GetFruit()
     for _, v in pairs(workspace:GetDescendants()) do
-        if (v:IsA("Tool") or v:IsA("Model")) and v:FindFirstChild("Handle") then
-            -- Kiểm tra xem vật thể có đang nằm trong nhân vật của người chơi khác không
-            local playerParent = game.Players:GetPlayerFromCharacter(v.Parent)
-            local humanoidParent = v.Parent and v.Parent:FindFirstChildOfClass("Humanoid")
+        if v:IsA("Tool") and v:FindFirstChild("Handle") then
+            local parent = v.Parent
+            local isPlayerChar = game.Players:GetPlayerFromCharacter(parent)
+            local isBackpack = parent and parent:IsA("Backpack")
             
-            if not playerParent and not humanoidParent then
-                if IsAllowedByFilter(v.Name) then
-                    return v
-                end
+            if not isPlayerChar and not isBackpack then
+                return v
             end
         end
     end
     return nil
 end
 
--- Hàm cất trái vào kho (Storage)
+-- Hàm cất toàn bộ trái trong người vào kho (Storage)
 local function AutoStoreFruits()
     local player = game.Players.LocalPlayer
     local remote = game:GetService("ReplicatedStorage"):FindFirstChild("Remotes") and game:GetService("ReplicatedStorage").Remotes:FindFirstChild("CommF_")
@@ -98,7 +64,7 @@ local function AutoStoreFruits()
     return storedSuccessfully
 end
 
--- Hàm chuyển Server thông minh
+-- Hàm chuyển Server thông minh & duy trì trạng thái
 local function ServerHop()
     local TeleportService = game:GetService("TeleportService")
     local HttpService = game:GetService("HttpService")
@@ -108,7 +74,6 @@ local function ServerHop()
     if queuetype and getgenv().AutoHopFruit then
         queuetype([[
             getgenv().AutoHopFruit = true
-            getgenv().FruitFilter = "]] .. getgenv().FruitFilter .. [["
             repeat task.wait() until game:IsLoaded()
             loadstring(game:HttpGet("ĐƯỜNG_LINK_SCRIPT_CỦA_BẠN"))()
         ]])
@@ -128,7 +93,7 @@ local function ServerHop()
     end
 end
 
--- Vòng lặp xử lý chính
+-- Vòng lặp chính thực hiện quy trình
 task.spawn(function()
     while task.wait(1) do
         if getgenv().AutoHopFruit then
@@ -138,17 +103,22 @@ task.spawn(function()
             
             local fruit = GetFruit()
             
-            if fruit and hrp then
-                local targetPart = fruit:FindFirstChild("Handle") or (fruit:IsA("Model") and (fruit.PrimaryPart or fruit:FindFirstChildOfClass("BasePart")))
+            if fruit and hrp and fruit:FindFirstChild("Handle") then
+                local handle = fruit.Handle
                 
-                if targetPart then
-                    -- Bay/Dịch chuyển tức thì đến vị trí trái
-                    hrp.CFrame = targetPart.CFrame + Vector3.new(0, 3, 0)
-                end
+                -- 1. Dịch chuyển ngay lập tức tới vị trí trái
+                hrp.CFrame = handle.CFrame + Vector3.new(0, 3, 0)
+                task.wait(0.3)
                 
-                task.wait(2) -- Đợi game nhận diện nhặt vào balo
+                -- 2. Ép buộc va chạm để nhặt trái vào balo
+                pcall(function()
+                    firetouchinterest(hrp, handle, 0)
+                    firetouchinterest(hrp, handle, 1)
+                end)
                 
-                -- Cất vào kho cho đến khi xong
+                task.wait(2) -- Chờ nhận diện nhặt
+                
+                -- 3. Tiến hành cất vào kho
                 local stored = false
                 local attempts = 0
                 repeat
@@ -157,12 +127,12 @@ task.spawn(function()
                     task.wait(0.5)
                 until stored or attempts > 5
                 
-                -- Cất xong mới hop sang server mới
+                -- 4. Cất xong xuôi mới hop sang server tiếp theo
                 task.wait(1)
                 ServerHop()
                 task.wait(10)
             else
-                -- Chờ 3 giây ở server mới để game kịp load map, nếu không thấy trái mới hop
+                -- Không thấy trái -> Chờ map load ổn định 3s rồi hop tìm server mới
                 task.wait(3)
                 ServerHop()
                 task.wait(8)
@@ -171,23 +141,13 @@ task.spawn(function()
     end
 end)
 
--- Tạo giao diện Menu
+-- Giao diện Menu tối giản (Chỉ còn Toggle Bật/Tắt và nút Hop thủ công)
 if Window and Tabs.Main then
-    Tabs.Main:AddDropdown("RarityFilter", {
-        Title = "Lọc Độ Hiếm Trái Ác Quỷ",
-        Values = {"Tất cả (Full mọi loại trái)", "Chỉ Mythical & Legendary", "Chỉ Mythical"},
-        Default = getgenv().FruitFilter,
-        Callback = function(Value)
-            getgenv().FruitFilter = Value
-            Fluent:Notify({ Title = "Cài đặt", Content = "Đã chuyển lọc thành: " .. Value, Duration = 2 })
-        end
-    })
-
-    local Toggle = Tabs.Main:AddToggle("AutoFruitHop", { Title = "Auto Nhặt Trái (Full) & Hop Server", Default = getgenv().AutoHopFruit })
+    local Toggle = Tabs.Main:AddToggle("AutoFruitHop", { Title = "Auto Nhặt Mọi Trái & Hop Server", Default = getgenv().AutoHopFruit })
     Toggle:OnChanged(function(Value)
         getgenv().AutoHopFruit = Value
         if Value then
-            Fluent:Notify({ Title = "Blox Fruits", Content = "Đã BẬT! Bắt đầu săn trái ác quỷ.", Duration = 3 })
+            Fluent:Notify({ Title = "Blox Fruits", Content = "Đã BẬT! Bắt đầu săn trái.", Duration = 3 })
         else
             Fluent:Notify({ Title = "Blox Fruits", Content = "Đã TẮT!", Duration = 3 })
         end
