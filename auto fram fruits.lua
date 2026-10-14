@@ -1,4 +1,4 @@
--- [[ BLOX FRUIT AUTO FARM, STORE & HOP - NO COMMON FRUITS ]] --
+-- [[ BLOX FRUIT SMART HOP & AUTO FARM (FIXED HOP LOGIC) ]] --
 
 local SuccessUI, Fluent = pcall(function()
     return loadstring(game:HttpGet("https://github.com/dawid-scripts/Fluent/releases/latest/download/main.lua"))()
@@ -7,8 +7,8 @@ end)
 local Window
 if SuccessUI and Fluent then
     Window = Fluent:CreateWindow({
-        Title = "Blox Fruits - Auto Hop (No Common)",
-        SubTitle = "Bỏ Trái Rác (Rocket, Spin...)",
+        Title = "Blox Fruits - Smart Hop Fruit",
+        SubTitle = "Fast & Smart Server Search",
         TabWidth = 160,
         Size = UDim2.fromOffset(550, 380),
         Theme = "Dark",
@@ -23,12 +23,13 @@ end
 
 getgenv().AutoHopFruit = getgenv().AutoHopFruit or false
 
--- Danh sách các trái RÁC (Common) bị cấm nhặt
-local CommonBlacklist = {
-    "Rocket", "Spin", "Chop", "Spring", "Bomb", "Smoke", "Spike"
-}
+-- Lưu danh sách các Server đã từng vào để KHÔNG BỊ VÀO LẠI
+getgenv().VisitedServers = getgenv().VisitedServers or {}
+table.insert(getgenv().VisitedServers, game.JobId)
 
--- Kiểm tra xem trái có phải trái rác không
+-- Danh sách trái rác bị BỎ QUA
+local CommonBlacklist = { "Rocket", "Spin", "Chop", "Spring", "Bomb", "Smoke", "Spike" }
+
 local function IsCommonFruit(fruitName)
     for _, name in ipairs(CommonBlacklist) do
         if fruitName == name or string.find(fruitName, name) then
@@ -40,7 +41,7 @@ end
 
 local HasLoadedServer = false
 
--- Hàm tìm Trái Ác Quỷ (Loại trừ trái rác và trái người chơi đang cầm)
+-- Hàm tìm Trái Ác Quỷ (Bỏ trái rác)
 local function GetFruit()
     for _, v in pairs(workspace:GetDescendants()) do
         if v:IsA("Tool") and v:FindFirstChild("Handle") then
@@ -49,7 +50,6 @@ local function GetFruit()
             local isBackpack = parent and parent:IsA("Backpack")
             
             if not isPlayerChar and not isBackpack then
-                -- BỎ QUA TRÁI RÁC!
                 if not IsCommonFruit(v.Name) then
                     return v
                 end
@@ -84,38 +84,75 @@ local function AutoStoreFruits()
     return storedSuccessfully
 end
 
--- Hàm chuyển Server
-local function ServerHop()
+-- Hàm Smart Hop Server (Tìm Server Ngẫu Nhiên + Chưa Vào Bao Giờ + Số Người Vừa Phải)
+local function SmartServerHop()
     local TeleportService = game:GetService("TeleportService")
     local HttpService = game:GetService("HttpService")
     local PlaceId = game.PlaceId
     
+    -- Lưu script chạy lại khi sang server mới
     local queuetype = queue_on_teleport or (syn and syn.queue_on_teleport)
     if queuetype and getgenv().AutoHopFruit then
+        local visitedStr = "{"
+        for _, id in ipairs(getgenv().VisitedServers) do
+            visitedStr = visitedStr .. '"' .. id .. '",'
+        end
+        visitedStr = visitedStr .. "}"
+        
         queuetype([[
             getgenv().AutoHopFruit = true
+            getgenv().VisitedServers = ]] .. visitedStr .. [[
+            repeat task.wait() until game:IsLoaded()
             loadstring(game:HttpGet("ĐƯỜNG_LINK_SCRIPT_CỦA_BẠN"))()
         ]])
     end
+
+    -- Tìm danh sách server
+    local cursor = ""
+    local foundServer = false
     
-    local success, Servers = pcall(function()
-        return HttpService:JSONDecode(game:HttpGet("https://games.roblox.com/v1/games/" .. PlaceId .. "/servers/Public?sortOrder=Asc&limit=100"))
-    end)
-    
-    if success and Servers and Servers.data then
-        for _, s in pairs(Servers.data) do
-            if s.playing ~= s.maxPlayers and s.id ~= game.JobId then
-                TeleportService:TeleportToPlaceInstance(PlaceId, s.id, game.Players.LocalPlayer)
-                break
+    for page = 1, 3 do -- Duyệt qua 3 trang danh sách server để tìm server mới
+        local url = "https://games.roblox.com/v1/games/" .. PlaceId .. "/servers/Public?sortOrder=Asc&limit=100"
+        if cursor ~= "" then url = url .. "&cursor=" .. cursor end
+        
+        local success, response = pcall(function()
+            return HttpService:JSONDecode(game:HttpGet(url))
+        end)
+        
+        if success and response and response.data then
+            cursor = response.nextPageCursor or ""
+            
+            -- Xáo trộn danh sách server để chọn ngẫu nhiên, không bị vào trùng
+            local servers = response.data
+            for i = #servers, 2, -1 do
+                local j = math.random(i)
+                servers[i], servers[j] = servers[j], servers[i]
+            end
+            
+            for _, s in pairs(servers) do
+                -- Điều kiện: Không phải server hiện tại, chưa từng vào, và server còn chỗ
+                local isVisited = false
+                for _, visitedId in ipairs(getgenv().VisitedServers) do
+                    if s.id == visitedId then isVisited = true break end
+                end
+                
+                if not isVisited and s.playing < s.maxPlayers and s.id ~= game.JobId then
+                    table.insert(getgenv().VisitedServers, s.id)
+                    foundServer = true
+                    TeleportService:TeleportToPlaceInstance(PlaceId, s.id, game.Players.LocalPlayer)
+                    break
+                end
             end
         end
+        
+        if foundServer or cursor == "" then break end
     end
 end
 
--- Đứng chờ 4s đầu khi vừa đổi server
+-- Chờ 3 giây load map khi vừa đổi server
 task.spawn(function()
     repeat task.wait() until game:IsLoaded()
-    task.wait(4)
+    task.wait(3)
     HasLoadedServer = true
 end)
 
@@ -134,7 +171,7 @@ task.spawn(function()
             if fruit and hrp and fruit:FindFirstChild("Handle") then
                 local handle = fruit.Handle
                 
-                -- Bay tới nhặt trái xịn
+                -- Phát hiện trái xịn -> Bay tới nhặt ngay
                 hrp.CFrame = handle.CFrame + Vector3.new(0, 3, 0)
                 task.wait(0.5)
                 
@@ -145,7 +182,7 @@ task.spawn(function()
                 
                 task.wait(2)
                 
-                -- Cất kho
+                -- Cất vào kho
                 local stored = false
                 local attempts = 0
                 repeat
@@ -154,16 +191,16 @@ task.spawn(function()
                     task.wait(0.5)
                 until stored or attempts > 5
                 
-                -- Cất xong hop tiếp
+                -- Cất xong -> Nhảy tiếp server mới
                 task.wait(1)
                 HasLoadedServer = false
-                ServerHop()
+                SmartServerHop()
                 task.wait(10)
             else
-                -- Thấy trái rác hoặc không có trái -> Hop server ngay!
+                -- Không có trái xịn -> Lập tức Smart Hop sang server khác chỉ sau 2 giây
                 task.wait(2)
                 HasLoadedServer = false
-                ServerHop()
+                SmartServerHop()
                 task.wait(8)
             end
         end
@@ -172,20 +209,20 @@ end)
 
 -- Giao diện Menu
 if Window and Tabs.Main then
-    local Toggle = Tabs.Main:AddToggle("AutoFruitHop", { Title = "Auto Nhặt Trái Xịn (Bỏ Rocket, Spin...) & Hop", Default = getgenv().AutoHopFruit })
+    local Toggle = Tabs.Main:AddToggle("AutoFruitHop", { Title = "Auto Smart Hop & Nhặt Trái Xịn", Default = getgenv().AutoHopFruit })
     Toggle:OnChanged(function(Value)
         getgenv().AutoHopFruit = Value
         if Value then
-            Fluent:Notify({ Title = "Blox Fruits", Content = "Đã BẬT! Bỏ qua toàn bộ trái rác Common.", Duration = 3 })
+            Fluent:Notify({ Title = "Blox Fruits", Content = "Bắt đầu Smart Hop tìm server có trái...", Duration = 3 })
         else
             Fluent:Notify({ Title = "Blox Fruits", Content = "Đã TẮT!", Duration = 3 })
         end
     end)
 
     Tabs.Main:AddButton({
-        Title = "Hop Server Ngay",
+        Title = "Smart Hop Ngay (Đổi Server Ngẫu Nhiên)",
         Callback = function()
-            ServerHop()
+            SmartServerHop()
         end
     })
 
