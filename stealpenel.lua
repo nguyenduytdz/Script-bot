@@ -1,7 +1,7 @@
 -- ==============================================================================
--- Project: Steal An Egg - Ultimate Foolproof UI & Execution Engine
+-- Project: Steal An Egg - Ultimate Fixed Execution Engine & 1:1 UI
 -- Author: Axiom | Elite Systems Architecture
--- Note: Press [Insert] on your keyboard to toggle the panel visibility!
+-- Note: Press [Insert] to toggle panel visibility.
 -- ==============================================================================
 
 local Players = game:GetService("Players")
@@ -142,13 +142,13 @@ UserInputService.InputBegan:Connect(function(input, gameProcessed)
     end
 end)
 
--- Network Remotes Interception
+-- Find Steal Remotes
 local ValidRemotes = {}
 pcall(function()
     for _, v in ipairs(ReplicatedStorage:GetDescendants()) do
         if v:IsA("RemoteEvent") or v:IsA("RemoteFunction") then
             local name = v.Name:lower()
-            if name:find("steal") or name:find("egg") or name:find("claim") or name:find("interact") or name:find("pet") then
+            if name:find("steal") or name:find("egg") or name:find("claim") or name:find("interact") then
                 table.insert(ValidRemotes, v)
             end
         end
@@ -179,18 +179,39 @@ SortBtn.MouseButton1Click:Connect(function()
     else
         sortMode = "Highest Value"
     end
-    SortBtn.Text = "Sort: " .. sortMode
+    SortBtn.Text = "Sort: " + sortMode
 end)
+
+-- Helper: Check if object belongs to LocalPlayer's base/plot
+local function IsMyOwnBase(obj)
+    local curr = obj.Parent
+    while curr and curr ~= Workspace do
+        local name = curr.Name:lower()
+        if name:find(LocalPlayer.Name:lower()) or name:find("plot") or name:find("base") then
+            -- Check if it's explicitly our plot
+            if curr:FindFirstChild("Owner") and curr.Owner.Value == LocalPlayer then
+                return true
+            end
+            if name:find(LocalPlayer.Name:lower()) then
+                return true
+            end
+        end
+        curr = curr.Parent
+    end
+    return false
+end
 
 local function PerformStealAction(targetObj)
     if not targetObj or not targetObj.Parent then return end
+    if IsMyOwnBase(targetObj) then return end -- Tuyệt đối không cướp nhà mình!
+
     local char = LocalPlayer.Character
     if not char or not char:FindFirstChild("HumanoidRootPart") then return end
     local hrp = char.HumanoidRootPart
     
     local pivot = targetObj:IsA("Model") and targetObj:GetPivot() or (targetObj:IsA("BasePart") and targetObj.CFrame)
     if pivot then
-        hrp.CFrame = pivot + Vector3.new(0, 3.5, 0)
+        hrp.CFrame = pivot + Vector3.new(0, 3, 0)
     end
     
     for _, prompt in ipairs(targetObj:GetDescendants()) do
@@ -200,16 +221,6 @@ local function PerformStealAction(targetObj)
                 if instantStealActive then prompt.HoldDuration = 0 end
                 fireproximityprompt(prompt, 0)
                 prompt.HoldDuration = oldHold
-            end)
-        end
-    end
-    
-    for _, desc in ipairs(targetObj:GetDescendants()) do
-        if desc:IsA("TouchTransmitter") and desc.Parent:IsA("BasePart") then
-            pcall(function()
-                firetouchinterest(hrp, desc.Parent, 0)
-                task.wait()
-                firetouchinterest(hrp, desc.Parent, 1)
             end)
         end
     end
@@ -234,18 +245,21 @@ local function RefreshList()
     pcall(function()
         for _, obj in pairs(Workspace:GetDescendants()) do
             if obj:IsA("Model") and (obj.Name:find("Egg") or obj:FindFirstChild("Egg") or obj:GetAttribute("Creature") or obj:GetAttribute("PetName") or obj:FindFirstChild("ProximityPrompt")) then
-                local creatureName = obj:GetAttribute("Creature") or obj:GetAttribute("PetName") or obj.Name
-                local valueStr = obj:GetAttribute("ValueStr") or obj:GetAttribute("Income") or "$15.4M/s"
-                local multiplier = tonumber(obj:GetAttribute("Multiplier")) or tonumber(obj:GetAttribute("Value")) or (math.random(100, 500) / 100)
-                local weight = tonumber(obj:GetAttribute("Weight")) or tonumber(obj:GetAttribute("Size")) or math.random(500, 5000)
-                
-                table.insert(items, {
-                    Object = obj,
-                    Creature = creatureName,
-                    ValueStr = tostring(valueStr),
-                    Multiplier = multiplier,
-                    Weight = weight
-                })
+                -- Lọc bỏ trứng thuộc nhà của chính mình
+                if not IsMyOwnBase(obj) then
+                    local creatureName = obj:GetAttribute("Creature") or obj:GetAttribute("PetName") or obj.Name
+                    local valueStr = obj:GetAttribute("ValueStr") or obj:GetAttribute("Income") or "$15.4M/s"
+                    local multiplier = tonumber(obj:GetAttribute("Multiplier")) or tonumber(obj:GetAttribute("Value")) or (math.random(100, 500) / 100)
+                    local weight = tonumber(obj:GetAttribute("Weight")) or tonumber(obj:GetAttribute("Size")) or math.random(500, 5000)
+                    
+                    table.insert(items, {
+                        Object = obj,
+                        Creature = creatureName,
+                        ValueStr = tostring(valueStr),
+                        Multiplier = multiplier,
+                        Weight = weight
+                    })
+                end
             end
         end
     end)
@@ -353,13 +367,13 @@ task.spawn(function()
             pcall(function()
                 for _, obj in pairs(Workspace:GetDescendants()) do
                     if obj:IsA("Model") and (obj.Name:find("Egg") or obj:FindFirstChild("Egg") or obj:FindFirstChild("ProximityPrompt")) then
-                        PerformStealAction(obj)
-                        task.wait(0.15)
+                        if not IsMyOwnBase(obj) then
+                            PerformStealAction(obj)
+                            task.wait(0.2)
+                        end
                     end
                 end
             end)
         end
     end
 end)
-
-print("[AxiomStealMaster] Loaded successfully! Press [Insert] to toggle panel.")
