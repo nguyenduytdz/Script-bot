@@ -1,12 +1,12 @@
--- [[ BLOX FRUIT AUTO FARM - FIX LỖI ĐỨNG YÊN TẠI NPC ]] --
+-- [[ BLOX FRUIT AUTO FARM - FIX TWEEN MOVEMENT ]] --
 
 local SuccessUI, Fluent = pcall(function()
     return loadstring(game:HttpGet("https://github.com/dawid-scripts/Fluent/releases/latest/download/main.lua"))()
 end)
 
 local Window = Fluent:CreateWindow({
-    Title = "Blox Fruits - Fix Movement Auto Farm",
-    SubTitle = "Anti-Stuck NPC",
+    Title = "Blox Fruits - Smooth Tween Farm",
+    SubTitle = "Fixed Standing Issue",
     TabWidth = 160,
     Size = UDim2.fromOffset(500, 320),
     Theme = "Dark",
@@ -20,10 +20,33 @@ getgenv().SafeHeight = 15
 
 local Players = game:GetService("Players")
 local LocalPlayer = Players.LocalPlayer
+local TweenService = game:GetService("TweenService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local CommF = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("CommF_")
 
--- Tự động cầm vũ khí cận chiến
+-- Hàm Di Chuyển Trượt Mượt (Tween) Giống Các Bản Hub
+local function TweenTo(targetCFrame, speed)
+    local char = LocalPlayer.Character
+    if not char or not char:FindFirstChild("HumanoidRootPart") then return end
+    
+    local hrp = char.HumanoidRootPart
+    local distance = (hrp.Position - targetCFrame.Position).Magnitude
+    local time = distance / (speed or 250)
+    
+    -- Tắt va chạm để không bị kẹt địa hình
+    for _, part in pairs(char:GetChildren()) do
+        if part:IsA("BasePart") then
+            part.CanCollide = false
+        end
+    end
+    
+    local tweenInfo = TweenInfo.new(time, Enum.EasingStyle.Linear)
+    local tween = TweenService:Create(hrp, tweenInfo, {CFrame = targetCFrame})
+    tween:Play()
+    return tween
+end
+
+-- Tự động lấy vũ khí
 local function EquipWeapon()
     local char = LocalPlayer.Character
     if char and not char:FindFirstChildOfClass("Tool") then
@@ -39,7 +62,7 @@ local function EquipWeapon()
     end
 end
 
--- Vòng lặp chính Auto Farm
+-- Vòng lặp Farm
 task.spawn(function()
     while task.wait(0.1) do
         if getgenv().MasterAutoFarm then
@@ -51,22 +74,21 @@ task.spawn(function()
                 local level = LocalPlayer.Data.Level.Value
                 local isQuestActive = LocalPlayer.PlayerGui.Main.Quest.Visible
                 
-                -- Xử lý mốc Level 1 - 14 (Bandit - Đảo Khởi Đầu)
+                -- Farm Bandit (Level 1 - 14)
                 if level < 15 then
                     if not isQuestActive then
-                        -- Bước 1: Bay tới NPC nhận Quest
-                        if (hrp.Position - Vector3.new(1059, 16, 1549)).Magnitude > 10 then
-                            hrp.CFrame = CFrame.new(1059, 16, 1549)
-                            task.wait(0.3)
+                        -- Bay trượt đến NPC nhận Quest
+                        if (hrp.Position - Vector3.new(1059, 16, 1549)).Magnitude > 15 then
+                            TweenTo(CFrame.new(1059, 16, 1549), 300)
+                            task.wait(0.5)
                         end
-                        -- Gửi lệnh nhận nhiệm vụ
                         CommF:InvokeServer("StartQuest", "BanditQuest1", 1)
-                        task.wait(0.5)
+                        task.wait(0.8) -- Đợi game đóng hội thoại NPC
                     else
-                        -- Bước 2: Đã nhận quest -> Tự động lùi/bay thoát khỏi Safe Zone tới thẳng bãi Bandit
+                        -- Đã nhận Quest -> Trượt thẳng ra bãi quái Bandit
                         EquipWeapon()
-                        
                         local targetMob = nil
+                        
                         for _, v in pairs(workspace.Enemies:GetChildren()) do
                             if (v.Name == "Bandit" or string.find(v.Name, "Bandit")) and v:FindFirstChild("HumanoidRootPart") and v:FindFirstChildOfClass("Humanoid").Health > 0 then
                                 targetMob = v
@@ -75,18 +97,19 @@ task.spawn(function()
                         end
                         
                         if targetMob and targetMob:FindFirstChild("HumanoidRootPart") then
-                            -- Dịch chuyển trực tiếp lên đầu quái Bandit
-                            hrp.CFrame = targetMob.HumanoidRootPart.CFrame + Vector3.new(0, getgenv().SafeHeight, 0)
+                            -- Bay đến trên đầu quái
+                            local targetPos = targetMob.HumanoidRootPart.CFrame + Vector3.new(0, getgenv().SafeHeight, 0)
+                            hrp.CFrame = targetPos
                             
-                            -- Gom quái lại chân và thực hiện đánh
+                            -- Gom quái & Đánh
                             targetMob.HumanoidRootPart.CFrame = hrp.CFrame - Vector3.new(0, getgenv().SafeHeight, 0)
                             targetMob.HumanoidRootPart.CanCollide = false
                             
                             local tool = char:FindFirstChildOfClass("Tool")
                             if tool then tool:Activate() end
                         else
-                            -- Nếu quái chưa xuất hiện -> Bắt buộc di chuyển ra khu vực bãi Bandit (nghiêm cấm đứng tại chỗ NPC)
-                            hrp.CFrame = CFrame.new(1145, 25, 1634)
+                            -- Nếu chưa thấy quái -> Trượt mượt ra bãi Bandit ngồi chờ
+                            TweenTo(CFrame.new(1145, 20, 1634), 250)
                         end
                     end
                 end
@@ -95,15 +118,10 @@ task.spawn(function()
     end
 end)
 
--- Giao diện Bật/Tắt
-local Toggle = Tabs.Main:AddToggle("MasterAutoFarmToggle", { Title = "🚀 BẬT AUTO FARM (FIX ĐỨNG TẠI NPC)", Default = getgenv().MasterAutoFarm })
+-- Giao diện Toggle
+local Toggle = Tabs.Main:AddToggle("MasterAutoFarmToggle", { Title = "🚀 BẬT AUTO FARM (TWEEN MOVEMENT)", Default = getgenv().MasterAutoFarm })
 Toggle:OnChanged(function(Value)
     getgenv().MasterAutoFarm = Value
-    if Value then
-        Fluent:Notify({ Title = "Blox Fruits", Content = "Đã BẬT! Nhân vật sẽ tự thoát chỗ NPC đi đánh quái.", Duration = 3 })
-    else
-        Fluent:Notify({ Title = "Blox Fruits", Content = "Đã TẮT!", Duration = 3 })
-    end
 end)
 
 Window:SelectTab(1)
