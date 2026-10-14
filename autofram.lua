@@ -1,12 +1,12 @@
--- [[ AUTO FARM BLOX FRUIT - REDZ & BANANA LOGIC FIX ]] --
+-- [[ BLOX FRUIT - REDZ & BANANA REAL CORE ENGINE ]] --
 
 local SuccessUI, Fluent = pcall(function()
     return loadstring(game:HttpGet("https://github.com/dawid-scripts/Fluent/releases/latest/download/main.lua"))()
 end)
 
 local Window = Fluent:CreateWindow({
-    Title = "Blox Fruits - Pro Farm (Redz Engine)",
-    SubTitle = "Fixed Quest Dialogue Freeze",
+    Title = "Blox Fruits - Real Redz/Banana Core",
+    SubTitle = "Fixed Standing NPC Issue",
     TabWidth = 160,
     Size = UDim2.fromOffset(520, 360),
     Theme = "Dark",
@@ -24,55 +24,57 @@ local TweenService = game:GetService("TweenService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local CommF = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("CommF_")
 
--- Giữ nhân vật lơ lửng không bị trọng lực ghì lại (Kỹ thuật từ Redz Hub)
-local function EnableNoclipAndFly(hrp)
-    if not hrp:FindFirstChild("FarmVelocity") then
-        local bv = Instance.new("BodyVelocity")
-        bv.Name = "FarmVelocity"
-        bv.Velocity = Vector3.new(0, 0, 0)
-        bv.MaxForce = Vector3.new(math.huge, math.huge, math.huge)
-        bv.Parent = hrp
-    end
-    
-    local char = LocalPlayer.Character
-    if char then
-        for _, part in pairs(char:GetChildren()) do
-            if part:IsA("BasePart") then
-                part.CanCollide = false
-            end
-        end
-    end
-end
+-- [[ CORE ENGINE CỦA REDZ & BANANA HUB ]] --
 
-local function DisableNoclipAndFly(hrp)
-    if hrp and hrp:FindFirstChild("FarmVelocity") then
-        hrp.FarmVelocity:Destroy()
-    end
-end
-
--- Tự động giải phóng bảng hội thoại NPC
-local function ClearDialogueUI()
+-- 1. Bỏ qua hoàn toàn hiệu ứng đóng băng/khóa nhân vật của NPC (Dialogue Bypass)
+local function ForceUnfreeze()
     pcall(function()
+        if LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Humanoid") then
+            LocalPlayer.Character.Humanoid.WalkSpeed = 16
+            LocalPlayer.Character.Humanoid.PlatformStand = false
+        end
         local mainGui = LocalPlayer.PlayerGui:FindFirstChild("Main")
         if mainGui then
-            if mainGui:FindFirstChild("Dialogue") then
-                mainGui.Dialogue.Visible = false
-            end
+            if mainGui:FindFirstChild("Dialogue") then mainGui.Dialogue.Visible = false end
+            if mainGui:FindFirstChild("Interacted") then mainGui.Interacted.Value = false end
         end
     end)
 end
 
--- Hàm di chuyển Tween chuẩn Redz Hub
+-- 2. Hệ thống Giữ trọng lực lơ lửng & Tắt va chạm (Fly/Noclip)
+local function ApplyBodyVelocity(hrp)
+    if not hrp:FindFirstChild("RedzVelocity") then
+        local bv = Instance.new("BodyVelocity")
+        bv.Name = "RedzVelocity"
+        bv.Velocity = Vector3.new(0, 0, 0)
+        bv.MaxForce = Vector3.new(math.huge, math.huge, math.huge)
+        bv.Parent = hrp
+    end
+    local char = LocalPlayer.Character
+    if char then
+        for _, v in pairs(char:GetChildren()) do
+            if v:IsA("BasePart") then v.CanCollide = false end
+        end
+    end
+end
+
+local function RemoveBodyVelocity(hrp)
+    if hrp and hrp:FindFirstChild("RedzVelocity") then
+        hrp.RedzVelocity:Destroy()
+    end
+end
+
+-- 3. Tween Engine chuẩn từ Banana Hub (Quản lý luồng bay mượt)
 local currentTween = nil
-local function TweenToPos(targetCFrame, speed)
+local function RedzTween(targetCFrame, speed)
     local char = LocalPlayer.Character
     if not char or not char:FindFirstChild("HumanoidRootPart") then return end
     local hrp = char.HumanoidRootPart
     
-    EnableNoclipAndFly(hrp)
+    ApplyBodyVelocity(hrp)
     
     local distance = (hrp.Position - targetCFrame.Position).Magnitude
-    local time = distance / (speed or 250)
+    local time = distance / (speed or 300)
     
     if currentTween then currentTween:Cancel() end
     
@@ -82,7 +84,7 @@ local function TweenToPos(targetCFrame, speed)
     return currentTween
 end
 
--- Trang bị vũ khí
+-- 4. Trang bị vũ khí
 local function EquipWeapon()
     local char = LocalPlayer.Character
     if char and not char:FindFirstChildOfClass("Tool") then
@@ -98,9 +100,9 @@ local function EquipWeapon()
     end
 end
 
--- Vòng lặp Farm chính
+-- [[ VÒNG LẶP FARM CHÍNH ]] --
 task.spawn(function()
-    while task.wait(0.1) do
+    while task.wait(0.05) do
         if getgenv().AutoFarmEnabled then
             pcall(function()
                 local char = LocalPlayer.Character
@@ -110,23 +112,26 @@ task.spawn(function()
                 local level = LocalPlayer.Data.Level.Value
                 local isQuestActive = LocalPlayer.PlayerGui.Main.Quest.Visible
                 
-                -- Level 1 - 14 (Bandit)
+                -- Level 1 - 14 (Bandit Island)
                 if level < 15 then
                     if not isQuestActive then
-                        -- Bay đến gần NPC (không đứng sát đè lên NPC)
-                        local npcPos = CFrame.new(1059, 16, 1549)
-                        if (hrp.Position - npcPos.Position).Magnitude > 12 then
-                            TweenToPos(npcPos, 280)
+                        -- Bước A: Bay tới sát vạch nhận Quest (Không đứng đè NPC)
+                        local questNPCPos = CFrame.new(1059, 16, 1549)
+                        if (hrp.Position - questNPCPos.Position).Magnitude > 15 then
+                            RedzTween(questNPCPos, 300)
                         else
                             if currentTween then currentTween:Cancel() end
-                            -- Nhận quest & ép tắt giao diện thoại lập tức
+                            -- Bấm nhận Quest & Giải phóng trạng thái nhân vật tức thì
                             CommF:InvokeServer("StartQuest", "BanditQuest1", 1)
-                            ClearDialogueUI()
-                            task.wait(0.3)
+                            ForceUnfreeze()
+                            
+                            -- ĐẨY NHÂN VẬT RA BÃI QUÁI NGAY TẬP TRUNG KHÔNG ĐỢI GAME RESPONSE
+                            hrp.CFrame = CFrame.new(1145, 25, 1634)
+                            task.wait(0.2)
                         end
                     else
-                        -- ĐÃ NHẬN QUEST -> Xóa thoại lần nữa & Bay thẳng ra bãi quái
-                        ClearDialogueUI()
+                        -- Bước B: Đã có Quest -> Giải phóng UI & Bay thẳng vào bãi đánh
+                        ForceUnfreeze()
                         EquipWeapon()
                         
                         local targetMob = nil
@@ -138,37 +143,38 @@ task.spawn(function()
                         end
                         
                         if targetMob and targetMob:FindFirstChild("HumanoidRootPart") then
-                            -- Bay lên đầu quái và gạt trọng lực
-                            EnableNoclipAndFly(hrp)
+                            ApplyBodyVelocity(hrp)
                             if currentTween then currentTween:Cancel() end
                             
-                            local safePos = targetMob.HumanoidRootPart.CFrame + Vector3.new(0, getgenv().SafeHeight, 0)
-                            hrp.CFrame = safePos
+                            -- Bay lên không trung lơ lửng trên quái
+                            local safeCFrame = targetMob.HumanoidRootPart.CFrame + Vector3.new(0, getgenv().SafeHeight, 0)
+                            hrp.CFrame = safeCFrame
                             
-                            -- Gom quái & Đánh
-                            targetMob.HumanoidRootPart.CFrame = safePos - Vector3.new(0, getgenv().SafeHeight, 0)
+                            -- Gom quái
+                            targetMob.HumanoidRootPart.CFrame = safeCFrame - Vector3.new(0, getgenv().SafeHeight, 0)
                             targetMob.HumanoidRootPart.CanCollide = false
                             
+                            -- Tự động đánh
                             local tool = char:FindFirstChildOfClass("Tool")
                             if tool then tool:Activate() end
                         else
-                            -- Nếu chưa có quái -> Bay trượt ra bãi Bandit đứng chờ lơ lửng
-                            TweenToPos(CFrame.new(1145, 25, 1634), 250)
+                            -- Nếu chưa có quái -> Đứng lơ lửng chờ bãi quái
+                            RedzTween(CFrame.new(1145, 25, 1634), 250)
                         end
                     end
                 end
             end)
         else
             if LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
-                DisableNoclipAndFly(LocalPlayer.Character.HumanoidRootPart)
+                RemoveBodyVelocity(LocalPlayer.Character.HumanoidRootPart)
             end
             if currentTween then currentTween:Cancel() end
         end
     end
 end)
 
--- Toggle Menu
-local Toggle = Tabs.Main:AddToggle("AutoFarmToggle", { Title = "🚀 BẬT AUTO FARM (REDZ ENGINE)", Default = getgenv().AutoFarmEnabled })
+-- Menu Toggle
+local Toggle = Tabs.Main:AddToggle("AutoFarmToggle", { Title = "🚀 BẬT AUTO FARM (REAL CORE)", Default = getgenv().AutoFarmEnabled })
 Toggle:OnChanged(function(Value)
     getgenv().AutoFarmEnabled = Value
 end)
