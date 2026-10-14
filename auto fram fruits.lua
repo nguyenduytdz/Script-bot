@@ -1,28 +1,76 @@
--- [[ BLOX FRUIT AUTO FARM, STORE & PERSISTENT HOP MENU (FINAL FIXED) ]] --
+-- [[ BLOX FRUIT AUTO FARM, STORE, FILTER & PERSISTENT HOP MENU ]] --
 
 local Library = loadstring(game:HttpGet("https://raw.githubusercontent.com/xHeptc/Kavo-UI-Library/main/source.lua"))()
-local Window = Library.CreateLib("Blox Fruits - Auto Hop & Store Fruit", "DarkTheme")
+local Window = Library.CreateLib("Blox Fruits - Auto Hop & Filter Fruit", "DarkTheme")
 
+-- Biến toàn cục lưu trạng thái qua các Server
 getgenv().AutoHopFruit = getgenv().AutoHopFruit or false
+getgenv().SelectedFilter = getgenv().SelectedFilter or "Mythical & Legendary" -- Mặc định chỉ nhặt trái xịn
 
 local MainTab = Window:NewTab("Main Menu")
-local MainSection = MainTab:NewSection("Auto Farm Fruit")
+local MainSection = MainTab:NewSection("Auto Farm Fruit & Filter")
 
--- Hàm tìm Trái Ác Quỷ sâu bên trong Workspace (Quét toàn bộ Map)
+-- Danh sách phân loại độ hiếm các trái trong Blox Fruits
+local Rarities = {
+    Mythical = {"Kitsune", "Dragon", "Leopard", "T-Rex", "Spirit", "Control", "Venom", "Shadow", "Dough", "Mammoth", "Gas", "Tiger", "Yeti", "Gravity"},
+    Legendary = {"Portal", "Lightning", "Pain", "Blizzard", "Buddha", "Quake", "Love", "Creation", "Spider", "Sound", "Phoenix"},
+    Rare = {"Light", "Rubber", "Ghost", "Magma"},
+    Uncommon = {"Flame", "Ice", "Sand", "Dark", "Eagle", "Diamond"},
+    Common = {"Rocket", "Spin", "Blade", "Spring", "Bomb", "Smoke", "Spike"}
+}
+
+-- Hàm kiểm tra độ hiếm của trái
+local function GetFruitRarity(fruitName)
+    for _, name in ipairs(Rarities.Mythical) do
+        if string.find(fruitName, name) then return "Mythical" end
+    end
+    for _, name in ipairs(Rarities.Legendary) do
+        if string.find(fruitName, name) then return "Legendary" end
+    end
+    for _, name in ipairs(Rarities.Rare) do
+        if string.find(fruitName, name) then return "Rare" end
+    end
+    for _, name in ipairs(Rarities.Uncommon) do
+        if string.find(fruitName, name) then return "Uncommon" end
+    end
+    for _, name in ipairs(Rarities.Common) do
+        if string.find(fruitName, name) then return "Common" end
+    end
+    return "Unknown"
+end
+
+-- Hàm kiểm tra xem trái có thỏa mãn bộ lọc không
+local function ShouldPickFruit(fruitName)
+    local rarity = GetFruitRarity(fruitName)
+    local filter = getgenv().SelectedFilter
+    
+    if filter == "Mythical & Legendary" then
+        return rarity == "Mythical" or rarity == "Legendary"
+    elseif filter == "Từ Rare trở lên" then
+        return rarity == "Mythical" or rarity == "Legendary" or rarity == "Rare"
+    elseif filter == "Tất cả các loại" then
+        return true
+    end
+    return true
+end
+
+-- Hàm tìm Trái Ác Quỷ trong Workspace thỏa mãn bộ lọc
 local function GetFruit()
     for _, v in pairs(workspace:GetDescendants()) do
         if (v:IsA("Tool") or v:IsA("Model")) and (string.find(v.Name, "Fruit") or v.Name == "Fruit ") then
-            -- Đảm bảo không lấy nhầm item đang nằm trên người người chơi khác
             local playerParent = game.Players:GetPlayerFromCharacter(v.Parent)
             local humanoidParent = v.Parent and v.Parent:FindFirstChildOfClass("Humanoid")
             
+            -- Đảm bảo không lấy nhầm trái của người chơi khác
             if not playerParent and not humanoidParent then
-                if v:IsA("Tool") and v:FindFirstChild("Handle") then
-                    return v
-                elseif v:IsA("Model") then
-                    local part = v:FindFirstChild("Handle") or v.PrimaryPart or v:FindFirstChildOfClass("BasePart")
-                    if part then
+                if ShouldPickFruit(v.Name) then
+                    if v:IsA("Tool") and v:FindFirstChild("Handle") then
                         return v
+                    elseif v:IsA("Model") then
+                        local part = v:FindFirstChild("Handle") or v.PrimaryPart or v:FindFirstChildOfClass("BasePart")
+                        if part then
+                            return v
+                        end
                     end
                 end
             end
@@ -59,7 +107,7 @@ local function AutoStoreFruits()
     return storedSuccessfully
 end
 
--- Hàm Server Hop kèm duy trì trạng thái
+-- Hàm Server Hop kèm duy trì trạng thái qua server mới
 local function ServerHop()
     local TeleportService = game:GetService("TeleportService")
     local HttpService = game:GetService("HttpService")
@@ -69,6 +117,7 @@ local function ServerHop()
     if queuetype and getgenv().AutoHopFruit then
         queuetype([[
             getgenv().AutoHopFruit = true
+            getgenv().SelectedFilter = "]] .. getgenv().SelectedFilter .. [["
             loadstring(game:HttpGet("ĐƯỜNG_LINK_SCRIPT_CỦA_BẠN"))()
         ]])
     end
@@ -80,83 +129,5 @@ local function ServerHop()
     if success and Servers and Servers.data then
         for _, s in pairs(Servers.data) do
             if s.playing ~= s.maxPlayers and s.id ~= game.JobId then
-                TeleportService:TeleportToPlaceInstance(PlaceId, s.id, game.Players.LocalPlayer)
-                break
-            end
-        end
-    end
-end
-
--- Vòng lặp xử lý chính
-task.spawn(function()
-    while task.wait(1) do
-        if getgenv().AutoHopFruit then
-            local fruit = GetFruit()
-            local hrp = game.Players.LocalPlayer.Character and game.Players.LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
-            
-            if fruit and hrp then
-                -- Lấy phần cơ sở để bay đến chính xác vị trí trái
-                local targetPart = nil
-                if fruit:IsA("Tool") then
-                    targetPart = fruit:FindFirstChild("Handle")
-                elseif fruit:IsA("Model") then
-                    targetPart = fruit:FindFirstChild("Handle") or fruit.PrimaryPart or fruit:FindFirstChildOfClass("BasePart")
-                end
-                
-                if targetPart then
-                    -- Dịch chuyển ngay lập tức tới trái (cộng thêm chút độ cao để nhận diện va chạm tốt hơn)
-                    hrp.CFrame = targetPart.CFrame + Vector3.new(0, 3, 0)
-                end
-                
-                -- Đợi game xác nhận nhặt vào balo
-                task.wait(2)
-                
-                -- Tiến hành cất vào kho
-                local stored = false
-                local attempts = 0
-                repeat
-                    stored = AutoStoreFruits()
-                    attempts = attempts + 1
-                    task.wait(0.5)
-                until stored or attempts > 5
-                
-                -- Cất xong xuôi mới chuyển Server khác
-                task.wait(1)
-                ServerHop()
-                task.wait(10)
-            else
-                -- Không tìm thấy trái trong map -> Chuyển sang Server mới ngay
-                ServerHop()
-                task.wait(8)
-            end
-        end
-    end
-end)
-
--- Giao diện Toggle
-MainSection:NewToggle("Auto Fruit, Store & Hop", "Tự động nhặt, cất kho, tự chạy lại khi đổi server", function(state)
-    getgenv().AutoHopFruit = state
-    if state then
-        game:GetService("StarterGui"):SetCore("SendNotification", {
-            Title = "Blox Fruits",
-            Text = "Đã BẬT! Sẵn sàng săn trái ác quỷ.",
-            Duration = 3
-        })
-    else
-        game:GetService("StarterGui"):SetCore("SendNotification", {
-            Title = "Blox Fruits",
-            Text = "Đã TẮT!",
-            Duration = 3
-        })
-    end
-end)
-
-MainSection:NewButton("Hop Server Ngay", "Chuyển server thủ công", function()
-    ServerHop()
-end)
-
-local ConfigTab = Window:NewTab("Cài Đặt")
-local ConfigSection = ConfigTab:NewSection("Phím Tắt")
-ConfigSection:NewKeybind("Bật/Tắt Menu", "Ẩn hiện giao diện", Enum.KeyCode.RightControl, function()
-    Library:ToggleUI()
-end)
+                TeleportService:TeleportToPlaceInstance(PlaceId,
+                    
