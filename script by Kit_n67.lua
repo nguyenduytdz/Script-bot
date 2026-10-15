@@ -1,3 +1,8 @@
+-- ==============================================================================
+-- Project: Luxury Dashboard UI (Full Upgraded Version)
+-- Author: Kit_n67 | Upgraded for Boss Man
+-- ==============================================================================
+
 local Players = game:GetService("Players")
 local UserInputService = game:GetService("UserInputService")
 local RunService = game:GetService("RunService")
@@ -5,6 +10,7 @@ local Stats = game:GetService("Stats")
 local HttpService = game:GetService("HttpService")
 local TeleportService = game:GetService("TeleportService")
 local SoundService = game:GetService("SoundService")
+local StarterGui = game:GetService("StarterGui")
 
 local LocalPlayer = Players.LocalPlayer
 local PlayerGui = LocalPlayer:WaitForChild("PlayerGui")
@@ -78,16 +84,17 @@ Gui.DisplayOrder = 999999
 Gui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 Gui.Parent = PlayerGui
 
+-- ICON NỔI DÙNG ẢNH TỰ TẠO CỦA MÀY
 local Icon = Instance.new("ImageButton")
 Icon.Name = "MenuIcon"
 Icon.Parent = Gui
-Icon.Size = UDim2.fromOffset(56, 56)
-Icon.Position = UDim2.new(0, 20, 0.5, -28)
-Icon.BackgroundColor3 = Color3.fromRGB(15, 15, 20)
+Icon.Size = UDim2.fromOffset(52, 52)
+Icon.Position = UDim2.new(0, 20, 0.5, -26)
+Icon.BackgroundColor3 = Color3.fromRGB(15, 15, 22)
 Icon.BorderSizePixel = 0
 Icon.AutoButtonColor = false
-if AvatarURL ~= "" then Icon.Image = AvatarURL end
-Corner(Icon, 28)
+Icon.Image = "rbxassetid://113875514885319"
+Corner(Icon, 26)
 Stroke(Icon, Accent, 2)
 
 local Menu = Instance.new("Frame")
@@ -123,7 +130,7 @@ local function MakeTopBtn(XOffset, Text, Callback)
     Corner(Btn, 6)
     
     Btn.MouseButton1Click:Connect(function()
-        ClickSound:Play() -- Phát âm thanh khi bấm nút điều khiển góc phải
+        ClickSound:Play()
         Callback()
     end)
     return Btn
@@ -133,12 +140,8 @@ local IsMaximized = false
 local NormalSize = UDim2.fromOffset(CONFIG.MenuWidth, CONFIG.MenuHeight)
 local NormalPos = Menu.Position
 
--- Nút [-] Thu nhỏ menu nhưng không tắt icon
-MakeTopBtn(0, "—", function()
-    Menu.Visible = false
-end)
+MakeTopBtn(0, "—", function() Menu.Visible = false end)
 
--- Ký tự thu phóng menu [🗖] (Phóng to / Thu nhỏ)
 MakeTopBtn(32, "🗖", function()
     IsMaximized = not IsMaximized
     if IsMaximized then
@@ -152,7 +155,6 @@ MakeTopBtn(32, "🗖", function()
     end
 end)
 
--- Nút [×] Tắt menu và vô hiệu hóa icon hoàn toàn
 local IconEnabled = true
 MakeTopBtn(64, "×", function()
     Menu.Visible = false
@@ -221,11 +223,13 @@ local HomePage = MakePage("Home")
 local PlayersPage = MakePage("Players")
 local ServerPage = MakePage("Server")
 local SettingsPage = MakePage("Settings")
+local CreatorPage = MakePage("Creator") -- Thêm trang Creator
 
 local HomeNav = MakeNav("🏠   Home Dashboard", 75, "Home")
 local PlayersNav = MakeNav("👥   Online Players", 125, "Players")
 local ServerNav = MakeNav("🌐   Server Hop", 175, "Server")
 local SettingsNav = MakeNav("⚙️   UI Settings", 225, "Settings")
+local CreatorNav = MakeNav("👑   Creator Info", 275, "Creator") -- Nút chuyển tab Creator
 
 local BottomProfile = Instance.new("Frame")
 BottomProfile.Parent = Sidebar
@@ -332,8 +336,45 @@ local PlayerCount = StatCard(HomePage, 5, 158, 150, "SERVER PLAYERS")
 local UserIDValue = StatCard(HomePage, 160, 158, 150, "ROBLOX USER ID")
 UserIDValue.Text = tostring(UserId)
 
-PageTitle(PlayersPage, "Active Players", "Danh sách người chơi đang ở cùng server")
+-- ========================================================
+-- THIẾT KẾ GIAO DIỆN TAB CREATOR (THÔNG TIN TÁC GIẢ)
+-- ========================================================
+PageTitle(CreatorPage, "Developer Information", "Thông tin chi tiết về nhà phát triển script")
 
+local CreatorCard = Instance.new("Frame")
+CreatorCard.Parent = CreatorPage
+CreatorCard.Size = UDim2.new(1, -5, 0, 100)
+CreatorCard.Position = UDim2.fromOffset(0, 70)
+CreatorCard.BackgroundColor3 = Color3.fromRGB(18, 18, 25)
+CreatorCard.BorderSizePixel = 0
+Corner(CreatorCard, 12)
+Stroke(CreatorCard, Accent, 1.5)
+
+local CreatorTitle = Instance.new("TextLabel")
+CreatorTitle.Parent = CreatorCard
+CreatorTitle.Size = UDim2.new(1, -20, 0, 24)
+CreatorTitle.Position = UDim2.fromOffset(15, 15)
+CreatorTitle.BackgroundTransparency = 1
+CreatorTitle.Text = "👑  SCRIPT CREATOR: Kit_n67"
+CreatorTitle.TextColor3 = Accent
+CreatorTitle.TextSize = 14
+CreatorTitle.Font = Enum.Font.GothamBold
+CreatorTitle.TextXAlignment = Enum.TextXAlignment.Left
+
+local CreatorDesc = Instance.new("TextLabel")
+CreatorDesc.Parent = CreatorCard
+CreatorDesc.Size = UDim2.new(1, -20, 0, 40)
+CreatorDesc.Position = UDim2.fromOffset(15, 45)
+CreatorDesc.BackgroundTransparency = 1
+CreatorDesc.Text = "Luxury Dashboard v1.0 - Được tinh chỉnh và phát triển tối ưu riêng cho hệ thống game Roblox."
+CreatorDesc.TextColor3 = Color3.fromRGB(160, 160, 175)
+CreatorDesc.TextSize = 11
+CreatorDesc.Font = Enum.Font.Gotham
+CreatorDesc.TextXAlignment = Enum.TextXAlignment.Left
+CreatorDesc.TextWrapped = true
+
+-- Các trang quản lý player & server giữ nguyên
+PageTitle(PlayersPage, "Active Players", "Danh sách người chơi đang ở cùng server")
 local PlayerList = Instance.new("ScrollingFrame")
 PlayerList.Parent = PlayersPage
 PlayerList.Size = UDim2.new(1, -5, 1, -75)
@@ -346,7 +387,6 @@ PlayerList.ScrollBarImageColor3 = Accent
 local PlayerLayout = Instance.new("UIListLayout")
 PlayerLayout.Parent = PlayerList
 PlayerLayout.Padding = UDim.new(0, 8)
-
 PlayerLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
     PlayerList.CanvasSize = UDim2.new(0, 0, 0, PlayerLayout.AbsoluteContentSize.Y + 10)
 end)
@@ -363,7 +403,6 @@ local function RefreshPlayers()
     for _, Child in ipairs(PlayerList:GetChildren()) do
         if Child:IsA("Frame") then Child:Destroy() end
     end
-
     for _, Target in ipairs(Players:GetPlayers()) do
         if Target ~= LocalPlayer then
             local Row = Instance.new("Frame")
@@ -417,9 +456,6 @@ RefreshPlayers()
 Players.PlayerAdded:Connect(function() task.wait(0.2) RefreshPlayers() end)
 Players.PlayerRemoving:Connect(function() task.wait(0.1) RefreshPlayers() end)
 
--- ========================================================
--- 3. SERVER HOP PAGE
--- ========================================================
 PageTitle(ServerPage, "Server Hop Hub", "Tìm kiếm và kết nối nhanh vào các server ít người")
 
 local FindServers = Instance.new("TextButton")
@@ -457,7 +493,6 @@ ServerList.ScrollBarImageColor3 = Accent
 local ServerLayout = Instance.new("UIListLayout")
 ServerLayout.Parent = ServerList
 ServerLayout.Padding = UDim.new(0, 8)
-
 ServerLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
     ServerList.CanvasSize = UDim2.new(0, 0, 0, ServerLayout.AbsoluteContentSize.Y + 10)
 end)
@@ -567,9 +602,6 @@ FindServers.MouseButton1Click:Connect(function()
     end)
 end)
 
--- ========================================================
--- 4. SETTINGS PAGE (CHỌN MÀU THEME)
--- ========================================================
 PageTitle(SettingsPage, "Customization", "Tùy chỉnh giao diện và màu chủ đạo")
 
 local ThemeLabel = Instance.new("TextLabel")
@@ -624,7 +656,6 @@ for Name, Color in pairs(THEMES) do
     end)
 end
 
--- ĐỔI TAB CHỨC NĂNG
 local function ShowPage(Name)
     for PageName, Page in pairs(Pages) do
         Page.Visible = (PageName == Name)
@@ -644,10 +675,10 @@ HomeNav.MouseButton1Click:Connect(function() ShowPage("Home") end)
 PlayersNav.MouseButton1Click:Connect(function() ShowPage("Players") end)
 ServerNav.MouseButton1Click:Connect(function() ShowPage("Server") end)
 SettingsNav.MouseButton1Click:Connect(function() ShowPage("Settings") end)
+CreatorNav.MouseButton1Click:Connect(function() ShowPage("Creator") end) -- Lắng nghe sự kiện chuyển trang Creator
 
 ShowPage("Home")
 
--- CẬP NHẬT FPS & PING
 local Frames = 0
 local LastFPS = os.clock()
 RunService.RenderStepped:Connect(function()
@@ -670,14 +701,12 @@ task.spawn(function()
     end
 end)
 
--- BẬT TẮT MENU (ICON TRÒN) - CHỈ HOẠT ĐỘNG KHI ICON CHƯA BỊ TẮT HẲN BỞI NÚT [×]
 Icon.MouseButton1Click:Connect(function()
     if IconEnabled then
         Menu.Visible = not Menu.Visible
     end
 end)
 
--- HỆ THỐNG ÂM THANH CLICK BÊN TRONG MENU
 UserInputService.InputBegan:Connect(function(input, processed)
     if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
         if not Menu.Visible then return end
@@ -695,7 +724,6 @@ UserInputService.InputBegan:Connect(function(input, processed)
     end
 end)
 
--- KÉO DI CHUYỂN ICON NỔI
 local DraggingIcon, IconDragStart, IconStartPosition = false, nil, nil
 Icon.InputBegan:Connect(function(Input)
     if Input.UserInputType == Enum.UserInputType.MouseButton1 or Input.UserInputType == Enum.UserInputType.Touch then
@@ -719,7 +747,6 @@ UserInputService.InputEnded:Connect(function(Input)
     end
 end)
 
--- NÚT CO GIÃN CỬA SỔ (RESIZE GÓC DƯỚI PHẢI)
 local Resize = Instance.new("TextButton")
 Resize.Parent = Menu
 Resize.Size = UDim2.fromOffset(26, 26)
@@ -756,4 +783,14 @@ UserInputService.InputEnded:Connect(function(Input)
     end
 end)
 
-print("Luxury Dashboard with Full Audio & Controls loaded successfully!")
+-- THÔNG BÁO KHI SCRIPT ĐƯỢC KÍCH HOẠT THÀNH CÔNG
+pcall(function()
+    StarterGui:SetCore("SendNotification", {
+        Title = "Luxury Dashboard",
+        Text = "Script đã bật thành công! Chúc chơi game vui vẻ.",
+        Icon = "rbxassetid://113875514885319",
+        Duration = 4,
+    })
+end)
+
+print("Luxury Dashboard with Creator Tab & Custom Icon loaded successfully!")
