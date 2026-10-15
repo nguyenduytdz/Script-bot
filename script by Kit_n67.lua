@@ -1,5 +1,5 @@
 -- ==============================================================================
--- Project: Luxury Dashboard UI (Full Upgraded Version)
+-- Project: Luxury Dashboard UI (Fixed Icon & Full Upgraded)
 -- Author: Kit_n67 | Upgraded for Boss Man
 -- ==============================================================================
 
@@ -84,7 +84,9 @@ Gui.DisplayOrder = 999999
 Gui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 Gui.Parent = PlayerGui
 
--- ICON NỔI DÙNG ẢNH TỰ TẠO CỦA MÀY
+-- ========================================================
+-- ICON NỔI DÙNG RBXTHUMB ĐỂ HIỂN THỊ CHUẨN XÁC ẢNH CỦA BẠN
+-- ========================================================
 local Icon = Instance.new("ImageButton")
 Icon.Name = "MenuIcon"
 Icon.Parent = Gui
@@ -93,7 +95,7 @@ Icon.Position = UDim2.new(0, 20, 0.5, -26)
 Icon.BackgroundColor3 = Color3.fromRGB(15, 15, 22)
 Icon.BorderSizePixel = 0
 Icon.AutoButtonColor = false
-Icon.Image = "rbxassetid://113875514885319"
+Icon.Image = "rbxthumb://type=Asset&id=113875514885319&w=150&h=150"
 Corner(Icon, 26)
 Stroke(Icon, Accent, 2)
 
@@ -223,13 +225,13 @@ local HomePage = MakePage("Home")
 local PlayersPage = MakePage("Players")
 local ServerPage = MakePage("Server")
 local SettingsPage = MakePage("Settings")
-local CreatorPage = MakePage("Creator") -- Thêm trang Creator
+local CreatorPage = MakePage("Creator")
 
 local HomeNav = MakeNav("🏠   Home Dashboard", 75, "Home")
 local PlayersNav = MakeNav("👥   Online Players", 125, "Players")
 local ServerNav = MakeNav("🌐   Server Hop", 175, "Server")
 local SettingsNav = MakeNav("⚙️   UI Settings", 225, "Settings")
-local CreatorNav = MakeNav("👑   Creator Info", 275, "Creator") -- Nút chuyển tab Creator
+local CreatorNav = MakeNav("👑   Creator Info", 275, "Creator")
 
 local BottomProfile = Instance.new("Frame")
 BottomProfile.Parent = Sidebar
@@ -336,9 +338,7 @@ local PlayerCount = StatCard(HomePage, 5, 158, 150, "SERVER PLAYERS")
 local UserIDValue = StatCard(HomePage, 160, 158, 150, "ROBLOX USER ID")
 UserIDValue.Text = tostring(UserId)
 
--- ========================================================
--- THIẾT KẾ GIAO DIỆN TAB CREATOR (THÔNG TIN TÁC GIẢ)
--- ========================================================
+-- TAB CREATOR
 PageTitle(CreatorPage, "Developer Information", "Thông tin chi tiết về nhà phát triển script")
 
 local CreatorCard = Instance.new("Frame")
@@ -373,7 +373,7 @@ CreatorDesc.Font = Enum.Font.Gotham
 CreatorDesc.TextXAlignment = Enum.TextXAlignment.Left
 CreatorDesc.TextWrapped = true
 
--- Các trang quản lý player & server giữ nguyên
+-- PLAYERS & SERVER PAGES
 PageTitle(PlayersPage, "Active Players", "Danh sách người chơi đang ở cùng server")
 local PlayerList = Instance.new("ScrollingFrame")
 PlayerList.Parent = PlayersPage
@@ -675,7 +675,7 @@ HomeNav.MouseButton1Click:Connect(function() ShowPage("Home") end)
 PlayersNav.MouseButton1Click:Connect(function() ShowPage("Players") end)
 ServerNav.MouseButton1Click:Connect(function() ShowPage("Server") end)
 SettingsNav.MouseButton1Click:Connect(function() ShowPage("Settings") end)
-CreatorNav.MouseButton1Click:Connect(function() ShowPage("Creator") end) -- Lắng nghe sự kiện chuyển trang Creator
+CreatorNav.MouseButton1Click:Connect(function() ShowPage("Creator") end)
 
 ShowPage("Home")
 
@@ -783,14 +783,13 @@ UserInputService.InputEnded:Connect(function(Input)
     end
 end)
 
--- THÔNG BÁO KHI SCRIPT ĐƯỢC KÍCH HOẠT THÀNH CÔNG
 pcall(function()
     StarterGui:SetCore("SendNotification", {
         Title = "Luxury Dashboard",
         Text = "Script đã bật thành công! Chúc chơi game vui vẻ.",
-        Icon = "rbxassetid://113875514885319",
+        Icon = "rbxthumb://type=Asset&id=113875514885319&w=150&h=150",
         Duration = 4,
     })
 end)
 
-print("Luxury Dashboard with Creator Tab & Custom Icon loaded successfully!")
+print("Luxury Dashboard loaded successfully")
