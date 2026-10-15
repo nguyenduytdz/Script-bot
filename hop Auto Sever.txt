@@ -1,0 +1,134 @@
+-- ==============================================================================
+-- Project: Small Server Joiner UI
+-- Style: Rounded Center Menu with Rainbow Border
+-- ==============================================================================
+
+local CoreGui = game:GetService("CoreGui")
+local TweenService = game:GetService("TweenService")
+local TeleportService = game:GetService("TeleportService")
+local HttpService = game:GetService("HttpService")
+local Players = game:GetService("Players")
+
+-- Dọn dẹp UI cũ nếu đã tồn tại
+if CoreGui:FindFirstChild("AxiomSmallServerUI") then
+    CoreGui.AxiomSmallServerUI:Destroy()
+end
+
+-- 1. Khởi tạo ScreenGui
+local ScreenGui = Instance.new("ScreenGui")
+ScreenGui.Name = "AxiomSmallServerUI"
+ScreenGui.ResetOnSpawn = false
+ScreenGui.Parent = CoreGui
+
+-- 2. Khung Menu Chính (Hình Tròn / Bo Góc)
+local MainFrame = Instance.new("Frame")
+MainFrame.Name = "MainFrame"
+MainFrame.Size = UDim2.new(0, 220, 0, 220)
+MainFrame.Position = UDim2.new(0.5, -110, 0.5, -110)
+MainFrame.BackgroundColor3 = Color3.fromRGB(15, 12, 28)
+MainFrame.BorderSizePixel = 0
+MainFrame.Active = true
+MainFrame.Draggable = true -- Cho phép kéo thả menu trên màn hình
+MainFrame.Parent = ScreenGui
+
+-- Bo tròn khung thành hình tròn
+local FrameCorner = Instance.new("UICorner")
+FrameCorner.CornerRadius = UDim.new(0.5, 0)
+FrameCorner.Parent = MainFrame
+
+-- Viền Rainbow
+local UIStroke = Instance.new("UIStroke")
+UIStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+UIStroke.Thickness = 4
+UIStroke.Color = Color3.fromRGB(255, 0, 0)
+UIStroke.Parent = MainFrame
+
+-- Hiệu ứng Rainbow xoay màu liên tục cho viền
+task.spawn(function()
+    local hue = 0
+    while task.wait(0.03) do
+        hue = (hue + 0.01) % 1
+        UIStroke.Color = Color3.fromHSV(hue, 0.8, 1)
+    end
+end)
+
+-- 3. Nút Bấm Ở Giữa (Join Server 1 Người)
+local HopButton = Instance.new("TextButton")
+HopButton.Name = "HopButton"
+HopButton.Size = UDim2.new(0, 140, 0, 140)
+HopButton.Position = UDim2.new(0.5, -70, 0.5, -70)
+HopButton.BackgroundColor3 = Color3.fromRGB(30, 24, 50)
+HopButton.Text = "JOIN SERVER\n1 NGƯỜI"
+HopButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+HopButton.Font = Enum.Font.FredokaOne
+HopButton.TextSize = 16
+HopButton.Parent = MainFrame
+
+-- Bo tròn nút bấm ở giữa
+local ButtonCorner = Instance.new("UICorner")
+ButtonCorner.CornerRadius = UDim.new(0.5, 0)
+ButtonCorner.Parent = HopButton
+
+-- Viền nhẹ cho nút
+local ButtonStroke = Instance.new("UIStroke")
+ButtonStroke.Thickness = 2
+ButtonStroke.Color = Color3.fromRGB(100, 80, 200)
+ButtonStroke.Parent = HopButton
+
+-- 4. Logic Tìm & Chuyển Đến Server Ít Người Nhất
+local isTeleporting = false
+
+local function TeleportToSmallestServer()
+    if isTeleporting then return end
+    isTeleporting = true
+    
+    HopButton.Text = "ĐANG TÌM\nSERVER..."
+    HopButton.BackgroundColor3 = Color3.fromRGB(80, 50, 20)
+
+    local placeId = game.PlaceId
+    local currentJobId = game.JobId
+    local targetServerId = nil
+    local cursor = ""
+
+    -- Quét danh sách server công khai của game
+    repeat
+        local url = string.format("https://games.roblox.com/v1/games/%d/servers/Public?sortOrder=Asc&limit=100&cursor=%s", placeId, cursor)
+        local success, result = pcall(function()
+            return HttpService:JSONDecode(game:HttpGet(url))
+        end)
+
+        if success and result and result.data then
+            -- Duyệt danh sách các server để tìm server có ít người nhất (1 người hoặc ít nhất có thể)
+            for _, server in ipairs(result.data) do
+                if server.playing < server.maxPlayers and server.id ~= currentJobId then
+                    if server.playing <= 2 then -- Ưu tiên server có 1-2 người
+                        targetServerId = server.id
+                        break
+                    end
+                end
+            end
+            cursor = result.nextPageCursor or ""
+        else
+            break
+        end
+
+        task.wait(0.2)
+    until targetServerId or cursor == ""
+
+    -- Tiến hành chuyển server
+    if targetServerId then
+        HopButton.Text = "ĐANG CHUYỂN\nSERVER..."
+        HopButton.BackgroundColor3 = Color3.fromRGB(20, 80, 30)
+        TeleportService:TeleportToPlaceInstance(placeId, targetServerId, Players.LocalPlayer)
+    else
+        HopButton.Text = "KHÔNG THẤY\nTHỬ LẠI!"
+        HopButton.BackgroundColor3 = Color3.fromRGB(100, 20, 20)
+        task.wait(2)
+        HopButton.Text = "JOIN SERVER\n1 NGƯỜI"
+        HopButton.BackgroundColor3 = Color3.fromRGB(30, 24, 50)
+        isTeleporting = false
+    end
+end
+
+-- Lắng nghe sự kiện click nút
+HopButton.MouseButton1Click:Connect(TeleportToSmallestServer)
