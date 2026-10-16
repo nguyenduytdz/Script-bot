@@ -1,5 +1,5 @@
 -- ==============================================================================
--- Project: Luxury Dashboard UI (Instant Chat Render & Admin Inline Pin Version)
+-- Project: Luxury Dashboard UI (Native Server Chat Sync & Inline Pin Version)
 -- Author: Kit_n67 | Upgraded for Boss Man
 -- ==============================================================================
 
@@ -11,6 +11,8 @@ local HttpService = game:GetService("HttpService")
 local TeleportService = game:GetService("TeleportService")
 local SoundService = game:GetService("SoundService")
 local StarterGui = game:GetService("StarterGui")
+local TextChatService = game:GetService("TextChatService")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local LocalPlayer = Players.LocalPlayer
 local PlayerGui = LocalPlayer:WaitForChild("PlayerGui")
@@ -386,7 +388,7 @@ CreatorDesc.TextXAlignment = Enum.TextXAlignment.Left
 CreatorDesc.TextWrapped = true
 
 -- ========================================================
--- TAB GLOBAL CHAT (HIỂN THỊ TIN NHẮN TỨC THÌ)
+-- TAB GLOBAL CHAT (ĐỒNG BỘ TRỰC TIẾP QUA MULTIPLAYER SERVER)
 -- ========================================================
 PageTitle(ChatPage, "Global Community Chat", "Trò chuyện trực tuyến cùng những người dùng script khác")
 
@@ -514,7 +516,7 @@ local function AddChatMessage(senderName, senderAvatar, messageText, isSpecialAd
     TextLabel.TextXAlignment = Enum.TextXAlignment.Left
     TextLabel.TextWrapped = true
 
-    -- NÚT GHIM KẾ BÊN TIN NHẮN (CHỈ DÀNH CHO ADMIN)
+    -- NÚT GHIM KẾ BÊN TIN NHẮN (CHỈ DÀNH CHO ADMIN CHÍNH CHỦ)
     if isAdmin and not isSystem then
         local InlinePinBtn = Instance.new("TextButton")
         InlinePinBtn.Parent = Row
@@ -538,14 +540,43 @@ local function AddChatMessage(senderName, senderAvatar, messageText, isSpecialAd
 end
 
 -- TIN NHẮN KHỞI ĐỘNG CỦA SYSTEM BOT
-AddChatMessage("System Bot", "", "Hệ thống Global Chat đã sẵn sàng! Chúc bạn chơi game vui vẻ.", false)
+AddChatMessage("System Bot", "", "Hệ thống Global Chat server đã sẵn sàng! Chúc bạn chơi game vui vẻ.", false)
 
+-- LẮNG NGHE TIN NHẮN TỪ TẤT CẢ NGƯỜI CHƠI TRONG SERVER (ĐỒNG BỘ REAL-TIME)
+local function ListenPlayerChat(p)
+    p.Chatted:Connect(function(msg)
+        local thumb = ""
+        pcall(function()
+            thumb = Players:GetUserThumbnailAsync(p.UserId, Enum.ThumbnailType.HeadShot, Enum.ThumbnailSize.Size420x420)
+        end)
+        local isServerAdmin = (p.Name:lower() == ADMIN_USERNAME:lower())
+        AddChatMessage(p.DisplayName, thumb, msg, isServerAdmin)
+    end)
+end
+
+for _, p in ipairs(Players:GetPlayers()) do
+    ListenPlayerChat(p)
+end
+Players.PlayerAdded:Connect(ListenPlayerChat)
+
+-- NÚT GỬI TIN NHẮN ĐẨY LÊN SERVER CHUNG
 SendChatBtn.MouseButton1Click:Connect(function()
     local txt = ChatInput.Text
     if txt ~= "" and #txt <= 150 then
-        AddChatMessage(DisplayName, AvatarURL, txt, isAdmin)
         ChatInput.Text = ""
         ClickSound:Play()
+        
+        -- Gửi thẳng vào hệ thống chat của game để server đồng bộ cho mọi người
+        pcall(function()
+            if TextChatService.ChatVersion == Enum.ChatVersion.TextChatService then
+                TextChatService.TextChannels.RBXGeneral:SendAsync(txt)
+            else
+                local events = ReplicatedStorage:FindFirstChild("DefaultChatSystemChatEvents")
+                if events and events:FindFirstChild("SayMessageRequest") then
+                    events.SayMessageRequest:FireServer(txt, "All")
+                end
+            end
+        end)
     end
 end)
 
@@ -983,4 +1014,4 @@ pcall(function()
     })
 end)
 
-print("Luxury Dashboard UI Ready!")
+print("Luxury Dashboard Server-Synced Chat Loaded!")
