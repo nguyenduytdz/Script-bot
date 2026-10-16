@@ -1,5 +1,5 @@
 -- ==============================================================================
--- Project: Luxury Dashboard UI (Native Server Chat Sync & Inline Pin Version)
+-- Project: Luxury Dashboard UI (Universal Native Server Chat Sync)
 -- Author: Kit_n67 | Upgraded for Boss Man
 -- ==============================================================================
 
@@ -388,7 +388,7 @@ CreatorDesc.TextXAlignment = Enum.TextXAlignment.Left
 CreatorDesc.TextWrapped = true
 
 -- ========================================================
--- TAB GLOBAL CHAT (ĐỒNG BỘ TRỰC TIẾP QUA MULTIPLAYER SERVER)
+-- TAB GLOBAL CHAT (ĐỒNG BỘ ĐA NỀN TẢNG TEXTCHATSERVICE & LEGACY)
 -- ========================================================
 PageTitle(ChatPage, "Global Community Chat", "Trò chuyện trực tuyến cùng những người dùng script khác")
 
@@ -540,9 +540,26 @@ local function AddChatMessage(senderName, senderAvatar, messageText, isSpecialAd
 end
 
 -- TIN NHẮN KHỞI ĐỘNG CỦA SYSTEM BOT
-AddChatMessage("System Bot", "", "Hệ thống Global Chat server đã sẵn sàng! Chúc bạn chơi game vui vẻ.", false)
+AddChatMessage("System Bot", "", "Hệ thống Universal Chat đã sẵn sàng! Chúc bạn chơi game vui vẻ.", false)
 
--- LẮNG NGHE TIN NHẮN TỪ TẤT CẢ NGƯỜI CHƠI TRONG SERVER (ĐỒNG BỘ REAL-TIME)
+-- LẮNG NGHE TIN NHẮN TỪ TEXTCHATSERVICE (ROBLOX HIỆN ĐẠI)
+pcall(function()
+    TextChatService.MessageReceived:Connect(function(textChatMessage)
+        if textChatMessage.TextSource then
+            local speaker = Players:GetPlayerByUserId(textChatMessage.TextSource.UserId)
+            if speaker then
+                local thumb = ""
+                pcall(function()
+                    thumb = Players:GetUserThumbnailAsync(speaker.UserId, Enum.ThumbnailType.HeadShot, Enum.ThumbnailSize.Size420x420)
+                end)
+                local isServerAdmin = (speaker.Name:lower() == ADMIN_USERNAME:lower())
+                AddChatMessage(speaker.DisplayName, thumb, textChatMessage.Text, isServerAdmin)
+            end
+        end
+    end)
+end)
+
+-- LẮNG NGHE TIN NHẮN TỪ LEGACY CHAT (ROBLOX CŨ)
 local function ListenPlayerChat(p)
     p.Chatted:Connect(function(msg)
         local thumb = ""
@@ -559,17 +576,19 @@ for _, p in ipairs(Players:GetPlayers()) do
 end
 Players.PlayerAdded:Connect(ListenPlayerChat)
 
--- NÚT GỬI TIN NHẮN ĐẨY LÊN SERVER CHUNG
+-- NÚT GỬI TIN NHẮN ĐẨY LÊN HỆ THỐNG SERVER CHUNG
 SendChatBtn.MouseButton1Click:Connect(function()
     local txt = ChatInput.Text
     if txt ~= "" and #txt <= 150 then
-        ChatInput.Text = ""
+            ChatInput.Text = ""
         ClickSound:Play()
         
-        -- Gửi thẳng vào hệ thống chat của game để server đồng bộ cho mọi người
         pcall(function()
             if TextChatService.ChatVersion == Enum.ChatVersion.TextChatService then
-                TextChatService.TextChannels.RBXGeneral:SendAsync(txt)
+                local channel = TextChatService.TextChannels:FindFirstChild("RBXGeneral")
+                if channel then
+                    channel:SendAsync(txt)
+                end
             else
                 local events = ReplicatedStorage:FindFirstChild("DefaultChatSystemChatEvents")
                 if events and events:FindFirstChild("SayMessageRequest") then
@@ -1014,4 +1033,4 @@ pcall(function()
     })
 end)
 
-print("Luxury Dashboard Server-Synced Chat Loaded!")
+print("Luxury Dashboard Universal Chat Ready!")
