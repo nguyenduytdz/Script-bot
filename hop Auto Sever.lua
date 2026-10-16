@@ -1,5 +1,5 @@
 -- ==============================================================================
--- Project: Luxury Dashboard UI (Real-time Online Global Chat Version)
+-- Project: Luxury Dashboard UI (Instant Chat Render & Admin Inline Pin Version)
 -- Author: Kit_n67 | Upgraded for Boss Man
 -- ==============================================================================
 
@@ -15,12 +15,9 @@ local StarterGui = game:GetService("StarterGui")
 local LocalPlayer = Players.LocalPlayer
 local PlayerGui = LocalPlayer:WaitForChild("PlayerGui")
 
--- XÁC NHẬN ADMIN CHÍNH CHỦ VỚI TÊN @ TÀI KHOẢN ROBROX
+-- BẢO MẬT ADMIN BẰNG TÊN @ THẬT (CHỐNG FAKE DISPLAY NAME)
 local ADMIN_USERNAME = "kit_n67"
 local isAdmin = (LocalPlayer.Name:lower() == ADMIN_USERNAME:lower())
-
--- SERVER DATABASE DÙNG CHUNG CHO CẢ CỘNG ĐỒNG DÙNG SCRIPT
-local CHAT_API_URL = "https://luxury-hub-chat-default-rtdb.firebaseio.com/chat.json"
 
 local CONFIG = {
     Theme = "Purple",
@@ -389,7 +386,7 @@ CreatorDesc.TextXAlignment = Enum.TextXAlignment.Left
 CreatorDesc.TextWrapped = true
 
 -- ========================================================
--- TAB GLOBAL CHAT & SERVER DATABASE ĐỒNG BỘ THỜI GIAN THỰC
+-- TAB GLOBAL CHAT (HIỂN THỊ TIN NHẮN TỨC THÌ)
 -- ========================================================
 PageTitle(ChatPage, "Global Community Chat", "Trò chuyện trực tuyến cùng những người dùng script khác")
 
@@ -473,12 +470,7 @@ SendChatBtn.TextSize = 12
 SendChatBtn.Font = Enum.Font.GothamBold
 Corner(SendChatBtn, 10)
 
-local RenderedMessageIDs = {}
-
-local function AddChatMessage(msgId, senderName, senderAvatar, messageText, isSpecialAdmin)
-    if RenderedMessageIDs[msgId] then return end
-    RenderedMessageIDs[msgId] = true
-
+local function AddChatMessage(senderName, senderAvatar, messageText, isSpecialAdmin)
     local Row = Instance.new("Frame")
     Row.Parent = ChatBoxContainer
     Row.Size = UDim2.new(1, -10, 0, 45)
@@ -522,6 +514,7 @@ local function AddChatMessage(msgId, senderName, senderAvatar, messageText, isSp
     TextLabel.TextXAlignment = Enum.TextXAlignment.Left
     TextLabel.TextWrapped = true
 
+    -- NÚT GHIM KẾ BÊN TIN NHẮN (CHỈ DÀNH CHO ADMIN)
     if isAdmin and not isSystem then
         local InlinePinBtn = Instance.new("TextButton")
         InlinePinBtn.Parent = Row
@@ -539,91 +532,20 @@ local function AddChatMessage(msgId, senderName, senderAvatar, messageText, isSp
         end)
     end
 
-    ChatBoxContainer.CanvasPosition = Vector2.new(0, 99999)
-end
-
--- TIN NHẮN BẮT ĐẦU CỦA BOT CỐ ĐỊNH
-AddChatMessage("sys_init", "System Bot", "", "Hệ thống Global Chat trực tuyến đã sẵn sàng! Chúc bạn chơi game vui vẻ.", false)
-
--- HÀM GỬI TIN NHẮN LÊN DATABASE DÙNG CHUNG
-local function SendMessageToDatabase(text)
-    local payload = HttpService:JSONEncode({
-        sender = DisplayName,
-        avatar = AvatarURL,
-        message = text,
-        isAdmin = isAdmin,
-        time = os.time()
-    })
-    
-    pcall(function()
-        if request then
-            request({
-                Url = CHAT_API_URL,
-                Method = "POST",
-                Headers = {["Content-Type"] = "application/json"},
-                Body = payload
-            })
-        elseif http_request then
-            http_request({
-                Url = CHAT_API_URL,
-                Method = "POST",
-                Headers = {["Content-Type"] = "application/json"},
-                Body = payload
-            })
-        end
+    task.defer(function()
+        ChatBoxContainer.CanvasPosition = Vector2.new(0, 99999)
     end)
 end
 
--- HÀM NHẬN TIN NHẮN THỜI GIAN THỰC TỪ SERVER DATABASE
-local function SyncMessagesFromDatabase()
-    local success, response = pcall(function()
-        return game:HttpGet(CHAT_API_URL)
-    end)
-
-    if success and response and response ~= "null" then
-        local decodeSuccess, data = pcall(function()
-            return HttpService:JSONDecode(response)
-        end)
-
-        if decodeSuccess and data then
-            local msgList = {}
-            for id, msgData in pairs(data) do
-                msgData.id = id
-                table.insert(msgList, msgData)
-            end
-
-            table.sort(msgList, function(a, b)
-              return (a.time or 0) < (b.time or 0)
-            end)
-
-            for _, msgData in ipairs(msgList) do
-                AddChatMessage(
-                    msgData.id,
-                    msgData.sender or "Unknown",
-                    msgData.avatar or "",
-                    msgData.message or "",
-                    msgData.isAdmin or false
-                )
-            end
-        end
-    end
-end
-
--- QUÉT TIN NHẮN TỰ ĐỘNG MỖI 3 GIÂY
-task.spawn(function()
-    while Gui.Parent do
-        SyncMessagesFromDatabase()
-        task.wait(3)
-    end
-end)
+-- TIN NHẮN KHỞI ĐỘNG CỦA SYSTEM BOT
+AddChatMessage("System Bot", "", "Hệ thống Global Chat đã sẵn sàng! Chúc bạn chơi game vui vẻ.", false)
 
 SendChatBtn.MouseButton1Click:Connect(function()
     local txt = ChatInput.Text
     if txt ~= "" and #txt <= 150 then
+        AddChatMessage(DisplayName, AvatarURL, txt, isAdmin)
         ChatInput.Text = ""
-        SendMessageToDatabase(txt)
-        task.wait(0.3)
-        SyncMessagesFromDatabase()
+        ClickSound:Play()
     end
 end)
 
@@ -1061,4 +983,4 @@ pcall(function()
     })
 end)
 
-print("Luxury Dashboard Online Global Chat Sync Ready!")
+print("Luxury Dashboard UI Ready!")
