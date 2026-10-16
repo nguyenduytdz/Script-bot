@@ -1,8 +1,3 @@
--- ==============================================================================
--- Project: Luxury Dashboard UI (Fixed Double Chat & Creator Social Links)
--- Author: Kit_n67 | Upgraded for Boss Man
--- ==============================================================================
-
 local Players = game:GetService("Players")
 local UserInputService = game:GetService("UserInputService")
 local RunService = game:GetService("RunService")
@@ -23,9 +18,9 @@ local isAdmin = (LocalPlayer.Name:lower() == ADMIN_USERNAME:lower())
 
 -- TÙY CHỈNH LINK LIÊN HỆ CỦA CREATOR TẠI ĐÂY
 local CREATOR_LINKS = {
-    TikTok = "https://www.tiktok.com/@kit_n67",
-    YouTube = "https://www.youtube.com/@kit_n67",
-    Discord = "https://discord.gg/luxuryhub"
+    TikTok = "https://www.tiktok.com/@nakarasutru?_r=1&_t=ZS-9Ab00FWZmPw",
+    YouTube = "Chưa có kênh Youtube",
+    Discord = "https://discord.com/users/1494250347731091497"
 }
 
 local CONFIG = {
@@ -378,7 +373,7 @@ CreatorTitle.Parent = CreatorCard
 CreatorTitle.Size = UDim2.new(1, -20, 0, 24)
 CreatorTitle.Position = UDim2.fromOffset(15, 12)
 CreatorTitle.BackgroundTransparency = 1
-CreatorTitle.Text = "👑  SCRIPT CREATOR: Kit_n67"
+CreatorTitle.Text = "👑  SCRIPT CREATOR: Kenji"
 CreatorTitle.TextColor3 = Accent
 CreatorTitle.TextSize = 14
 CreatorTitle.Font = Enum.Font.GothamBold
@@ -482,7 +477,7 @@ local function CreateSocialRow(platformName, iconEmoji, linkUrl)
     end)
 end
 
-CreateSocialRow("TikTok", "🎵", CREATOR_LINKS.TikTok)
+CreateSocialRow("TikTok", "🎧", CREATOR_LINKS.TikTok)
 CreateSocialRow("YouTube", "▶️", CREATOR_LINKS.YouTube)
 CreateSocialRow("Discord", "💬", CREATOR_LINKS.Discord)
 
@@ -514,7 +509,7 @@ PinnedText.Parent = PinnedBanner
 PinnedText.Size = UDim2.new(1, -40, 1, 0)
 PinnedText.Position = UDim2.fromOffset(35, 0)
 PinnedText.BackgroundTransparency = 1
-PinnedText.Text = "Tin nhắn ghim từ Admin: Chào mừng bạn đến với Luxury Hub!"
+PinnedText.Text = "Tin nhắn từ Admin: Chào mừng bạn đến với Luxury Hub!"
 PinnedText.TextColor3 = Color3.fromRGB(240, 220, 255)
 PinnedText.TextSize = 11
 PinnedText.Font = Enum.Font.GothamBold
