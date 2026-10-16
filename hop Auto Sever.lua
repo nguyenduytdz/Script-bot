@@ -1,5 +1,5 @@
 -- ==============================================================================
--- Project: Luxury Dashboard UI (Admin Pinned Message & Secure Auth Version)
+-- Project: Luxury Dashboard UI (System Bot No Avatar & Inline Pin Version)
 -- Author: Kit_n67 | Upgraded for Boss Man
 -- ==============================================================================
 
@@ -15,7 +15,7 @@ local StarterGui = game:GetService("StarterGui")
 local LocalPlayer = Players.LocalPlayer
 local PlayerGui = LocalPlayer:WaitForChild("PlayerGui")
 
--- KIỂM TRA QUYỀN ADMIN CHUẨN XÁC BẰNG TÊN TÀI KHOẢN THẬT (TÊN @) ĐỂ CHỐNG FAKE
+-- BẢO MẬT ADMIN BẰNG TÊN @ THẬT (CHỐNG FAKE DISPLAY NAME)
 local ADMIN_USERNAME = "kit_n67"
 local isAdmin = (LocalPlayer.Name:lower() == ADMIN_USERNAME:lower())
 
@@ -386,11 +386,11 @@ CreatorDesc.TextXAlignment = Enum.TextXAlignment.Left
 CreatorDesc.TextWrapped = true
 
 -- ========================================================
--- TAB GLOBAL CHAT & PINNED MESSAGE (DÀNH RIÊNG CHO ADMIN)
+-- TAB GLOBAL CHAT & SYSTEM BOT (KHÔNG CÓ AVATAR CHO BOT)
 -- ========================================================
 PageTitle(ChatPage, "Global Community Chat", "Trò chuyện trực tuyến cùng những người dùng script khác")
 
--- BẢNG GHIM TIN NHẮN (PINNED MESSAGE BANNER) Ở ĐẦU CHAT
+-- BẢNG GHIM TIN NHẮN TẠI ĐẦU CHAT
 local PinnedBanner = Instance.new("Frame")
 PinnedBanner.Parent = ChatPage
 PinnedBanner.Size = UDim2.new(1, -5, 0, 36)
@@ -420,7 +420,7 @@ PinnedText.Font = Enum.Font.GothamBold
 PinnedText.TextXAlignment = Enum.TextXAlignment.Left
 PinnedText.TextTruncate = Enum.TextTruncate.AtEnd
 
--- KHUNG CHAT CONTAINER (ĐÃ DỊCH XUỐNG DƯỚI THANH GHIM)
+-- KHUNG CHAT CONTAINER
 local ChatBoxContainer = Instance.new("ScrollingFrame")
 ChatBoxContainer.Parent = ChatPage
 ChatBoxContainer.Size = UDim2.new(1, -5, 1, -165)
@@ -441,7 +441,7 @@ end)
 
 local ChatInput = Instance.new("TextBox")
 ChatInput.Parent = ChatPage
-ChatInput.Size = UDim2.new(1, isAdmin and -135 or -75, 0, 40)
+ChatInput.Size = UDim2.new(1, -75, 0, 40)
 ChatInput.Position = UDim2.new(0, 0, 1, -50)
 ChatInput.BackgroundColor3 = Color3.fromRGB(18, 18, 25)
 ChatInput.BorderSizePixel = 0
@@ -461,7 +461,7 @@ InputPadding.Parent = ChatInput
 local SendChatBtn = Instance.new("TextButton")
 SendChatBtn.Parent = ChatPage
 SendChatBtn.Size = UDim2.fromOffset(70, 40)
-SendChatBtn.Position = UDim2.new(1, isAdmin and -130 or -70, 1, -50)
+SendChatBtn.Position = UDim2.new(1, -70, 1, -50)
 SendChatBtn.BackgroundColor3 = Accent
 SendChatBtn.BorderSizePixel = 0
 SendChatBtn.Text = "GỬI"
@@ -470,40 +470,33 @@ SendChatBtn.TextSize = 12
 SendChatBtn.Font = Enum.Font.GothamBold
 Corner(SendChatBtn, 10)
 
--- NÚT GHIM DÀNH RIÊNG CHO ADMIN (HIỆN NẾU ĐÚNG TÀI KHOẢN KẾT NỐI)
-local PinChatBtn = nil
-if isAdmin then
-    PinChatBtn = Instance.new("TextButton")
-    PinChatBtn.Parent = ChatPage
-    PinChatBtn.Size = UDim2.fromOffset(50, 40)
-    PinChatBtn.Position = UDim2.new(1, -50, 1, -50)
-    PinChatBtn.BackgroundColor3 = Color3.fromRGB(220, 50, 80)
-    PinChatBtn.BorderSizePixel = 0
-    PinChatBtn.Text = "📌 GHIM"
-    PinChatBtn.TextColor3 = Color3.new(1, 1, 1)
-    PinChatBtn.TextSize = 11
-    PinChatBtn.Font = Enum.Font.GothamBold
-    Corner(PinChatBtn, 10)
-end
-
 local function AddChatMessage(senderName, senderAvatar, messageText, isSpecialAdmin)
     local Row = Instance.new("Frame")
     Row.Parent = ChatBoxContainer
     Row.Size = UDim2.new(1, -10, 0, 45)
     Row.BackgroundTransparency = 1
 
-    local Avatar = Instance.new("ImageLabel")
-    Avatar.Parent = Row
-    Avatar.Size = UDim2.fromOffset(32, 32)
-    Avatar.Position = UDim2.fromOffset(5, 6)
-    Avatar.BackgroundTransparency = 1
-    Avatar.Image = senderAvatar ~= "" and senderAvatar or AvatarURL
-    Corner(Avatar, 16)
+    local isSystem = (senderName == "System Bot")
+
+    -- Nếu không phải System Bot thì hiển thị Avatar bình thường
+    if not isSystem then
+        local Avatar = Instance.new("ImageLabel")
+        Avatar.Parent = Row
+        Avatar.Size = UDim2.fromOffset(32, 32)
+        Avatar.Position = UDim2.fromOffset(5, 6)
+        Avatar.BackgroundTransparency = 1
+        Avatar.Image = senderAvatar ~= "" and senderAvatar or AvatarURL
+        Corner(Avatar, 16)
+    end
+
+    -- Căn lề cho System Bot (không có avatar thì sát lề trái hơn)
+    local textOffsetX = isSystem and 10 or 45
+    local textWidthOffset = isSystem and -20 or -85
 
     local NameLabel = Instance.new("TextLabel")
     NameLabel.Parent = Row
-    NameLabel.Size = UDim2.new(1, -45, 0, 16)
-    NameLabel.Position = UDim2.fromOffset(45, 4)
+    NameLabel.Size = UDim2.new(1, textWidthOffset, 0, 16)
+    NameLabel.Position = UDim2.fromOffset(textOffsetX, 4)
     NameLabel.BackgroundTransparency = 1
     NameLabel.Text = senderName .. (isSpecialAdmin and " 👑 [ADMIN]" or "")
     NameLabel.TextColor3 = isSpecialAdmin and Color3.fromRGB(255, 100, 100) or Accent
@@ -513,8 +506,8 @@ local function AddChatMessage(senderName, senderAvatar, messageText, isSpecialAd
 
     local TextLabel = Instance.new("TextLabel")
     TextLabel.Parent = Row
-    TextLabel.Size = UDim2.new(1, -45, 0, 20)
-    TextLabel.Position = UDim2.fromOffset(45, 20)
+    TextLabel.Size = UDim2.new(1, textWidthOffset, 0, 20)
+    TextLabel.Position = UDim2.fromOffset(textOffsetX, 20)
     TextLabel.BackgroundTransparency = 1
     TextLabel.Text = messageText
     TextLabel.TextColor3 = Color3.fromRGB(220, 220, 230)
@@ -522,6 +515,24 @@ local function AddChatMessage(senderName, senderAvatar, messageText, isSpecialAd
     TextLabel.Font = Enum.Font.Gotham
     TextLabel.TextXAlignment = Enum.TextXAlignment.Left
     TextLabel.TextWrapped = true
+
+    -- NÚT GHIM KẾ BÊN TIN NHẮN (CHỈ XUẤT HIỆN NẾU LÀ ADMIN CHÍNH CHỦ VÀ KHÔNG PHẢI SYSTEM BOT)
+    if isAdmin and not isSystem then
+        local InlinePinBtn = Instance.new("TextButton")
+        InlinePinBtn.Parent = Row
+        InlinePinBtn.Size = UDim2.fromOffset(28, 28)
+        InlinePinBtn.Position = UDim2.new(1, -30, 0.5, -14)
+        InlinePinBtn.BackgroundColor3 = Color3.fromRGB(28, 28, 38)
+        InlinePinBtn.BorderSizePixel = 0
+        InlinePinBtn.Text = "📌"
+        InlinePinBtn.TextSize = 12
+        Corner(InlinePinBtn, 6)
+
+        InlinePinBtn.MouseButton1Click:Connect(function()
+            ClickSound:Play()
+            PinnedText.Text = "Tin nhắn ghim từ Admin (" .. senderName .. "): " .. messageText
+        end)
+    end
 end
 
 AddChatMessage("System Bot", "", "Hệ thống Global Chat đã sẵn sàng. Chúc bạn chơi game vui vẻ!")
@@ -533,17 +544,6 @@ SendChatBtn.MouseButton1Click:Connect(function()
         ChatInput.Text = ""
     end
 end)
-
-if PinChatBtn then
-    PinChatBtn.MouseButton1Click:Connect(function()
-        local txt = ChatInput.Text
-        if txt ~= "" and #txt <= 150 then
-            PinnedText.Text = "Tin nhắn ghim từ Admin (" .. DisplayName .. "): " .. txt
-            AddChatMessage("📌 [ADMIN GHIM]", AvatarURL, txt, true)
-            ChatInput.Text = ""
-        end
-    end)
-end
 
 -- PLAYERS & SERVER PAGES
 PageTitle(PlayersPage, "Active Players", "Danh sách người chơi đang ở cùng server")
@@ -818,7 +818,6 @@ for Name, Color in pairs(THEMES) do
         ChatBoxContainer.ScrollBarImageColor3 = Accent
         FindServers.BackgroundColor3 = Accent
         SendChatBtn.BackgroundColor3 = Accent
-        if PinChatBtn then PinChatBtn.BackgroundColor3 = Color3.fromRGB(220, 50, 80) end
 
         for PageName, Nav in pairs(NavButtons) do
             if Pages[PageName].Visible then
@@ -980,4 +979,4 @@ pcall(function()
     })
 end)
 
-print("Luxury Dashboard loaded with Secure Admin Pinned Message!")
+print("Luxury Dashboard with System Bot No-Avatar Loaded Successfully!")
