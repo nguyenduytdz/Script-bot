@@ -1,5 +1,5 @@
 -- ==============================================================================
--- Project: Luxury Dashboard UI (Draggable Menu + Global Chat Version)
+-- Project: Luxury Dashboard UI (Fixed Button Overlap & Startup Notification)
 -- Author: Kit_n67 | Upgraded for Boss Man
 -- ==============================================================================
 
@@ -84,7 +84,7 @@ Gui.DisplayOrder = 999999
 Gui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 Gui.Parent = PlayerGui
 
--- ICON NỔI
+-- ICON NỔI BẬT MENU (CÓ THỂ KÉO THẢ)
 local Icon = Instance.new("ImageButton")
 Icon.Name = "MenuIcon"
 Icon.Parent = Gui
@@ -110,7 +110,7 @@ Menu.ClipsDescendants = true
 Corner(Menu, 16)
 Stroke(Menu, Accent, 1.5)
 
--- THANH TIÊU ĐỀ ĐỂ KÉO THẢ MENU (DRAGGABLE TOPBAR)
+-- THANH TIÊU ĐỀ KÉO THẢ MENU
 local DragHeader = Instance.new("Frame")
 DragHeader.Parent = Menu
 DragHeader.Size = UDim2.new(1, -110, 0, 35)
@@ -382,7 +382,7 @@ CreatorDesc.TextXAlignment = Enum.TextXAlignment.Left
 CreatorDesc.TextWrapped = true
 
 -- ========================================================
--- THIẾT KẾ TAB GLOBAL CHAT (NHẮN TIN GIỮA CÁC NGƯỜI DÙNG)
+-- TAB GLOBAL CHAT (ĐÃ ĐIỀU CHỈNH VỊ TRÍ KHÔNG BỊ TRÙNG NÚT THU PHÓNG)
 -- ========================================================
 PageTitle(ChatPage, "Global Community Chat", "Trò chuyện trực tuyến cùng những người dùng script khác")
 
@@ -406,7 +406,7 @@ end)
 
 local ChatInput = Instance.new("TextBox")
 ChatInput.Parent = ChatPage
-ChatInput.Size = UDim2.new(1, -75, 0, 40)
+ChatInput.Size = UDim2.new(1, -85, 0, 40)
 ChatInput.Position = UDim2.new(0, 0, 1, -50)
 ChatInput.BackgroundColor3 = Color3.fromRGB(18, 18, 25)
 ChatInput.BorderSizePixel = 0
@@ -423,10 +423,11 @@ local InputPadding = Instance.new("UIPadding")
 InputPadding.PaddingLeft = UDim.new(0, 12)
 InputPadding.Parent = ChatInput
 
+-- ĐẨY NÚT GỬI SANG TRÁI HƠN MỘT CHÚT ĐỂ TRÁNH TRÙNG NÚT THU PHÓNG ◢
 local SendChatBtn = Instance.new("TextButton")
 SendChatBtn.Parent = ChatPage
-SendChatBtn.Size = UDim2.fromOffset(65, 40)
-SendChatBtn.Position = UDim2.new(1, -65, 1, -50)
+SendChatBtn.Size = UDim2.fromOffset(70, 40)
+SendChatBtn.Position = UDim2.new(1, -75, 1, -50)
 SendChatBtn.BackgroundColor3 = Accent
 SendChatBtn.BorderSizePixel = 0
 SendChatBtn.Text = "GỬI"
@@ -473,7 +474,6 @@ local function AddChatMessage(senderName, senderAvatar, messageText)
     TextLabel.TextWrapped = true
 end
 
--- Tin nhắn mẫu hiển thị mở đầu
 AddChatMessage("System Bot", "", "Chào mừng bạn đến với Global Chat của Luxury Hub!")
 
 SendChatBtn.MouseButton1Click:Connect(function()
@@ -836,9 +836,7 @@ UserInputService.InputBegan:Connect(function(input, processed)
     end
 end)
 
--- ========================================================
--- TÍNH NĂNG KÉO THẢ (DRAGGABLE MENU & ICON) CHO CẢ MOBILE & PC
--- ========================================================
+-- KÉO THẢ MENU VÀ ICON
 local DraggingMenu, MenuDragStart, MenuStartPosition = false, nil, nil
 DragHeader.InputBegan:Connect(function(Input)
     if Input.UserInputType == Enum.UserInputType.MouseButton1 or Input.UserInputType == Enum.UserInputType.Touch then
@@ -876,7 +874,7 @@ UserInputService.InputEnded:Connect(function(Input)
     end
 end)
 
--- NÚT THAY ĐỔI KÍCH THƯỚC (RESIZE)
+-- NÚT THU PHÓNG (RESIZE) Ở GÓC DƯỚI BÊN PHẢI
 local Resize = Instance.new("TextButton")
 Resize.Parent = Menu
 Resize.Size = UDim2.fromOffset(26, 26)
@@ -913,4 +911,16 @@ UserInputService.InputEnded:Connect(function(Input)
     end
 end)
 
-print("Luxury Dashboard loaded successfully with Draggable Menu & Global Chat!")
+-- ========================================================
+-- THÔNG BÁO KHỞI ĐỘNG KHI BẬT SCRIPT (ĐÃ KHÔI PHỤC)
+-- ========================================================
+pcall(function()
+    StarterGui:SetCore("SendNotification", {
+        Title = "Luxury Dashboard",
+        Text = "Script đã bật thành công! Chúc bạn chơi game vui vẻ.",
+        Icon = "rbxthumb://type=Asset&id=113875514885319&w=150&h=150",
+        Duration = 4,
+    })
+end)
+
+print("Luxury Dashboard Fixed Button Overlap & Startup Notification Ready!")
