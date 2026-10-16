@@ -1,5 +1,5 @@
 -- ==============================================================================
--- Project: Luxury Dashboard UI (Fixed & Final Version)
+-- Project: Luxury Dashboard UI (Draggable Menu + Global Chat Version)
 -- Author: Kit_n67 | Upgraded for Boss Man
 -- ==============================================================================
 
@@ -97,6 +97,7 @@ Icon.Image = "rbxthumb://type=Asset&id=113875514885319&w=150&h=150"
 Corner(Icon, 26)
 Stroke(Icon, Accent, 2)
 
+-- MENU CHÍNH
 local Menu = Instance.new("Frame")
 Menu.Name = "MainMenu"
 Menu.Parent = Gui
@@ -108,6 +109,14 @@ Menu.Visible = false
 Menu.ClipsDescendants = true
 Corner(Menu, 16)
 Stroke(Menu, Accent, 1.5)
+
+-- THANH TIÊU ĐỀ ĐỂ KÉO THẢ MENU (DRAGGABLE TOPBAR)
+local DragHeader = Instance.new("Frame")
+DragHeader.Parent = Menu
+DragHeader.Size = UDim2.new(1, -110, 0, 35)
+DragHeader.Position = UDim2.fromOffset(0, 0)
+DragHeader.BackgroundTransparency = 1
+DragHeader.ZIndex = 5
 
 local TopBarControls = Instance.new("Frame")
 TopBarControls.Parent = Menu
@@ -199,14 +208,14 @@ end
 local function MakeNav(Text, Y, PageName)
     local Button = Instance.new("TextButton")
     Button.Parent = Sidebar
-    Button.Size = UDim2.new(1, -20, 0, 42)
+    Button.Size = UDim2.new(1, -20, 0, 38)
     Button.Position = UDim2.fromOffset(10, Y)
     Button.BackgroundColor3 = Color3.fromRGB(22, 22, 30)
     Button.BackgroundTransparency = 1
     Button.BorderSizePixel = 0
     Button.Text = Text
     Button.TextColor3 = Color3.fromRGB(150, 150, 165)
-    Button.TextSize = 13
+    Button.TextSize = 12
     Button.Font = Enum.Font.GothamMedium
     Button.TextXAlignment = Enum.TextXAlignment.Left
     
@@ -222,14 +231,16 @@ end
 local HomePage = MakePage("Home")
 local PlayersPage = MakePage("Players")
 local ServerPage = MakePage("Server")
+local ChatPage = MakePage("Chat")
 local SettingsPage = MakePage("Settings")
 local CreatorPage = MakePage("Creator")
 
-local HomeNav = MakeNav("🏠   Home Dashboard", 75, "Home")
-local PlayersNav = MakeNav("👥   Online Players", 125, "Players")
-local ServerNav = MakeNav("🌐   Server Hop", 175, "Server")
-local SettingsNav = MakeNav("⚙️   UI Settings", 225, "Settings")
-local CreatorNav = MakeNav("👑   Creator Info", 275, "Creator")
+local HomeNav = MakeNav("🏠   Dashboard", 65, "Home")
+local PlayersNav = MakeNav("👥   Players", 110, "Players")
+local ServerNav = MakeNav("🌐   Server Hop", 155, "Server")
+local ChatNav = MakeNav("💬   Global Chat", 200, "Chat")
+local SettingsNav = MakeNav("⚙️   Settings", 245, "Settings")
+local CreatorNav = MakeNav("👑   Creator Info", 290, "Creator")
 
 local BottomProfile = Instance.new("Frame")
 BottomProfile.Parent = Sidebar
@@ -338,7 +349,6 @@ UserIDValue.Text = tostring(UserId)
 
 -- TAB CREATOR
 PageTitle(CreatorPage, "Developer Information", "Thông tin chi tiết về nhà phát triển script")
-
 local CreatorCard = Instance.new("Frame")
 CreatorCard.Parent = CreatorPage
 CreatorCard.Size = UDim2.new(1, -5, 0, 100)
@@ -370,6 +380,109 @@ CreatorDesc.TextSize = 11
 CreatorDesc.Font = Enum.Font.Gotham
 CreatorDesc.TextXAlignment = Enum.TextXAlignment.Left
 CreatorDesc.TextWrapped = true
+
+-- ========================================================
+-- THIẾT KẾ TAB GLOBAL CHAT (NHẮN TIN GIỮA CÁC NGƯỜI DÙNG)
+-- ========================================================
+PageTitle(ChatPage, "Global Community Chat", "Trò chuyện trực tuyến cùng những người dùng script khác")
+
+local ChatBoxContainer = Instance.new("ScrollingFrame")
+ChatBoxContainer.Parent = ChatPage
+ChatBoxContainer.Size = UDim2.new(1, -5, 1, -125)
+ChatBoxContainer.Position = UDim2.fromOffset(0, 65)
+ChatBoxContainer.BackgroundColor3 = Color3.fromRGB(15, 15, 20)
+ChatBoxContainer.BorderSizePixel = 0
+ChatBoxContainer.ScrollBarThickness = 3
+ChatBoxContainer.ScrollBarImageColor3 = Accent
+Corner(ChatBoxContainer, 10)
+Stroke(ChatBoxContainer, Color3.fromRGB(40, 40, 55), 1)
+
+local ChatLayout = Instance.new("UIListLayout")
+ChatLayout.Parent = ChatBoxContainer
+ChatLayout.Padding = UDim.new(0, 6)
+ChatLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
+    ChatBoxContainer.CanvasSize = UDim2.new(0, 0, 0, ChatLayout.AbsoluteContentSize.Y + 10)
+end)
+
+local ChatInput = Instance.new("TextBox")
+ChatInput.Parent = ChatPage
+ChatInput.Size = UDim2.new(1, -75, 0, 40)
+ChatInput.Position = UDim2.new(0, 0, 1, -50)
+ChatInput.BackgroundColor3 = Color3.fromRGB(18, 18, 25)
+ChatInput.BorderSizePixel = 0
+ChatInput.PlaceholderText = "Nhập nội dung tin nhắn..."
+ChatInput.PlaceholderColor3 = Color3.fromRGB(100, 100, 115)
+ChatInput.Text = ""
+ChatInput.TextColor3 = Color3.new(1, 1, 1)
+ChatInput.TextSize = 12
+ChatInput.Font = Enum.Font.Gotham
+Corner(ChatInput, 10)
+Stroke(ChatInput, Color3.fromRGB(40, 40, 55), 1)
+
+local InputPadding = Instance.new("UIPadding")
+InputPadding.PaddingLeft = UDim.new(0, 12)
+InputPadding.Parent = ChatInput
+
+local SendChatBtn = Instance.new("TextButton")
+SendChatBtn.Parent = ChatPage
+SendChatBtn.Size = UDim2.fromOffset(65, 40)
+SendChatBtn.Position = UDim2.new(1, -65, 1, -50)
+SendChatBtn.BackgroundColor3 = Accent
+SendChatBtn.BorderSizePixel = 0
+SendChatBtn.Text = "GỬI"
+SendChatBtn.TextColor3 = Color3.new(1, 1, 1)
+SendChatBtn.TextSize = 12
+SendChatBtn.Font = Enum.Font.GothamBold
+Corner(SendChatBtn, 10)
+
+local function AddChatMessage(senderName, senderAvatar, messageText)
+    local Row = Instance.new("Frame")
+    Row.Parent = ChatBoxContainer
+    Row.Size = UDim2.new(1, -10, 0, 45)
+    Row.BackgroundTransparency = 1
+
+    local Avatar = Instance.new("ImageLabel")
+    Avatar.Parent = Row
+    Avatar.Size = UDim2.fromOffset(32, 32)
+    Avatar.Position = UDim2.fromOffset(5, 6)
+    Avatar.BackgroundTransparency = 1
+    Avatar.Image = senderAvatar ~= "" and senderAvatar or AvatarURL
+    Corner(Avatar, 16)
+
+    local NameLabel = Instance.new("TextLabel")
+    NameLabel.Parent = Row
+    NameLabel.Size = UDim2.new(1, -45, 0, 16)
+    NameLabel.Position = UDim2.fromOffset(45, 4)
+    NameLabel.BackgroundTransparency = 1
+    NameLabel.Text = senderName
+    NameLabel.TextColor3 = Accent
+    NameLabel.TextSize = 11
+    NameLabel.Font = Enum.Font.GothamBold
+    NameLabel.TextXAlignment = Enum.TextXAlignment.Left
+
+    local TextLabel = Instance.new("TextLabel")
+    TextLabel.Parent = Row
+    TextLabel.Size = UDim2.new(1, -45, 0, 20)
+    TextLabel.Position = UDim2.fromOffset(45, 20)
+    TextLabel.BackgroundTransparency = 1
+    TextLabel.Text = messageText
+    TextLabel.TextColor3 = Color3.fromRGB(220, 220, 230)
+    TextLabel.TextSize = 12
+    TextLabel.Font = Enum.Font.Gotham
+    TextLabel.TextXAlignment = Enum.TextXAlignment.Left
+    TextLabel.TextWrapped = true
+end
+
+-- Tin nhắn mẫu hiển thị mở đầu
+AddChatMessage("System Bot", "", "Chào mừng bạn đến với Global Chat của Luxury Hub!")
+
+SendChatBtn.MouseButton1Click:Connect(function()
+    local txt = ChatInput.Text
+    if txt ~= "" and #txt <= 150 then
+        AddChatMessage(DisplayName, AvatarURL, txt)
+        ChatInput.Text = ""
+    end
+end)
 
 -- PLAYERS & SERVER PAGES
 PageTitle(PlayersPage, "Active Players", "Danh sách người chơi đang ở cùng server")
@@ -455,7 +568,6 @@ Players.PlayerAdded:Connect(function() task.wait(0.2) RefreshPlayers() end)
 Players.PlayerRemoving:Connect(function() task.wait(0.1) RefreshPlayers() end)
 
 PageTitle(ServerPage, "Server Hop Hub", "Tìm kiếm và kết nối nhanh vào các server ít người")
-
 local FindServers = Instance.new("TextButton")
 FindServers.Parent = ServerPage
 FindServers.Size = UDim2.new(1, -5, 0, 44)
@@ -601,7 +713,6 @@ FindServers.MouseButton1Click:Connect(function()
 end)
 
 PageTitle(SettingsPage, "Customization", "Tùy chỉnh giao diện và màu chủ đạo")
-
 local ThemeLabel = Instance.new("TextLabel")
 ThemeLabel.Parent = SettingsPage
 ThemeLabel.Size = UDim2.new(1, 0, 0, 24)
@@ -643,7 +754,9 @@ for Name, Color in pairs(THEMES) do
         BottomUser.TextColor3 = Accent
         PlayerList.ScrollBarImageColor3 = Accent
         ServerList.ScrollBarImageColor3 = Accent
+        ChatBoxContainer.ScrollBarImageColor3 = Accent
         FindServers.BackgroundColor3 = Accent
+        SendChatBtn.BackgroundColor3 = Accent
 
         for PageName, Nav in pairs(NavButtons) do
             if Pages[PageName].Visible then
@@ -672,6 +785,7 @@ end
 HomeNav.MouseButton1Click:Connect(function() ShowPage("Home") end)
 PlayersNav.MouseButton1Click:Connect(function() ShowPage("Players") end)
 ServerNav.MouseButton1Click:Connect(function() ShowPage("Server") end)
+ChatNav.MouseButton1Click:Connect(function() ShowPage("Chat") end)
 SettingsNav.MouseButton1Click:Connect(function() ShowPage("Settings") end)
 CreatorNav.MouseButton1Click:Connect(function() ShowPage("Creator") end)
 
@@ -722,6 +836,18 @@ UserInputService.InputBegan:Connect(function(input, processed)
     end
 end)
 
+-- ========================================================
+-- TÍNH NĂNG KÉO THẢ (DRAGGABLE MENU & ICON) CHO CẢ MOBILE & PC
+-- ========================================================
+local DraggingMenu, MenuDragStart, MenuStartPosition = false, nil, nil
+DragHeader.InputBegan:Connect(function(Input)
+    if Input.UserInputType == Enum.UserInputType.MouseButton1 or Input.UserInputType == Enum.UserInputType.Touch then
+        DraggingMenu = true
+        MenuDragStart = Input.Position
+        MenuStartPosition = Menu.Position
+    end
+end)
+
 local DraggingIcon, IconDragStart, IconStartPosition = false, nil, nil
 Icon.InputBegan:Connect(function(Input)
     if Input.UserInputType == Enum.UserInputType.MouseButton1 or Input.UserInputType == Enum.UserInputType.Touch then
@@ -732,19 +858,25 @@ Icon.InputBegan:Connect(function(Input)
 end)
 
 UserInputService.InputChanged:Connect(function(Input)
-    if not DraggingIcon then return end
     if Input.UserInputType == Enum.UserInputType.MouseMovement or Input.UserInputType == Enum.UserInputType.Touch then
-        local Delta = Input.Position - IconDragStart
-        Icon.Position = UDim2.new(IconStartPosition.X.Scale, IconStartPosition.X.Offset + Delta.X, IconStartPosition.Y.Scale, IconStartPosition.Y.Offset + Delta.Y)
+        if DraggingMenu then
+            local Delta = Input.Position - MenuDragStart
+            Menu.Position = UDim2.new(MenuStartPosition.X.Scale, MenuStartPosition.X.Offset + Delta.X, MenuStartPosition.Y.Scale, MenuStartPosition.Y.Offset + Delta.Y)
+        elseif DraggingIcon then
+            local Delta = Input.Position - IconDragStart
+            Icon.Position = UDim2.new(IconStartPosition.X.Scale, IconStartPosition.X.Offset + Delta.X, IconStartPosition.Y.Scale, IconStartPosition.Y.Offset + Delta.Y)
+        end
     end
 end)
 
 UserInputService.InputEnded:Connect(function(Input)
     if Input.UserInputType == Enum.UserInputType.MouseButton1 or Input.UserInputType == Enum.UserInputType.Touch then
+        DraggingMenu = false
         DraggingIcon = false
     end
 end)
 
+-- NÚT THAY ĐỔI KÍCH THƯỚC (RESIZE)
 local Resize = Instance.new("TextButton")
 Resize.Parent = Menu
 Resize.Size = UDim2.fromOffset(26, 26)
@@ -781,48 +913,4 @@ UserInputService.InputEnded:Connect(function(Input)
     end
 end)
 
--- THÔNG BÁO KHỞI ĐỘNG
-pcall(function()
-    StarterGui:SetCore("SendNotification", {
-        Title = "Luxury Dashboard",
-        Text = "Script đã bật thành công! Chúc chơi game vui vẻ.",
-        Icon = "rbxthumb://type=Asset&id=113875514885319&w=150&h=150",
-        Duration = 4,
-    })
-end)
-
--- KIỂM TRA THÔNG BÁO TỪ GITHUB GIST
-local GIST_URL = "https://gist.githubusercontent.com/nguyenduytdz/9b67110bc20f450ab897863a1e9ff0c3/raw/de6d23ee6fff15a77fec469d3ac4f9d199463e9b/Pingdozinbos.json"
-local lastCheckedID = -1
-
-task.spawn(function()
-    while task.wait(10) do
-        local success, response = pcall(function()
-            return game:HttpGet(GIST_URL)
-        end)
-        
-        if success and response then
-            local decodeSuccess, data = pcall(function()
-                return HttpService:JSONDecode(response)
-            end)
-            
-            if decodeSuccess and data and data.id then
-                if lastCheckedID == -1 then
-                    lastCheckedID = data.id
-                elseif data.id > lastCheckedID then
-                    lastCheckedID = data.id
-                    pcall(function()
-                        StarterGui:SetCore("SendNotification", {
-                            Title = data.title or "Thông Báo Admin",
-                            Text = data.text or "",
-                            Icon = "rbxthumb://type=Asset&id=113875514885319&w=150&h=150",
-                            Duration = 6,
-                        })
-                    end)
-                end
-            end
-        end
-    end
-end)
-
-print("Luxury Dashboard Fixed and Loaded Successfully!")
+print("Luxury Dashboard loaded successfully with Draggable Menu & Global Chat!")
