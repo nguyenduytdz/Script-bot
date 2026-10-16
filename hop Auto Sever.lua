@@ -1,5 +1,5 @@
 -- ==============================================================================
--- Project: Luxury Dashboard UI (Fixed Button Overlap & Startup Notification)
+-- Project: Luxury Dashboard UI (Smaller Resize Button Version)
 -- Author: Kit_n67 | Upgraded for Boss Man
 -- ==============================================================================
 
@@ -382,7 +382,7 @@ CreatorDesc.TextXAlignment = Enum.TextXAlignment.Left
 CreatorDesc.TextWrapped = true
 
 -- ========================================================
--- TAB GLOBAL CHAT (ĐÃ ĐIỀU CHỈNH VỊ TRÍ KHÔNG BỊ TRÙNG NÚT THU PHÓNG)
+-- TAB GLOBAL CHAT
 -- ========================================================
 PageTitle(ChatPage, "Global Community Chat", "Trò chuyện trực tuyến cùng những người dùng script khác")
 
@@ -423,7 +423,6 @@ local InputPadding = Instance.new("UIPadding")
 InputPadding.PaddingLeft = UDim.new(0, 12)
 InputPadding.Parent = ChatInput
 
--- ĐẨY NÚT GỬI SANG TRÁI HƠN MỘT CHÚT ĐỂ TRÁNH TRÙNG NÚT THU PHÓNG ◢
 local SendChatBtn = Instance.new("TextButton")
 SendChatBtn.Parent = ChatPage
 SendChatBtn.Size = UDim2.fromOffset(70, 40)
@@ -874,17 +873,17 @@ UserInputService.InputEnded:Connect(function(Input)
     end
 end)
 
--- NÚT THU PHÓNG (RESIZE) Ở GÓC DƯỚI BÊN PHẢI
+-- NÚT THU PHÓNG (RESIZE) GÓC DƯỚI BÊN PHẢI (ĐÃ THU NHỎ GỌN)
 local Resize = Instance.new("TextButton")
 Resize.Parent = Menu
-Resize.Size = UDim2.fromOffset(26, 26)
-Resize.Position = UDim2.new(1, -30, 1, -30)
+Resize.Size = UDim2.fromOffset(18, 18)
+Resize.Position = UDim2.new(1, -22, 1, -22)
 Resize.BackgroundColor3 = Accent
 Resize.BorderSizePixel = 0
 Resize.Text = "◢"
 Resize.TextColor3 = Color3.new(1, 1, 1)
-Resize.TextSize = 12
-Corner(Resize, 6)
+Resize.TextSize = 9
+Corner(Resize, 4)
 
 local Resizing, ResizeStart, OriginalSize = false, nil, nil
 Resize.InputBegan:Connect(function(Input)
@@ -911,9 +910,7 @@ UserInputService.InputEnded:Connect(function(Input)
     end
 end)
 
--- ========================================================
--- THÔNG BÁO KHỞI ĐỘNG KHI BẬT SCRIPT (ĐÃ KHÔI PHỤC)
--- ========================================================
+-- THÔNG BÁO KHỞI ĐỘNG KHI BẬT SCRIPT
 pcall(function()
     StarterGui:SetCore("SendNotification", {
         Title = "Luxury Dashboard",
@@ -923,4 +920,4 @@ pcall(function()
     })
 end)
 
-print("Luxury Dashboard Fixed Button Overlap & Startup Notification Ready!")
+print("Luxury Dashboard with compact resize button loaded successfully!")
