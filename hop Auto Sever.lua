@@ -1,5 +1,5 @@
 -- ==============================================================================
--- Project: Luxury Dashboard UI (GitHub Gist Global Announcement Version)
+-- Project: Luxury Dashboard UI (Fixed & Final Version)
 -- Author: Kit_n67 | Upgraded for Boss Man
 -- ==============================================================================
 
@@ -84,7 +84,7 @@ Gui.DisplayOrder = 999999
 Gui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 Gui.Parent = PlayerGui
 
--- ICON NỔI DÙNG RBXTHUMB CHUẨN XÁC
+-- ICON NỔI
 local Icon = Instance.new("ImageButton")
 Icon.Name = "MenuIcon"
 Icon.Parent = Gui
@@ -732,7 +732,7 @@ Icon.InputBegan:Connect(function(Input)
 end)
 
 UserInputService.InputChanged:Connect(function(Input)
-    if not DraggingIcon me.Position end
+    if not DraggingIcon then return end
     if Input.UserInputType == Enum.UserInputType.MouseMovement or Input.UserInputType == Enum.UserInputType.Touch then
         local Delta = Input.Position - IconDragStart
         Icon.Position = UDim2.new(IconStartPosition.X.Scale, IconStartPosition.X.Offset + Delta.X, IconStartPosition.Y.Scale, IconStartPosition.Y.Offset + Delta.Y)
@@ -781,7 +781,7 @@ UserInputService.InputEnded:Connect(function(Input)
     end
 end)
 
--- THÔNG BÁO KHỞI ĐỘNG CÁ NHÂN KHI VỪA BẬT SCRIPT
+-- THÔNG BÁO KHỞI ĐỘNG
 pcall(function()
     StarterGui:SetCore("SendNotification", {
         Title = "Luxury Dashboard",
@@ -791,14 +791,12 @@ pcall(function()
     })
 end)
 
--- ========================================================
--- HỆ THỐNG NHẬN THÔNG BÁO TỰ ĐỘNG TỪ GITHUB GIST CỦA BẠN
--- ========================================================
+-- KIỂM TRA THÔNG BÁO TỪ GITHUB GIST
 local GIST_URL = "https://gist.githubusercontent.com/nguyenduytdz/9b67110bc20f450ab897863a1e9ff0c3/raw/de6d23ee6fff15a77fec469d3ac4f9d199463e9b/Pingdozinbos.json"
 local lastCheckedID = -1
 
 task.spawn(function()
-    while task.wait(10) do -- Kiểm tra Gist mỗi 10 giây
+    while task.wait(10) do
         local success, response = pcall(function()
             return game:HttpGet(GIST_URL)
         end)
@@ -810,11 +808,9 @@ task.spawn(function()
             
             if decodeSuccess and data and data.id then
                 if lastCheckedID == -1 then
-                    lastCheckedID = data.id -- Lưu ID ban đầu để không spam lại tin cũ
+                    lastCheckedID = data.id
                 elseif data.id > lastCheckedID then
                     lastCheckedID = data.id
-                    
-                    -- NỔI THÔNG BÁO KHI BẠN VỪA SỬA GIST VÀ TĂNG ID
                     pcall(function()
                         StarterGui:SetCore("SendNotification", {
                             Title = data.title or "Thông Báo Admin",
@@ -829,4 +825,4 @@ task.spawn(function()
     end
 end)
 
-print("Luxury Dashboard with GitHub Gist Announcement Loaded Successfully!")
+print("Luxury Dashboard Fixed and Loaded Successfully!")
