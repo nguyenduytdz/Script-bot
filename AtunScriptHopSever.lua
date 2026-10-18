@@ -580,7 +580,7 @@ local function RefreshSkinList()
                             local humanoid = char:FindFirstChildOfClass("Humanoid")
                             if humanoid then
                                 local desc = Players:GetHumanoidDescriptionFromUserId(Target.UserId)
-                    humanoid:ApplyDescriptionReset(desc)
+                                         humanoid:ApplyDescriptionReset(desc)
                                 end
                             end
                         end
