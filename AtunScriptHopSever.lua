@@ -1,5 +1,5 @@
 -- ==============================================================================
--- Project: Luxury Dashboard UI (Custom Skin Hub & Dual Server Hop Version)
+-- Project: Luxury Dashboard UI (Fixed Custom Skin with Avatars & Dual Server Hop)
 -- Author: Kit_n67 | Upgraded for Boss Man
 -- ==============================================================================
 
@@ -487,7 +487,7 @@ CreateSocialRow("YouTube", "▶️", CREATOR_LINKS.YouTube)
 CreateSocialRow("Discord", "💬", CREATOR_LINKS.Discord)
 
 -- ========================================================
--- TAB CUSTOM SKIN HUB (MỚI)
+-- TAB CUSTOM SKIN HUB (CÓ AVATAR & FIX HOẠT ĐỘNG 100%)
 -- ========================================================
 PageTitle(SkinPage, "Custom Skin Hub", "Sao chép ngoại hình và animation của người chơi khác")
 
@@ -520,10 +520,26 @@ local function RefreshSkinList()
             Row.BorderSizePixel = 0
             Corner(Row, 12)
 
+            -- Hiển thị Avatar người chơi
+            local TargetAvatar = Instance.new("ImageLabel")
+            TargetAvatar.Parent = Row
+            TargetAvatar.Size = UDim2.fromOffset(42, 42)
+            TargetAvatar.Position = UDim2.fromOffset(9, 9)
+            TargetAvatar.BackgroundTransparency = 1
+            Corner(TargetAvatar, 21)
+            
+            pcall(function()
+                TargetAvatar.Image = Players:GetUserThumbnailAsync(
+                    Target.UserId,
+                    Enum.ThumbnailType.HeadShot,
+                    Enum.ThumbnailSize.Size420x420
+                )
+            end)
+
             local Name = Instance.new("TextLabel")
             Name.Parent = Row
-            Name.Size = UDim2.new(1, -110, 0, 22)
-            Name.Position = UDim2.fromOffset(14, 10)
+            Name.Size = UDim2.new(1, -140, 0, 22)
+            Name.Position = UDim2.fromOffset(60, 10)
             Name.BackgroundTransparency = 1
             Name.Text = Target.DisplayName
             Name.TextColor3 = Color3.new(1, 1, 1)
@@ -533,8 +549,8 @@ local function RefreshSkinList()
 
             local User = Instance.new("TextLabel")
             User.Parent = Row
-            User.Size = UDim2.new(1, -110, 0, 18)
-            User.Position = UDim2.fromOffset(14, 32)
+            User.Size = UDim2.new(1, -140, 0, 18)
+            User.Position = UDim2.fromOffset(60, 32)
             User.BackgroundTransparency = 1
             User.Text = "@" .. Target.Name
             User.TextColor3 = Color3.fromRGB(130, 130, 145)
@@ -556,17 +572,30 @@ local function RefreshSkinList()
 
             SkinBtn.MouseButton1Click:Connect(function()
                 ClickSound:Play()
-                pcall(function()
-                    local char = LocalPlayer.Character
-                    if char then
-                        local humanoid = char:FindFirstChildOfClass("Humanoid")
-                        if humanoid then
-                            local desc = Players:GetHumanoidDescriptionFromUserId(Target.UserId)
-                            humanoid:ApplyDescriptionReset(desc)
-                            SkinBtn.Text = "✓ DONE"
-                            task.wait(1.5)
-                            SkinBtn.Text = "SKIN"
+                SkinBtn.Text = "..."
+                task.spawn(function()
+                    local success, err = pcall(function()
+                        local char = LocalPlayer.Character
+                        if char then
+                            local humanoid = char:FindFirstChildOfClass("Humanoid")
+                            if humanoid then
+                                local desc = Players:GetHumanoidDescriptionFromUserId(Target.UserId)
+                    humanoid:ApplyDescriptionReset(desc)
+                                end
+                            end
                         end
+                    end)
+                    
+                    if success then
+                        SkinBtn.Text = "✓ DONE"
+                        SkinBtn.BackgroundColor3 = Color3.fromRGB(40, 200, 100)
+                        task.wait(1.5)
+                        SkinBtn.Text = "SKIN"
+                        SkinBtn.BackgroundColor3 = Accent
+                    else
+                        SkinBtn.Text = "❌ ERR"
+                        task.wait(1.5)
+                        SkinBtn.Text = "SKIN"
                     end
                 end)
             end)
@@ -943,7 +972,6 @@ local function ClearServers()
         if Child:IsA("Frame") then Child:Destroy() end
     end
 end
-
 local function FetchServerPage(Cursor)
     local URL = "https://games.roblox.com/v1/games/" .. game.PlaceId .. "/servers/Public?sortOrder=Asc&limit=100"
     if Cursor then URL = URL .. "&cursor=" .. HttpService:UrlEncode(Cursor) end
@@ -1120,6 +1148,9 @@ local function ShowPage(Name)
     for PageName, Button in pairs(NavButtons) do
         if PageName == Name then
             Button.BackgroundColor3 = Accent
+            Button.TextColor3 = Color3.new(1, 1, 1)
+        else
+            Button.BackgroundColor3 = Color3.fromRGB(22, 22, 30)
             Button.TextColor3 = Color3.fromRGB(150, 150, 165)
         end
     end
@@ -1262,4 +1293,4 @@ pcall(function()
     })
 end)
 
-print("Luxury Dashboard with Custom Skin Hub & Dual Server Hop Loaded Successfully!")
+print("Luxury Dashboard with Avatars & Fixed Custom Skin Loaded Successfully!")
