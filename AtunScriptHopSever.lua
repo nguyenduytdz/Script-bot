@@ -21,7 +21,7 @@ local PlayerGui = LocalPlayer:WaitForChild("PlayerGui")
 -- CẤU HÌNH CHẾ ĐỘ BẢO TRÌ (MAINTENANCE CONFIG)
 -- ==========================================================
 local MAINTENANCE_CONFIG = {
-    Enabled = true,                        -- Đặt là true để bật bảo trì, false để chạy bình thường
+    Enabled = false,                        -- Đặt là true để bật bảo trì, false để chạy bình thường
     Duration = 160,                         -- Thời gian bảo trì (tính bằng giây, ví dụ 60 giây)
     Reason = "Hệ thống Luxury Hub đang tiến hành bảo trì nâng cấp phiên bản mới để tối ưu hóa tiêu chí người dùng."
 }
