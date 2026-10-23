@@ -1,5 +1,5 @@
 -- ==============================================================================
--- Project: Luxury Dashboard UI (Fixed Custom Skin with Avatars & Dual Server Hop)
+-- Project: Luxury Dashboard UI (Auto-Show Menu + Job ID Joiner & Copy Feature)
 -- Author: Kit_n67 | Upgraded for Boss Man
 -- ==============================================================================
 
@@ -109,7 +109,7 @@ Icon.Image = "rbxthumb://type=Asset&id=113875514885319&w=150&h=150"
 Corner(Icon, 26)
 Stroke(Icon, Accent, 2)
 
--- MENU CHÍNH
+-- MENU CHÍNH (ÉP HIỂN THỊ TỰ ĐỘNG KHI BẬT SCRIPT)
 local Menu = Instance.new("Frame")
 Menu.Name = "MainMenu"
 Menu.Parent = Gui
@@ -117,7 +117,7 @@ Menu.Size = UDim2.fromOffset(CONFIG.MenuWidth, CONFIG.MenuHeight)
 Menu.Position = UDim2.new(0.5, -CONFIG.MenuWidth/2, 0.5, -CONFIG.MenuHeight/2)
 Menu.BackgroundColor3 = Color3.fromRGB(12, 12, 16)
 Menu.BorderSizePixel = 0
-Menu.Visible = false
+Menu.Visible = true -- FIX TỰ BẬT MENU KHÔNG CẦN BẤM ICON
 Menu.ClipsDescendants = true
 Corner(Menu, 16)
 Stroke(Menu, Accent, 1.5)
@@ -487,7 +487,7 @@ CreateSocialRow("YouTube", "▶️", CREATOR_LINKS.YouTube)
 CreateSocialRow("Discord", "💬", CREATOR_LINKS.Discord)
 
 -- ========================================================
--- TAB CUSTOM SKIN HUB (CÓ AVATAR & FIX HOẠT ĐỘNG 100%)
+-- TAB CUSTOM SKIN HUB
 -- ========================================================
 PageTitle(SkinPage, "Custom Skin Hub", "Sao chép ngoại hình và animation của người chơi khác")
 
@@ -520,7 +520,6 @@ local function RefreshSkinList()
             Row.BorderSizePixel = 0
             Corner(Row, 12)
 
-            -- Hiển thị Avatar người chơi
             local TargetAvatar = Instance.new("ImageLabel")
             TargetAvatar.Parent = Row
             TargetAvatar.Size = UDim2.fromOffset(42, 42)
@@ -574,13 +573,14 @@ local function RefreshSkinList()
                 ClickSound:Play()
                 SkinBtn.Text = "..."
                 task.spawn(function()
-                    local success, err = pcall(function()
+                    local success = pcall(function()
                         local char = LocalPlayer.Character
                         if char then
                             local humanoid = char:FindFirstChildOfClass("Humanoid")
                             if humanoid then
                                 local desc = Players:GetHumanoidDescriptionFromUserId(Target.UserId)
-                                         humanoid:ApplyDescriptionReset(desc)
+                             if desc then
+                                    humanoid:ApplyDescriptionReset(desc)
                                 end
                             end
                         end
@@ -607,7 +607,7 @@ Players.PlayerAdded:Connect(function() task.wait(0.2) RefreshSkinList() end)
 Players.PlayerRemoving:Connect(function() task.wait(0.1) RefreshSkinList() end)
 
 -- ========================================================
--- TAB GLOBAL CHAT (CHỐNG TRÙNG LẶP TIN NHẮN)
+-- TAB GLOBAL CHAT
 -- ========================================================
 PageTitle(ChatPage, "Global Community Chat", "Trò chuyện trực tuyến cùng những người dùng script khác")
 
@@ -911,39 +911,91 @@ Players.PlayerAdded:Connect(function() task.wait(0.2) RefreshPlayers() end)
 Players.PlayerRemoving:Connect(function() task.wait(0.1) RefreshPlayers() end)
 
 -- ========================================================
--- TAB SERVER HOP HUB (2 CHẾ ĐỘ: 1 NGƯỜI & TREO CŨ)
+-- TAB SERVER HOP HUB (NÂNG CẤP VÙNG NHẬP MÃ JOB ID VÀ NÚT COPY JOB)
 -- ========================================================
-PageTitle(ServerPage, "Server Hop Hub", "Quét tìm phòng 1 người hoặc phòng treo cũ")
+PageTitle(ServerPage, "Server Hop Hub", "Quét tìm phòng hoặc nhập mã Job ID để tham gia trực tiếp")
 
+-- 1. NÚT QUÉT PHÒNG
 local Find1Player = Instance.new("TextButton")
 Find1Player.Parent = ServerPage
-Find1Player.Size = UDim2.new(0.48, 0, 0, 42)
-Find1Player.Position = UDim2.fromOffset(0, 65)
+Find1Player.Size = UDim2.new(0.48, 0, 0, 38)
+Find1Player.Position = UDim2.fromOffset(0, 62)
 Find1Player.BackgroundColor3 = Accent
 Find1Player.BorderSizePixel = 0
-Find1Player.Text = "🔍  TÌM PHÒNG 1 NGƯỜI"
+Find1Player.Text = "🔍 TÌM PHÒNG 1 NGƯỜI"
 Find1Player.TextColor3 = Color3.new(1, 1, 1)
 Find1Player.TextSize = 11
 Find1Player.Font = Enum.Font.GothamBold
-Corner(Find1Player, 10)
+Corner(Find1Player, 8)
 
 local FindOldServer = Instance.new("TextButton")
 FindOldServer.Parent = ServerPage
-FindOldServer.Size = UDim2.new(0.48, 0, 0, 42)
-FindOldServer.Position = UDim2.new(0.52, 0, 0, 65)
+FindOldServer.Size = UDim2.new(0.48, 0, 0, 38)
+FindOldServer.Position = UDim2.new(0.52, 0, 0, 62)
 FindOldServer.BackgroundColor3 = Color3.fromRGB(25, 25, 35)
 FindOldServer.BorderSizePixel = 0
-FindOldServer.Text = "⏳  TÌM PHÒNG TREO CŨ"
+FindOldServer.Text = "⏳ TÌM PHÒNG TREO CŨ"
 FindOldServer.TextColor3 = Color3.fromRGB(200, 200, 210)
 FindOldServer.TextSize = 11
 FindOldServer.Font = Enum.Font.GothamBold
-Corner(FindOldServer, 10)
+Corner(FindOldServer, 8)
 Stroke(FindOldServer, Accent, 1)
 
+-- 2. KHU VỰC NHẬP MÃ JOB ID VÀ NÚT JOIN TÁCH BIỆT
+local JobInputContainer = Instance.new("Frame")
+JobInputContainer.Parent = ServerPage
+JobInputContainer.Size = UDim2.new(1, -5, 0, 40)
+JobInputContainer.Position = UDim2.fromOffset(0, 106)
+JobInputContainer.BackgroundColor3 = Color3.fromRGB(18, 18, 25)
+JobInputContainer.BorderSizePixel = 0
+Corner(JobInputContainer, 8)
+Stroke(JobInputContainer, Color3.fromRGB(45, 45, 60), 1)
+
+local JobInput = Instance.new("TextBox")
+JobInput.Parent = JobInputContainer
+JobInput.Size = UDim2.new(1, -125, 1, 0)
+JobInput.Position = UDim2.fromOffset(10, 0)
+JobInput.BackgroundTransparency = 1
+JobInput.PlaceholderText = "Dán mã Job ID server vào đây..."
+JobInput.PlaceholderColor3 = Color3.fromRGB(110, 110, 130)
+JobInput.Text = ""
+JobInput.TextColor3 = Color3.new(1, 1, 1)
+JobInput.TextSize = 11
+JobInput.Font = Enum.Font.Gotham
+JobInput.TextXAlignment = Enum.TextXAlignment.Left
+
+local JoinJobBtn = Instance.new("TextButton")
+JoinJobBtn.Parent = JobInputContainer
+JoinJobBtn.Size = UDim2.fromOffset(110, 30)
+JoinJobBtn.Position = UDim2.new(1, -115, 0.5, -15)
+JoinJobBtn.BackgroundColor3 = Accent
+JoinJobBtn.BorderSizePixel = 0
+JoinJobBtn.Text = "🚀 JOIN JOB ID"
+JoinJobBtn.TextColor3 = Color3.new(1, 1, 1)
+JoinJobBtn.TextSize = 10
+JoinJobBtn.Font = Enum.Font.GothamBold
+Corner(JoinJobBtn, 6)
+
+JoinJobBtn.MouseButton1Click:Connect(function()
+    local targetJobId = JobInput.Text:gsub("%s+", "")
+    if targetJobId ~= "" then
+        ClickSound:Play()
+        JoinJobBtn.Text = "CONNECTING..."
+        JoinJobBtn.Active = false
+        pcall(function()
+            TeleportService:TeleportToPlaceInstance(game.PlaceId, targetJobId, LocalPlayer)
+        end)
+        task.wait(2)
+        JoinJobBtn.Text = "🚀 JOIN JOB ID"
+        JoinJobBtn.Active = true
+    end
+end)
+
+-- 3. BẢNG DANH SÁCH SERVER VÀ TRẠNG THÁI
 local ServerStatus = Instance.new("TextLabel")
 ServerStatus.Parent = ServerPage
-ServerStatus.Size = UDim2.new(1, -5, 0, 22)
-ServerStatus.Position = UDim2.fromOffset(0, 112)
+ServerStatus.Size = UDim2.new(1, -5, 0, 20)
+ServerStatus.Position = UDim2.fromOffset(0, 150)
 ServerStatus.BackgroundTransparency = 1
 ServerStatus.Text = "Trạng thái: Sẵn sàng quét server"
 ServerStatus.TextColor3 = Color3.fromRGB(140, 140, 155)
@@ -953,8 +1005,8 @@ ServerStatus.TextXAlignment = Enum.TextXAlignment.Left
 
 local ServerList = Instance.new("ScrollingFrame")
 ServerList.Parent = ServerPage
-ServerList.Size = UDim2.new(1, -5, 1, -140)
-ServerList.Position = UDim2.fromOffset(0, 138)
+ServerList.Size = UDim2.new(1, -5, 1, -178)
+ServerList.Position = UDim2.fromOffset(0, 172)
 ServerList.BackgroundTransparency = 1
 ServerList.BorderSizePixel = 0
 ServerList.ScrollBarThickness = 3
@@ -972,6 +1024,7 @@ local function ClearServers()
         if Child:IsA("Frame") then Child:Destroy() end
     end
 end
+
 local function FetchServerPage(Cursor)
     local URL = "https://games.roblox.com/v1/games/" .. game.PlaceId .. "/servers/Public?sortOrder=Asc&limit=100"
     if Cursor then URL = URL .. "&cursor=" .. HttpService:UrlEncode(Cursor) end
@@ -1011,6 +1064,7 @@ end
 local function AddServer(Server, Index, modeTag)
     local Playing = tonumber(Server.playing) or 0
     local MaxPlayers = tonumber(Server.maxPlayers) or 0
+    local serverJobId = Server.id or ""
 
     local Row = Instance.new("Frame")
     Row.Parent = ServerList
@@ -1021,8 +1075,8 @@ local function AddServer(Server, Index, modeTag)
 
     local Info = Instance.new("TextLabel")
     Info.Parent = Row
-    Info.Size = UDim2.new(1, -80, 1, 0)
-    Info.Position = UDim2.fromOffset(14, 0)
+    Info.Size = UDim2.new(1, -160, 1, 0)
+    Info.Position = UDim2.fromOffset(12, 0)
     Info.BackgroundTransparency = 1
     Info.Text = "[" .. modeTag .. "] SERVER #" .. Index .. " (" .. Playing .. " NGƯỜI)\n👥 Tình trạng: " .. Playing .. " / " .. MaxPlayers
     Info.TextColor3 = Color3.new(1, 1, 1)
@@ -1030,22 +1084,50 @@ local function AddServer(Server, Index, modeTag)
     Info.Font = Enum.Font.GothamMedium
     Info.TextXAlignment = Enum.TextXAlignment.Left
 
+    -- NÚT COPY JOB ID RIÊNG CHO MỖI SERVER
+    local CopyJobBtn = Instance.new("TextButton")
+    CopyJobBtn.Parent = Row
+    CopyJobBtn.Size = UDim2.fromOffset(80, 32)
+    CopyJobBtn.Position = UDim2.new(1, -140, 0.5, -16)
+    CopyJobBtn.BackgroundColor3 = Color3.fromRGB(28, 28, 38)
+    CopyJobBtn.BorderSizePixel = 0
+    CopyJobBtn.Text = "📋 JOB ID"
+    CopyJobBtn.TextColor3 = Color3.fromRGB(200, 200, 220)
+    CopyJobBtn.TextSize = 10
+    CopyJobBtn.Font = Enum.Font.GothamBold
+    Corner(CopyJobBtn, 6)
+
+    CopyJobBtn.MouseButton1Click:Connect(function()
+        ClickSound:Play()
+        if setclipboard then
+            setclipboard(serverJobId)
+        elseif toclipboard then
+            toclipboard(serverJobId)
+        end
+        CopyJobBtn.Text = "✓ COPIED"
+        CopyJobBtn.BackgroundColor3 = Color3.fromRGB(40, 200, 100)
+        task.wait(1.5)
+        CopyJobBtn.Text = "📋 JOB ID"
+        CopyJobBtn.BackgroundColor3 = Color3.fromRGB(28, 28, 38)
+    end)
+
+    -- NÚT THAM GIA SERVER TRỰC TIẾP
     local Join = Instance.new("TextButton")
     Join.Parent = Row
-    Join.Size = UDim2.fromOffset(50, 36)
-    Join.Position = UDim2.new(1, -60, 0.5, -18)
+    Join.Size = UDim2.fromOffset(48, 32)
+    Join.Position = UDim2.new(1, -55, 0.5, -16)
     Join.BackgroundColor3 = Accent
     Join.BorderSizePixel = 0
     Join.Text = "🚀"
     Join.TextColor3 = Color3.new(1, 1, 1)
-    Join.TextSize = 16
+    Join.TextSize = 15
     Join.Font = Enum.Font.GothamBold
-    Corner(Join, 8)
+    Corner(Join, 6)
 
     Join.MouseButton1Click:Connect(function()
         Join.Active = false
         Join.Text = "..."
-        TeleportService:TeleportToPlaceInstance(game.PlaceId, Server.id, LocalPlayer)
+        TeleportService:TeleportToPlaceInstance(game.PlaceId, serverJobId, LocalPlayer)
     end)
 end
 
@@ -1131,6 +1213,7 @@ for Name, Color in pairs(THEMES) do
         Find1Player.BackgroundColor3 = Accent
         FindOldServer.UIStroke.Color = Accent
         SendChatBtn.BackgroundColor3 = Accent
+        JoinJobBtn.BackgroundColor3 = Accent
 
         for PageName, Nav in pairs(NavButtons) do
             if Pages[PageName].Visible then
@@ -1293,4 +1376,4 @@ pcall(function()
     })
 end)
 
-print("Luxury Dashboard with Avatars & Fixed Custom Skin Loaded Successfully!")
+print("Luxury Dashboard with Job ID Features Loaded Successfully!")
