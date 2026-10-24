@@ -1,5 +1,5 @@
 -- ==============================================================================
--- Project: Luxury Dashboard UI (FIXED MAINTENANCE & AUTO-SHOW MENU)
+-- Project: Luxury Dashboard UI (FIXED SYNTAX & STARTUP READY)
 -- Author: Kit_n67 | Upgraded for Boss Man
 -- ==============================================================================
 
@@ -20,7 +20,6 @@ local PlayerGui = LocalPlayer:WaitForChild("PlayerGui")
 local ADMIN_USERNAME = "kit_n67"
 local isAdmin = (LocalPlayer.Name:lower() == ADMIN_USERNAME:lower())
 
--- CẤU HÌNH BẢO TRÌ (ĐÃ ĐẶT FALSE ĐỂ KHÔNG BỊ KHÓA MENU KHI CHẠY SCRIPT)
 local MAINTENANCE_CONFIG = {
     Enabled = false,
     Duration = 10,
@@ -165,9 +164,21 @@ task.spawn(function()
     end
 end)
 
+-- HÀM THÔNG BÁO CHÀO MỪNG KHI KHỞI ĐỘNG
+local function ShowStartupNotification()
+    pcall(function()
+        StarterGui:SetCore("SendNotification", {
+            Title = "👑 Luxury Dashboard",
+            Text = "Script đã bật thành công! Chào boss " .. DisplayName,
+            Duration = 4,
+        })
+    end)
+end
+
 -- MENU CHÍNH
 local function StartMainDashboard()
     SetStatus("Dashboard Overview")
+    ShowStartupNotification()
 
     local Icon = Instance.new("ImageButton")
     Icon.Name = "MenuIcon"
@@ -365,7 +376,7 @@ local function StartMainDashboard()
     JobValueLbl.TextXAlignment = Enum.TextXAlignment.Left
     JobValueLbl.TextTruncate = Enum.TextTruncate.AtEnd
 
-    -- TAB 2: PLAYERS & TP
+    -- TAB 2: PLAYERS & TP (ĐÃ SỬA LỖI SYNTAX Ở ĐÂY)
     PageTitle(PlayersPage, "Active Players & Teleport", "Xem danh sách và dịch chuyển tới người chơi")
     local PlayerScroll = Instance.new("ScrollingFrame")
     PlayerScroll.Parent = PlayersPage
@@ -537,8 +548,7 @@ local function StartMainDashboard()
 
     local CopyJobBtn = Instance.new("TextButton")
     CopyJobBtn.Parent = JobContainer
-    CopyJobBtn.Size = UDim2.fromOffset(85, 30)
-    CopyJobBtn.Position = UDim2.new(1, -90, 0.5, -15)
+    CopyJobBtn.Size = UDim2.new(1, -85, 0.5, -15)
     CopyJobBtn.BackgroundColor3 = Color3.fromRGB(35, 35, 45)
     CopyJobBtn.Text = "📋 COPY JOB"
     CopyJobBtn.TextColor3 = Color3.new(1, 1, 1)
@@ -749,7 +759,7 @@ local function StartMainDashboard()
     end)
 end
 
--- KÍCH HOẠT MENU (CÓ FIX HẾT THỜI GIAN TỰ TỰ MỞ MENU BÌNH THƯỜNG)
+-- KÍCH HOẠT MENU
 if MAINTENANCE_CONFIG.Enabled and not isAdmin then
     SetStatus("Hệ thống đang bảo trì...")
     local MaintFrame = Instance.new("Frame")
@@ -801,4 +811,4 @@ else
     StartMainDashboard()
 end
 
-print("Luxury Dashboard System Fixed Loaded!")
+print("Luxury Dashboard Bug Fixed Loaded!")
