@@ -1,5 +1,5 @@
 -- ==============================================================================
--- Project: Luxury Dashboard UI (8 TABS + FULL SERVER HOP HUB)
+-- Project: Luxury Dashboard UI (SAFE EDITION - PERFECT SERVER HOP & HOME JOB ID)
 -- Author: Kit_n67 | Upgraded for Boss Man
 -- ==============================================================================
 
@@ -23,13 +23,20 @@ local isAdmin = (LocalPlayer.Name:lower() == ADMIN_USERNAME:lower())
 local MAINTENANCE_CONFIG = {
     Enabled = false,
     Duration = 10,
-    Reason = "Đang tối ưu bảo trì..."
+    Reason = "Hệ thống đang bảo trì..."
+}
+
+local CREATOR_LINKS = {
+    TikTok = "https://www.tiktok.com/@kit_n67",
+    YouTube = "https://www.youtube.com/@kit_n67",
+    Discord = "https://discord.gg/luxuryhub"
 }
 
 local CONFIG = {
     Theme = "Purple",
     MenuWidth = 760,
-    MenuHeight = 500,
+    MenuHeight = 490,
+    TeleportOffset = 3,
 }
 
 local THEMES = {
@@ -55,6 +62,12 @@ ClickSound.Parent = SoundService
 
 pcall(function()
     AvatarURL = Players:GetUserThumbnailAsync(UserId, Enum.ThumbnailType.HeadShot, Enum.ThumbnailSize.Size420x420)
+end)
+
+-- 🛡️ ANTI-AFK CHẠY ẨN NGẦM 100%
+LocalPlayer.Idled:Connect(function()
+    VirtualUser:CaptureController()
+    VirtualUser:ClickButton2(Vector2.new())
 end)
 
 local Old = PlayerGui:FindFirstChild("LuxuryDashboardUI")
@@ -84,37 +97,35 @@ Gui.DisplayOrder = 999999
 Gui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 Gui.Parent = PlayerGui
 
--- ==========================================================
--- 📱 DYNAMIC ISLAND (IPHONE DESIGN)
--- ==========================================================
+-- 📱 DYNAMIC ISLAND (IPHONE PILL DESIGN)
 local DynamicIsland = Instance.new("TextButton")
 DynamicIsland.Name = "AppleDynamicIsland"
 DynamicIsland.Parent = Gui
-DynamicIsland.Size = UDim2.fromOffset(230, 40)
-DynamicIsland.Position = UDim2.new(0.5, -115, 0, 10)
+DynamicIsland.Size = UDim2.fromOffset(210, 36)
+DynamicIsland.Position = UDim2.new(0.5, -105, 0, 10)
 DynamicIsland.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
 DynamicIsland.BorderSizePixel = 0
 DynamicIsland.AutoButtonColor = false
 DynamicIsland.Text = ""
 DynamicIsland.ClipsDescendants = true
-Corner(DynamicIsland, 20)
-Stroke(DynamicIsland, Color3.fromRGB(45, 45, 60), 1.5, 0.3)
+Corner(DynamicIsland, 18)
+Stroke(DynamicIsland, Color3.fromRGB(35, 35, 45), 1.5, 0.4)
 
 local CameraLens = Instance.new("Frame")
 CameraLens.Parent = DynamicIsland
-CameraLens.Size = UDim2.fromOffset(12, 12)
-CameraLens.Position = UDim2.fromOffset(14, 14)
-CameraLens.BackgroundColor3 = Color3.fromRGB(15, 18, 25)
+CameraLens.Size = UDim2.fromOffset(11, 11)
+CameraLens.Position = UDim2.fromOffset(14, 12.5)
+CameraLens.BackgroundColor3 = Color3.fromRGB(12, 14, 20)
 Corner(CameraLens, 6)
 
 local ClockLabel = Instance.new("TextLabel")
 ClockLabel.Parent = DynamicIsland
-ClockLabel.Size = UDim2.fromOffset(60, 40)
+ClockLabel.Size = UDim2.fromOffset(60, 36)
 ClockLabel.Position = UDim2.new(1, -65, 0, 0)
 ClockLabel.BackgroundTransparency = 1
 ClockLabel.Text = "00:00"
-ClockLabel.TextColor3 = Accent
-ClockLabel.TextSize = 12
+ClockLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+ClockLabel.TextSize = 11
 ClockLabel.Font = Enum.Font.GothamBold
 
 -- THANH STATUS BÊN DƯỚI DYNAMIC ISLAND
@@ -122,7 +133,7 @@ local StatusContainer = Instance.new("Frame")
 StatusContainer.Name = "StatusContainer"
 StatusContainer.Parent = Gui
 StatusContainer.Size = UDim2.fromOffset(340, 30)
-StatusContainer.Position = UDim2.new(0.5, -170, 0, 55)
+StatusContainer.Position = UDim2.new(0.5, -170, 0, 52)
 StatusContainer.BackgroundColor3 = Color3.fromRGB(12, 12, 18)
 Corner(StatusContainer, 10)
 Stroke(StatusContainer, Accent, 1, 0.4)
@@ -132,7 +143,7 @@ StatusLabel.Parent = StatusContainer
 StatusLabel.Size = UDim2.new(1, -20, 1, 0)
 StatusLabel.Position = UDim2.fromOffset(10, 0)
 StatusLabel.BackgroundTransparency = 1
-StatusLabel.Text = "Hệ thống Server Hop đã sẵn sàng!"
+StatusLabel.Text = "Luxury Dashboard Ready"
 StatusLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
 StatusLabel.TextSize = 12
 StatusLabel.Font = Enum.Font.GothamBold
@@ -150,20 +161,18 @@ task.spawn(function()
     end
 end)
 
--- ==========================================================
 -- MENU CHÍNH
--- ==========================================================
 local function StartMainDashboard()
-    SetStatus("Đang ở Dashboard Overview")
+    SetStatus("Dashboard Overview")
 
     local Icon = Instance.new("ImageButton")
     Icon.Name = "MenuIcon"
     Icon.Parent = Gui
-    Icon.Size = UDim2.fromOffset(50, 50)
-    Icon.Position = UDim2.new(0, 20, 0.5, -25)
+    Icon.Size = UDim2.fromOffset(52, 52)
+    Icon.Position = UDim2.new(0, 20, 0.5, -26)
     Icon.BackgroundColor3 = Color3.fromRGB(15, 15, 22)
     Icon.Image = "rbxthumb://type=Asset&id=113875514885319&w=150&h=150"
-    Corner(Icon, 25)
+    Corner(Icon, 26)
     Stroke(Icon, Accent, 2)
 
     local Menu = Instance.new("Frame")
@@ -175,6 +184,12 @@ local function StartMainDashboard()
     Menu.ClipsDescendants = true
     Corner(Menu, 16)
     Stroke(Menu, Accent, 1.5)
+
+    local DragHeader = Instance.new("Frame")
+    DragHeader.Parent = Menu
+    DragHeader.Size = UDim2.new(1, -110, 0, 35)
+    DragHeader.Position = UDim2.fromOffset(0, 0)
+    DragHeader.BackgroundTransparency = 1
 
     local TopBarControls = Instance.new("Frame")
     TopBarControls.Parent = Menu
@@ -196,12 +211,12 @@ local function StartMainDashboard()
     end
 
     MakeTopBtn(0, "—", function() Menu.Visible = false SetStatus("Đã ẩn Menu") end)
-    MakeTopBtn(32, "🗖", function() Menu.Size = (Menu.Size.X.Offset == 760) and UDim2.fromOffset(900, 560) or UDim2.fromOffset(760, 500) end)
+    MakeTopBtn(32, "🗖", function() Menu.Size = (Menu.Size.X.Offset == 760) and UDim2.fromOffset(880, 560) or UDim2.fromOffset(760, 490) end)
     MakeTopBtn(64, "×", function() Menu.Visible = false Icon.Visible = false SetStatus("Đã tắt Menu") end)
 
     local Sidebar = Instance.new("Frame")
     Sidebar.Parent = Menu
-    Sidebar.Size = UDim2.new(0, 190, 1, 0)
+    Sidebar.Size = UDim2.new(0, 185, 1, 0)
     Sidebar.BackgroundColor3 = Color3.fromRGB(16, 16, 22)
     Corner(Sidebar, 16)
 
@@ -234,8 +249,8 @@ local function StartMainDashboard()
         local Page = Instance.new("Frame")
         Page.Name = Name
         Page.Parent = Menu
-        Page.Size = UDim2.new(1, -210, 1, -20)
-        Page.Position = UDim2.fromOffset(200, 10)
+        Page.Size = UDim2.new(1, -205, 1, -20)
+        Page.Position = UDim2.fromOffset(195, 10)
         Page.BackgroundTransparency = 1
         Page.Visible = false
         Pages[Name] = Page
@@ -255,7 +270,7 @@ local function StartMainDashboard()
         Button.TextXAlignment = Enum.TextXAlignment.Left
         
         local TextPadding = Instance.new("UIPadding")
-        TextPadding.PaddingLeft = UDim.new(0, 12)
+        TextPadding.PaddingLeft = UDim.new(0, 14)
         TextPadding.Parent = Button
 
         Corner(Button, 8)
@@ -263,24 +278,22 @@ local function StartMainDashboard()
         return Button
     end
 
-    -- DANH SÁCH TAB
+    -- KHỞI TẠO TAB
     local HomePage = MakePage("Home")
-    local UtilityPage = MakePage("Utility")
-    local AntiAfkPage = MakePage("AntiAfk")
+    local PlayersPage = MakePage("Players")
     local EspPage = MakePage("Esp")
     local PosPage = MakePage("Positions")
     local ServerPage = MakePage("Server")
     local ScriptHubPage = MakePage("ScriptHub")
-    local SettingsPage = MakePage("Settings")
+    local CreatorPage = MakePage("Creator")
 
-    local HomeNav = MakeNav("🏠  Dashboard", "Home")
-    local UtilityNav = MakeNav("⚡  Speed Utilities", "Utility")
-    local AntiAfkNav = MakeNav("🛡️  Anti-AFK System", "AntiAfk")
-    local EspNav = MakeNav("👁️  ESP Wallhack", "Esp")
-    local PosNav = MakeNav("📍  Waypoints", "Positions")
-    local ServerNav = MakeNav("🌐  Server Hop Hub", "Server")
-    local ScriptHubNav = MakeNav("📁  Script Hub", "ScriptHub")
-    local SettingsNav = MakeNav("⚙️  Settings", "Settings")
+    local HomeNav = MakeNav("🏠   Dashboard", "Home")
+    local PlayersNav = MakeNav("👥   Players List & TP", "Players")
+    local EspNav = MakeNav("👁️   ESP Wallhack", "Esp")
+    local PosNav = MakeNav("📍   Waypoints", "Positions")
+    local ServerNav = MakeNav("🌐   Server Hop Hub", "Server")
+    local ScriptHubNav = MakeNav("📁   Script Hub", "ScriptHub")
+    local CreatorNav = MakeNav("👑   Creator Info", "Creator")
 
     local function PageTitle(Page, Main, Sub)
         local Title = Instance.new("TextLabel")
@@ -306,11 +319,12 @@ local function StartMainDashboard()
         Subtitle.TextXAlignment = Enum.TextXAlignment.Left
     end
 
-    -- 1. HOME TAB
+    -- TAB 1: DASHBOARD (CÓ HIỂN THỊ MÃ JOB ID SERVER ĐANG Ở)
     PageTitle(HomePage, "Dashboard Overview", "Thống kê hệ thống")
+    
     local FPSValue = Instance.new("TextLabel")
     FPSValue.Parent = HomePage
-    FPSValue.Size = UDim2.fromOffset(160, 60)
+    FPSValue.Size = UDim2.fromOffset(150, 65)
     FPSValue.Position = UDim2.fromOffset(5, 55)
     FPSValue.BackgroundColor3 = Color3.fromRGB(18, 18, 25)
     FPSValue.Text = "FPS: --"
@@ -318,51 +332,102 @@ local function StartMainDashboard()
     FPSValue.Font = Enum.Font.GothamBold
     Corner(FPSValue, 10)
 
-    -- 2. UTILITY TAB
-    PageTitle(UtilityPage, "Speed Utilities", "Tốc độ di chuyển Safe Mode")
-    local SpeedInp = Instance.new("TextBox")
-    SpeedInp.Parent = UtilityPage
-    SpeedInp.Size = UDim2.new(1, -10, 0, 36)
-    SpeedInp.Position = UDim2.fromOffset(5, 55)
-    SpeedInp.BackgroundColor3 = Color3.fromRGB(18, 18, 25)
-    SpeedInp.PlaceholderText = "Nhập WalkSpeed (Mặc định: 16)..."
-    SpeedInp.Text = "16"
-    SpeedInp.TextColor3 = Accent
-    SpeedInp.Font = Enum.Font.GothamBold
-    Corner(SpeedInp, 8)
+    -- MÃ JOB ID SERVER ĐANG Ở TẠI TAB HOME
+    local JobCard = Instance.new("Frame")
+    JobCard.Parent = HomePage
+    JobCard.Size = UDim2.new(1, -10, 0, 65)
+    JobCard.Position = UDim2.fromOffset(5, 130)
+    JobCard.BackgroundColor3 = Color3.fromRGB(18, 18, 25)
+    Corner(JobCard, 10)
+    Stroke(JobCard, Color3.fromRGB(40, 40, 55), 1)
 
-    SpeedInp.FocusLost:Connect(function()
-        local n = tonumber(SpeedInp.Text)
-        if n and LocalPlayer.Character and LocalPlayer.Character:FindFirstChildOfClass("Humanoid") then
-            LocalPlayer.Character:FindFirstChildOfClass("Humanoid").WalkSpeed = n
-            SetStatus("Thay đổi WalkSpeed: " .. n)
+    local JobTitleLbl = Instance.new("TextLabel")
+    JobTitleLbl.Parent = JobCard
+    JobTitleLbl.Size = UDim2.new(1, -20, 0, 20)
+    JobTitleLbl.Position = UDim2.fromOffset(12, 8)
+    JobTitleLbl.BackgroundTransparency = 1
+    JobTitleLbl.Text = "🆔 SERVER JOB ID ĐANG Ở:"
+    JobTitleLbl.TextColor3 = Color3.fromRGB(150, 150, 170)
+    JobTitleLbl.TextSize = 11
+    JobTitleLbl.Font = Enum.Font.GothamBold
+    JobTitleLbl.TextXAlignment = Enum.TextXAlignment.Left
+
+    local JobValueLbl = Instance.new("TextLabel")
+    JobValueLbl.Parent = JobCard
+    JobValueLbl.Size = UDim2.new(1, -20, 0, 25)
+    JobValueLbl.Position = UDim2.fromOffset(12, 30)
+    JobValueLbl.BackgroundTransparency = 1
+    JobValueLbl.Text = game.JobId
+    JobValueLbl.TextColor3 = Accent
+    JobValueLbl.TextSize = 12
+    JobValueLbl.Font = Enum.Font.Gotham
+    JobValueLbl.TextXAlignment = Enum.TextXAlignment.Left
+    JobValueLbl.TextTruncate = Enum.TextTruncate.AtEnd
+
+    -- TAB 2: PLAYERS & TP
+    PageTitle(PlayersPage, "Active Players & Teleport", "Xem danh sách và dịch chuyển tới người chơi")
+    local PlayerScroll = Instance.new("ScrollingFrame")
+    PlayerScroll.Parent = PlayersPage
+    PlayerScroll.Size = UDim2.new(1, -5, 1, -65)
+    PlayerScroll.Position = UDim2.fromOffset(0, 55)
+    PlayerScroll.BackgroundTransparency = 1
+    PlayerScroll.ScrollBarThickness = 3
+    PlayerScroll.ScrollBarImageColor3 = Accent
+
+    local PlayerListLayout = Instance.new("UIListLayout")
+    PlayerListLayout.Parent = PlayerScroll
+    PlayerListLayout.Padding = UDim.new(0, 8)
+
+    local function RefreshPlayers()
+        for _, c in ipairs(PlayerScroll:GetChildren()) do if c:IsA("Frame") then c:Destroy() end end
+        for _, Target in ipairs(Players:GetPlayers()) do
+            if Target ~= LocalPlayer then
+                local Row = Instance.new("Frame")
+                Row.Parent = PlayerScroll
+                Row.Size = UDim2.new(1, -5, 0, 55)
+                Row.BackgroundColor3 = Color3.fromRGB(18, 18, 25)
+                Corner(Row, 10)
+
+                local NameLbl = Instance.new("TextLabel")
+                NameLbl.Parent = Row
+                NameLbl.Size = UDim2.new(1, -190, 0, 20)
+                NameLbl.Position = UDim2.fromOffset(12, 8)
+                NameLbl.BackgroundTransparency = 1
+                NameLbl.Text = Target.DisplayName .. " (@" .. Target.Name .. ")"
+                NameLbl.TextColor3 = Color3.new(1, 1, 1)
+                NameLbl.Font = Enum.Font.GothamBold
+                NameLbl.TextXAlignment = Enum.TextXAlignment.Left
+
+                local TpToBtn = Instance.new("TextButton")
+                TpToBtn.Parent = Row
+                TpToBtn.Size = UDim2.fromOffset(80, 28)
+                TpToBtn.Position = UDim2.new(1, -85, 0.5, -14)
+                TpToBtn.BackgroundColor3 = Accent
+                TpToBtn.Text = "🚀 TP TỚI"
+                TpToBtn.TextColor3 = Color3.new(1, 1, 1)
+                TpToBtn.Font = Enum.Font.GothamBold
+                Corner(TpToBtn, 6)
+
+                TpToBtn.MouseButton1Click:Connect(function()
+                    if LocalPlayer.Character and Target.Character and Target.Character:FindFirstChild("HumanoidRootPart") then
+                        LocalPlayer.Character:PivotTo(Target.Character.HumanoidRootPart.CFrame * CFrame.new(0, 0, CONFIG.TeleportOffset))
+                        SetStatus("Đã TP tới: " .. Target.DisplayName)
+                    end
+                end)
+            end
         end
-    end)
+    end
+    RefreshPlayers()
+    Players.PlayerAdded:Connect(function() task.wait(0.2) RefreshPlayers() end)
+    Players.PlayerRemoving:Connect(function() task.wait(0.1) RefreshPlayers() end)
 
-    -- 3. ANTI-AFK TAB
-    PageTitle(AntiAfkPage, "Anti-AFK System", "Bảo vệ treo game 24/7")
-    local AfkBtn = Instance.new("TextButton")
-    AfkBtn.Parent = AntiAfkPage
-    AfkBtn.Size = UDim2.new(1, -10, 0, 40)
-    AfkBtn.Position = UDim2.fromOffset(5, 55)
-    AfkBtn.BackgroundColor3 = Color3.fromRGB(40, 200, 100)
-    AfkBtn.Text = "🛡️ ANTI-AFK: DANG BẬT BẢO VỆ"
-    AfkBtn.TextColor3 = Color3.new(1, 1, 1)
-    AfkBtn.Font = Enum.Font.GothamBold
-    Corner(AfkBtn, 8)
-
-    LocalPlayer.Idled:Connect(function()
-        VirtualUser:CaptureController()
-        VirtualUser:ClickButton2(Vector2.new())
-    end)
-
-    -- 4. ESP TAB
+    -- TAB 3: ESP
     PageTitle(EspPage, "ESP Wallhack", "Nhìn vị trí người chơi xuyên tường")
     local EspEnabled = false
     local EspBtn = Instance.new("TextButton")
     EspBtn.Parent = EspPage
-    EspBtn.Size = UDim2.new(1, -10, 0, 40)
-    EspBtn.Position = UDim2.fromOffset(5, 55)
+    EspBtn.Size = UDim2.new(1, -5, 0, 40)
+    EspBtn.Position = UDim2.fromOffset(0, 55)
     EspBtn.BackgroundColor3 = Color3.fromRGB(35, 35, 45)
     EspBtn.Text = "👁️ ESP PLAYER HIGHLIGHT: OFF"
     EspBtn.TextColor3 = Color3.new(1, 1, 1)
@@ -373,7 +438,7 @@ local function StartMainDashboard()
         EspEnabled = not EspEnabled
         EspBtn.Text = EspEnabled and "👁️ ESP PLAYER HIGHLIGHT: ON" or "👁️ ESP PLAYER HIGHLIGHT: OFF"
         EspBtn.BackgroundColor3 = EspEnabled and Accent or Color3.fromRGB(35, 35, 45)
-        SetStatus(EspEnabled and "Đã bật ESP xuyên tường" or "Đã tắt ESP")
+        SetStatus(EspEnabled and "Đã BẬT ESP xuyên tường" or "Đã TẮT ESP")
         for _, p in ipairs(Players:GetPlayers()) do
             if p ~= LocalPlayer and p.Character then
                 local hl = p.Character:FindFirstChild("LuxuryESP")
@@ -386,13 +451,13 @@ local function StartMainDashboard()
         end
     end)
 
-    -- 5. WAYPOINTS TAB
+    -- TAB 4: WAYPOINTS
     PageTitle(PosPage, "Teleport Waypoints", "Lưu tọa độ mong muốn")
     local SavedCFrame = nil
     local SaveBtn = Instance.new("TextButton")
     SaveBtn.Parent = PosPage
     SaveBtn.Size = UDim2.new(0.48, 0, 0, 36)
-    SaveBtn.Position = UDim2.fromOffset(5, 55)
+    SaveBtn.Position = UDim2.fromOffset(0, 55)
     SaveBtn.BackgroundColor3 = Accent
     SaveBtn.Text = "📍 LƯU VỊ TRÍ"
     SaveBtn.TextColor3 = Color3.new(1, 1, 1)
@@ -423,49 +488,20 @@ local function StartMainDashboard()
         end
     end)
 
-    -- 6. TAB SERVER HOP CHUẨN ĐẦY ĐỦ (PING THẤP / 1 NGƯỜI / TREO CỦ)
-    PageTitle(ServerPage, "Server Hop Hub", "Quét tìm server ít người, ping thấp hoặc treo cũ")
+    -- TAB 5: SERVER HOP HUB (3 NÚT CHÍNH + DÁN JOB ID + COPY JOB ID)
+    PageTitle(ServerPage, "Server Hop Hub", "Quản lý chuyển Server, nhập Job ID hoặc sao chép mã Server")
 
-    local FindLowPing = Instance.new("TextButton")
-    FindLowPing.Parent = ServerPage
-    FindLowPing.Size = UDim2.new(0.31, 0, 0, 34)
-    FindLowPing.Position = UDim2.fromOffset(5, 52)
-    FindLowPing.BackgroundColor3 = Color3.fromRGB(40, 180, 90)
-    FindLowPing.Text = "⚡ PING THẤP"
-    FindLowPing.TextColor3 = Color3.new(1, 1, 1)
-    FindLowPing.Font = Enum.Font.GothamBold
-    Corner(FindLowPing, 8)
-
-    local Find1Player = Instance.new("TextButton")
-    Find1Player.Parent = ServerPage
-    Find1Player.Size = UDim2.new(0.32, 0, 0, 34)
-    Find1Player.Position = UDim2.new(0.34, 5, 0, 52)
-    Find1Player.BackgroundColor3 = Accent
-    Find1Player.Text = "🔍 1 NGƯỜI"
-    Find1Player.TextColor3 = Color3.new(1, 1, 1)
-    Find1Player.Font = Enum.Font.GothamBold
-    Corner(Find1Player, 8)
-
-    local FindOldServer = Instance.new("TextButton")
-    FindOldServer.Parent = ServerPage
-    FindOldServer.Size = UDim2.new(0.31, 0, 0, 34)
-    FindOldServer.Position = UDim2.new(0.68, 5, 0, 52)
-    FindOldServer.BackgroundColor3 = Color3.fromRGB(25, 25, 35)
-    FindOldServer.Text = "⏳ TREO CỦ"
-    FindOldServer.TextColor3 = Color3.fromRGB(200, 200, 210)
-    FindOldServer.Font = Enum.Font.GothamBold
-    Corner(FindOldServer, 8)
-
+    -- PHẦN NHẬP JOB ID + NÚT JOIN + NÚT COPY JOB ID
     local JobContainer = Instance.new("Frame")
     JobContainer.Parent = ServerPage
-    JobContainer.Size = UDim2.new(1, -10, 0, 36)
-    JobContainer.Position = UDim2.fromOffset(5, 92)
+    JobContainer.Size = UDim2.new(1, -5, 0, 42)
+    JobContainer.Position = UDim2.fromOffset(0, 55)
     JobContainer.BackgroundColor3 = Color3.fromRGB(18, 18, 25)
     Corner(JobContainer, 8)
 
     local JobInp = Instance.new("TextBox")
     JobInp.Parent = JobContainer
-    JobInp.Size = UDim2.new(1, -125, 1, 0)
+    JobInp.Size = UDim2.new(1, -190, 1, 0)
     JobInp.Position = UDim2.fromOffset(10, 0)
     JobInp.BackgroundTransparency = 1
     JobInp.PlaceholderText = "Dán mã Job ID server vào đây..."
@@ -475,13 +511,23 @@ local function StartMainDashboard()
 
     local JoinJobBtn = Instance.new("TextButton")
     JoinJobBtn.Parent = JobContainer
-    JoinJobBtn.Size = UDim2.fromOffset(110, 26)
-    JoinJobBtn.Position = UDim2.new(1, -115, 0.5, -13)
+    JoinJobBtn.Size = UDim2.fromOffset(80, 30)
+    JoinJobBtn.Position = UDim2.new(1, -175, 0.5, -15)
     JoinJobBtn.BackgroundColor3 = Accent
-    JoinJobBtn.Text = "🚀 JOIN JOB ID"
+    JoinJobBtn.Text = "🚀 JOIN JOB"
     JoinJobBtn.TextColor3 = Color3.new(1, 1, 1)
     JoinJobBtn.Font = Enum.Font.GothamBold
     Corner(JoinJobBtn, 6)
+
+    local CopyJobBtn = Instance.new("TextButton")
+    CopyJobBtn.Parent = JobContainer
+    CopyJobBtn.Size = UDim2.fromOffset(85, 30)
+    CopyJobBtn.Position = UDim2.new(1, -90, 0.5, -15)
+    CopyJobBtn.BackgroundColor3 = Color3.fromRGB(35, 35, 45)
+    CopyJobBtn.Text = "📋 COPY JOB"
+    CopyJobBtn.TextColor3 = Color3.new(1, 1, 1)
+    CopyJobBtn.Font = Enum.Font.GothamBold
+    Corner(CopyJobBtn, 6)
 
     JoinJobBtn.MouseButton1Click:Connect(function()
         local targetJob = JobInp.Text:gsub("%s+", "")
@@ -491,93 +537,83 @@ local function StartMainDashboard()
         end
     end)
 
-    local ServerList = Instance.new("ScrollingFrame")
-    ServerList.Parent = ServerPage
-    ServerList.Size = UDim2.new(1, -10, 1, -135)
-    ServerList.Position = UDim2.fromOffset(5, 132)
-    ServerList.BackgroundTransparency = 1
-    ServerList.ScrollBarThickness = 3
-    ServerList.ScrollBarImageColor3 = Accent
+    CopyJobBtn.MouseButton1Click:Connect(function()
+        pcall(function() setclipboard(game.JobId) end)
+        SetStatus("Đã copy Job ID vào bộ nhớ tạm!")
+        CopyJobBtn.Text = "✓ ĐÃ COPY!"
+        task.wait(1)
+        CopyJobBtn.Text = "📋 COPY JOB"
+    end)
 
-    local ServerLayout = Instance.new("UIListLayout")
-    ServerLayout.Parent = ServerList
-    ServerLayout.Padding = UDim.new(0, 6)
+    -- 3 NÚT TÌM SERVER (1 NGƯỜI / PING THẤP / TREO CỦ)
+    local Find1PlayerBtn = Instance.new("TextButton")
+    Find1PlayerBtn.Parent = ServerPage
+    Find1PlayerBtn.Size = UDim2.new(1, -5, 0, 38)
+    Find1PlayerBtn.Position = UDim2.fromOffset(0, 107)
+    Find1PlayerBtn.BackgroundColor3 = Accent
+    Find1PlayerBtn.Text = "🔍 TÌM SERVER 1 NGƯỜI (LOWEST PLAYERS)"
+    Find1PlayerBtn.TextColor3 = Color3.new(1, 1, 1)
+    Find1PlayerBtn.Font = Enum.Font.GothamBold
+    Corner(Find1PlayerBtn, 8)
 
-    local function FetchServers(Cursor)
-        local URL = "https://games.roblox.com/v1/games/" .. game.PlaceId .. "/servers/Public?sortOrder=Asc&limit=100"
-        if Cursor then URL = URL .. "&cursor=" .. HttpService:UrlEncode(Cursor) end
-        local Success, Response = pcall(function() return game:HttpGet(URL) end)
-        if not Success or not Response then return nil end
-        local DecodeSuccess, Data = pcall(function() return HttpService:JSONDecode(Response) end)
-        return DecodeSuccess and Data or nil
-    end
+    local FindLowPingBtn = Instance.new("TextButton")
+    FindLowPingBtn.Parent = ServerPage
+    FindLowPingBtn.Size = UDim2.new(1, -5, 0, 38)
+    FindLowPingBtn.Position = UDim2.fromOffset(0, 153)
+    FindLowPingBtn.BackgroundColor3 = Color3.fromRGB(40, 180, 90)
+    FindLowPingBtn.Text = "⚡ TÌM SERVER PING THẤP"
+    FindLowPingBtn.TextColor3 = Color3.new(1, 1, 1)
+    FindLowPingBtn.Font = Enum.Font.GothamBold
+    Corner(FindLowPingBtn, 8)
 
-    local function ScanAndDisplayServers(mode)
-        SetStatus("Đang quét tìm danh sách Server...")
-        for _, v in ipairs(ServerList:GetChildren()) do if v:IsA("Frame") then v:Destroy() end end
+    local FindOldServerBtn = Instance.new("TextButton")
+    FindOldServerBtn.Parent = ServerPage
+    FindOldServerBtn.Size = UDim2.new(1, -5, 0, 38)
+    FindOldServerBtn.Position = UDim2.fromOffset(0, 199)
+    FindOldServerBtn.BackgroundColor3 = Color3.fromRGB(35, 35, 45)
+    FindOldServerBtn.Text = "⏳ TÌM SERVER TREO CỦ (OLD SERVERS)"
+    FindOldServerBtn.TextColor3 = Color3.fromRGB(200, 200, 220)
+    FindOldServerBtn.Font = Enum.Font.GothamBold
+    Corner(FindOldServerBtn, 8)
 
+    local function TeleportToCustomServer(mode)
+        SetStatus("Đang quét danh sách Server...")
         task.spawn(function()
-            local Cursor, PagesScanned = nil, 0
-            while PagesScanned < 5 do
-                PagesScanned += 1
-                local Data = FetchServers(Cursor)
-                if not Data or not Data.data then break end
-
-                for i, Server in ipairs(Data.data) do
-                    local Playing = tonumber(Server.playing) or 999
-                    if Server.id ~= game.JobId and Playing > 0 then
-                        if (mode == "1player" and Playing == 1) or (mode == "old" and Playing <= 3) or (mode == "lowping") then
-                            local Row = Instance.new("Frame")
-                            Row.Parent = ServerList
-                            Row.Size = UDim2.new(1, -5, 0, 42)
-                            Row.BackgroundColor3 = Color3.fromRGB(18, 18, 25)
-                            Corner(Row, 8)
-
-                            local Info = Instance.new("TextLabel")
-                            Info.Parent = Row
-                            Info.Size = UDim2.new(1, -80, 1, 0)
-                            Info.Position = UDim2.fromOffset(10, 0)
-                            Info.BackgroundTransparency = 1
-                            Info.Text = "SERVER (" .. Playing .. " Người) - Ping Thấp"
-                            Info.TextColor3 = Color3.new(1, 1, 1)
-                            Info.Font = Enum.Font.GothamMedium
-                            Info.TextXAlignment = Enum.TextXAlignment.Left
-
-                            local Join = Instance.new("TextButton")
-                            Join.Parent = Row
-                            Join.Size = UDim2.fromOffset(60, 28)
-                            Join.Position = UDim2.new(1, -65, 0.5, -14)
-                            Join.BackgroundColor3 = Accent
-                            Join.Text = "🚀 JOIN"
-                            Join.TextColor3 = Color3.new(1, 1, 1)
-                            Join.Font = Enum.Font.GothamBold
-                            Corner(Join, 6)
-
-                            Join.MouseButton1Click:Connect(function()
-                                SetStatus("Đang dịch chuyển tới Server...")
-                                TeleportService:TeleportToPlaceInstance(game.PlaceId, Server.id, LocalPlayer)
-                            end)
+            local sortOrder = (mode == "1player" or mode == "lowping") and "Asc" or "Desc"
+            local raw = game:HttpGet("https://games.roblox.com/v1/games/" .. game.PlaceId .. "/servers/Public?sortOrder=" .. sortOrder .. "&limit=100")
+            local data = HttpService:JSONDecode(raw)
+            if data and data.data then
+                local validServers = {}
+                for _, s in ipairs(data.data) do
+                    if s.id ~= game.JobId and s.playing < s.maxPlayers then
+                        if mode == "1player" and s.playing == 1 then
+                            table.insert(validServers, s)
+                        elseif mode ~= "1player" then
+                            table.insert(validServers, s)
                         end
                     end
                 end
-                Cursor = Data.nextPageCursor
-                if not Cursor then break end
-                task.wait(0.05)
+                if #validServers > 0 then
+                    local target = validServers[math.random(1, math.min(5, #validServers))]
+                    SetStatus("Đang chuyển tới Server: " .. target.id)
+                    TeleportService:TeleportToPlaceInstance(game.PlaceId, target.id, LocalPlayer)
+                else
+                    SetStatus("Không tìm thấy server phù hợp, thử lại sau!")
+                end
             end
-            SetStatus("✓ Đã tải xong danh sách Server!")
         end)
     end
 
-    FindLowPing.MouseButton1Click:Connect(function() ScanAndDisplayServers("lowping") end)
-    Find1Player.MouseButton1Click:Connect(function() ScanAndDisplayServers("1player") end)
-    FindOldServer.MouseButton1Click:Connect(function() ScanAndDisplayServers("old") end)
+    Find1PlayerBtn.MouseButton1Click:Connect(function() TeleportToCustomServer("1player") end)
+    FindLowPingBtn.MouseButton1Click:Connect(function() TeleportToCustomServer("lowping") end)
+    FindOldServerBtn.MouseButton1Click:Connect(function() TeleportToCustomServer("old") end)
 
-    -- 7. SCRIPT HUB TAB
-    PageTitle(ScriptHubPage, "Script Hub Library", "Khởi chạy script hỗ trợ")
+    -- TAB 6: SCRIPT HUB
+    PageTitle(ScriptHubPage, "Script Hub Library", "Khởi chạy script hỗ trợ an toàn")
     local IyBtn = Instance.new("TextButton")
     IyBtn.Parent = ScriptHubPage
-    IyBtn.Size = UDim2.new(1, -10, 0, 40)
-    IyBtn.Position = UDim2.fromOffset(5, 55)
+    IyBtn.Size = UDim2.new(1, -5, 0, 40)
+    IyBtn.Position = UDim2.fromOffset(0, 55)
     IyBtn.BackgroundColor3 = Accent
     IyBtn.Text = "⚡ RUN INFINITE YIELD ADMIN"
     IyBtn.TextColor3 = Color3.new(1, 1, 1)
@@ -589,8 +625,63 @@ local function StartMainDashboard()
         loadstring(game:HttpGet('https://raw.githubusercontent.com/EdgeIY/infiniteyield/master/source'))()
     end)
 
-    -- 8. SETTINGS TAB
-    PageTitle(SettingsPage, "Settings & Info", "Thông tin tác giả Kit_n67")
+    -- TAB 7: CREATOR INFO
+    PageTitle(CreatorPage, "Developer & Socials", "Thông tin tác giả Kit_n67")
+
+    local DevCard = Instance.new("Frame")
+    DevCard.Parent = CreatorPage
+    DevCard.Size = UDim2.new(1, -5, 0, 90)
+    DevCard.Position = UDim2.fromOffset(0, 55)
+    DevCard.BackgroundColor3 = Color3.fromRGB(18, 18, 25)
+    Corner(DevCard, 10)
+    Stroke(DevCard, Accent, 1)
+
+    local DevTitle = Instance.new("TextLabel")
+    DevTitle.Parent = DevCard
+    DevTitle.Size = UDim2.new(1, -20, 0, 25)
+    DevTitle.Position = UDim2.fromOffset(15, 12)
+    DevTitle.BackgroundTransparency = 1
+    DevTitle.Text = "👑 CREATOR: Kit_n67"
+    DevTitle.TextColor3 = Color3.new(1, 1, 1)
+    DevTitle.TextSize = 15
+    DevTitle.Font = Enum.Font.GothamBold
+    DevTitle.TextXAlignment = Enum.TextXAlignment.Left
+
+    local DevSub = Instance.new("TextLabel")
+    DevSub.Parent = DevCard
+    DevSub.Size = UDim2.new(1, -20, 0, 20)
+    DevSub.Position = UDim2.fromOffset(15, 38)
+    DevSub.BackgroundTransparency = 1
+    DevSub.Text = "Cảm ơn boss đã tin tưởng và sử dụng hệ thống Luxury Dashboard!"
+    DevSub.TextColor3 = Color3.fromRGB(150, 150, 170)
+    DevSub.TextSize = 11
+    DevSub.Font = Enum.Font.Gotham
+    DevSub.TextXAlignment = Enum.TextXAlignment.Left
+
+    local function MakeSocialBtn(YPos, Text, Link, Color)
+        local Btn = Instance.new("TextButton")
+        Btn.Parent = CreatorPage
+        Btn.Size = UDim2.new(1, -5, 0, 36)
+        Btn.Position = UDim2.fromOffset(0, YPos)
+        Btn.BackgroundColor3 = Color
+        Btn.Text = Text
+        Btn.TextColor3 = Color3.new(1, 1, 1)
+        Btn.TextSize = 11
+        Btn.Font = Enum.Font.GothamBold
+        Corner(Btn, 8)
+
+        Btn.MouseButton1Click:Connect(function()
+            pcall(function() setclipboard(Link) end)
+            SetStatus("Đã copy link: " .. Link)
+            Btn.Text = "✓ ĐÃ SAO CHÉP LINK DÁN VÀO TRÌNH DUYỆT!"
+            task.wait(1.5)
+            Btn.Text = Text
+        end)
+    end
+
+    MakeSocialBtn(155, "🎵 TIKTOK: @kit_n67 (BẤM ĐỂ SAO CHÉP LINK)", CREATOR_LINKS.TikTok, Color3.fromRGB(30, 30, 40))
+    MakeSocialBtn(200, "▶️ YOUTUBE: Kit_n67 Channel (BẤM ĐỂ SAO CHÉP LINK)", CREATOR_LINKS.YouTube, Color3.fromRGB(200, 40, 50))
+    MakeSocialBtn(245, "💬 DISCORD COMMUNITY (BẤM ĐỂ SAO CHÉP LINK)", CREATOR_LINKS.Discord, Color3.fromRGB(88, 101, 242))
 
     -- ĐIỀU HƯỚNG TAB
     local function ShowPage(Name)
@@ -603,13 +694,12 @@ local function StartMainDashboard()
     end
 
     HomeNav.MouseButton1Click:Connect(function() ShowPage("Home") end)
-    UtilityNav.MouseButton1Click:Connect(function() ShowPage("Utility") end)
-    AntiAfkNav.MouseButton1Click:Connect(function() ShowPage("AntiAfk") end)
+    PlayersNav.MouseButton1Click:Connect(function() ShowPage("Players") end)
     EspNav.MouseButton1Click:Connect(function() ShowPage("Esp") end)
     PosNav.MouseButton1Click:Connect(function() ShowPage("Positions") end)
     ServerNav.MouseButton1Click:Connect(function() ShowPage("Server") end)
     ScriptHubNav.MouseButton1Click:Connect(function() ShowPage("ScriptHub") end)
-    SettingsNav.MouseButton1Click:Connect(function() ShowPage("Settings") end)
+    CreatorNav.MouseButton1Click:Connect(function() ShowPage("Creator") end)
 
     ShowPage("Home")
     Icon.MouseButton1Click:Connect(function() Menu.Visible = not Menu.Visible end)
@@ -626,9 +716,7 @@ local function StartMainDashboard()
     end)
 end
 
--- ==========================================================
 -- BẢO TRÌ SYSTEM
--- ==========================================================
 if MAINTENANCE_CONFIG.Enabled and not isAdmin then
     SetStatus("Hệ thống đang bảo trì...")
     local MaintFrame = Instance.new("Frame")
@@ -671,4 +759,4 @@ else
     StartMainDashboard()
 end
 
-print("Luxury Hop Hub Loaded!")
+print("Luxury Dashboard Perfect Server Hop Loaded!")
