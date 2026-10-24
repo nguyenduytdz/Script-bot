@@ -1,5 +1,5 @@
 -- ==============================================================================
--- Project: Luxury Dashboard UI (SAFE EDITION - PERFECT SERVER HOP & HOME JOB ID)
+-- Project: Luxury Dashboard UI (FIXED MAINTENANCE & AUTO-SHOW MENU)
 -- Author: Kit_n67 | Upgraded for Boss Man
 -- ==============================================================================
 
@@ -11,7 +11,7 @@ local HttpService = game:GetService("HttpService")
 local TeleportService = game:GetService("TeleportService")
 local SoundService = game:GetService("SoundService")
 local StarterGui = game:GetService("StarterGui")
-local TweenService = game:GetService("TweenService")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local VirtualUser = game:GetService("VirtualUser")
 
 local LocalPlayer = Players.LocalPlayer
@@ -20,10 +20,11 @@ local PlayerGui = LocalPlayer:WaitForChild("PlayerGui")
 local ADMIN_USERNAME = "kit_n67"
 local isAdmin = (LocalPlayer.Name:lower() == ADMIN_USERNAME:lower())
 
+-- CẤU HÌNH BẢO TRÌ (ĐÃ ĐẶT FALSE ĐỂ KHÔNG BỊ KHÓA MENU KHI CHẠY SCRIPT)
 local MAINTENANCE_CONFIG = {
     Enabled = false,
     Duration = 10,
-    Reason = "Hệ thống đang bảo trì..."
+    Reason = "Hệ thống đang được nâng cấp tối ưu..."
 }
 
 local CREATOR_LINKS = {
@@ -35,7 +36,7 @@ local CREATOR_LINKS = {
 local CONFIG = {
     Theme = "Purple",
     MenuWidth = 760,
-    MenuHeight = 490,
+    MenuHeight = 510,
     TeleportOffset = 3,
 }
 
@@ -52,7 +53,6 @@ local Accent = THEMES[CONFIG.Theme]
 local UserId = LocalPlayer.UserId
 local DisplayName = LocalPlayer.DisplayName
 local Username = "@" .. LocalPlayer.Name
-local AvatarURL = ""
 
 local ClickSound = Instance.new("Sound")
 ClickSound.Name = "LuxuryClickSound"
@@ -60,15 +60,19 @@ ClickSound.SoundId = "rbxassetid://6895079853"
 ClickSound.Volume = 1
 ClickSound.Parent = SoundService
 
-pcall(function()
-    AvatarURL = Players:GetUserThumbnailAsync(UserId, Enum.ThumbnailType.HeadShot, Enum.ThumbnailSize.Size420x420)
-end)
-
 -- 🛡️ ANTI-AFK CHẠY ẨN NGẦM 100%
 LocalPlayer.Idled:Connect(function()
     VirtualUser:CaptureController()
     VirtualUser:ClickButton2(Vector2.new())
 end)
+
+-- 📡 KÊNH CHAT RIÊNG GIỮA NHỮNG NGƯỜI CHẠY SCRIPT
+local ScriptChatEvent = ReplicatedStorage:FindFirstChild("LuxuryScriptChatEvent")
+if not ScriptChatEvent then
+    ScriptChatEvent = Instance.new("BindableEvent")
+    ScriptChatEvent.Name = "LuxuryScriptChatEvent"
+    ScriptChatEvent.Parent = ReplicatedStorage
+end
 
 local Old = PlayerGui:FindFirstChild("LuxuryDashboardUI")
 if Old then Old:Destroy() end
@@ -211,7 +215,7 @@ local function StartMainDashboard()
     end
 
     MakeTopBtn(0, "—", function() Menu.Visible = false SetStatus("Đã ẩn Menu") end)
-    MakeTopBtn(32, "🗖", function() Menu.Size = (Menu.Size.X.Offset == 760) and UDim2.fromOffset(880, 560) or UDim2.fromOffset(760, 490) end)
+    MakeTopBtn(32, "🗖", function() Menu.Size = (Menu.Size.X.Offset == 760) and UDim2.fromOffset(880, 560) or UDim2.fromOffset(760, 510) end)
     MakeTopBtn(64, "×", function() Menu.Visible = false Icon.Visible = false SetStatus("Đã tắt Menu") end)
 
     local Sidebar = Instance.new("Frame")
@@ -278,21 +282,19 @@ local function StartMainDashboard()
         return Button
     end
 
-    -- KHỞI TẠO TAB
+    -- KHỞI TẠO TẤT CẢ TABS
     local HomePage = MakePage("Home")
     local PlayersPage = MakePage("Players")
-    local EspPage = MakePage("Esp")
-    local PosPage = MakePage("Positions")
+    local ChatPage = MakePage("Chat")
     local ServerPage = MakePage("Server")
-    local ScriptHubPage = MakePage("ScriptHub")
+    local MaintPage = MakePage("Maintenance")
     local CreatorPage = MakePage("Creator")
 
     local HomeNav = MakeNav("🏠   Dashboard", "Home")
     local PlayersNav = MakeNav("👥   Players List & TP", "Players")
-    local EspNav = MakeNav("👁️   ESP Wallhack", "Esp")
-    local PosNav = MakeNav("📍   Waypoints", "Positions")
+    local ChatNav = MakeNav("💬   Script Users Chat", "Chat")
     local ServerNav = MakeNav("🌐   Server Hop Hub", "Server")
-    local ScriptHubNav = MakeNav("📁   Script Hub", "ScriptHub")
+    local MaintNav = MakeNav("🛠️   Bảo Trì Control", "Maintenance")
     local CreatorNav = MakeNav("👑   Creator Info", "Creator")
 
     local function PageTitle(Page, Main, Sub)
@@ -319,7 +321,7 @@ local function StartMainDashboard()
         Subtitle.TextXAlignment = Enum.TextXAlignment.Left
     end
 
-    -- TAB 1: DASHBOARD (CÓ HIỂN THỊ MÃ JOB ID SERVER ĐANG Ở)
+    -- TAB 1: DASHBOARD
     PageTitle(HomePage, "Dashboard Overview", "Thống kê hệ thống")
     
     local FPSValue = Instance.new("TextLabel")
@@ -332,7 +334,6 @@ local function StartMainDashboard()
     FPSValue.Font = Enum.Font.GothamBold
     Corner(FPSValue, 10)
 
-    -- MÃ JOB ID SERVER ĐANG Ở TẠI TAB HOME
     local JobCard = Instance.new("Frame")
     JobCard.Parent = HomePage
     JobCard.Size = UDim2.new(1, -10, 0, 65)
@@ -421,77 +422,92 @@ local function StartMainDashboard()
     Players.PlayerAdded:Connect(function() task.wait(0.2) RefreshPlayers() end)
     Players.PlayerRemoving:Connect(function() task.wait(0.1) RefreshPlayers() end)
 
-    -- TAB 3: ESP
-    PageTitle(EspPage, "ESP Wallhack", "Nhìn vị trí người chơi xuyên tường")
-    local EspEnabled = false
-    local EspBtn = Instance.new("TextButton")
-    EspBtn.Parent = EspPage
-    EspBtn.Size = UDim2.new(1, -5, 0, 40)
-    EspBtn.Position = UDim2.fromOffset(0, 55)
-    EspBtn.BackgroundColor3 = Color3.fromRGB(35, 35, 45)
-    EspBtn.Text = "👁️ ESP PLAYER HIGHLIGHT: OFF"
-    EspBtn.TextColor3 = Color3.new(1, 1, 1)
-    EspBtn.Font = Enum.Font.GothamBold
-    Corner(EspBtn, 8)
+    -- TAB 3: SCRIPT USERS CHAT
+    PageTitle(ChatPage, "Script Users Chat Hub", "Kênh chat dành riêng cho những người đang bật Luxury Script")
 
-    EspBtn.MouseButton1Click:Connect(function()
-        EspEnabled = not EspEnabled
-        EspBtn.Text = EspEnabled and "👁️ ESP PLAYER HIGHLIGHT: ON" or "👁️ ESP PLAYER HIGHLIGHT: OFF"
-        EspBtn.BackgroundColor3 = EspEnabled and Accent or Color3.fromRGB(35, 35, 45)
-        SetStatus(EspEnabled and "Đã BẬT ESP xuyên tường" or "Đã TẮT ESP")
-        for _, p in ipairs(Players:GetPlayers()) do
-            if p ~= LocalPlayer and p.Character then
-                local hl = p.Character:FindFirstChild("LuxuryESP")
-                if EspEnabled then
-                    if not hl then hl = Instance.new("Highlight") hl.Name = "LuxuryESP" hl.FillColor = Accent hl.Parent = p.Character end
-                else
-                    if hl then hl:Destroy() end
-                end
-            end
+    local ChatHistoryScroll = Instance.new("ScrollingFrame")
+    ChatHistoryScroll.Parent = ChatPage
+    ChatHistoryScroll.Size = UDim2.new(1, -5, 1, -115)
+    ChatHistoryScroll.Position = UDim2.fromOffset(0, 55)
+    ChatHistoryScroll.BackgroundColor3 = Color3.fromRGB(15, 15, 22)
+    ChatHistoryScroll.ScrollBarThickness = 3
+    ChatHistoryScroll.ScrollBarImageColor3 = Accent
+    Corner(ChatHistoryScroll, 10)
+
+    local ChatLayout = Instance.new("UIListLayout")
+    ChatLayout.Parent = ChatHistoryScroll
+    ChatLayout.Padding = UDim.new(0, 6)
+
+    local ChatInputBox = Instance.new("Frame")
+    ChatInputBox.Parent = ChatPage
+    ChatInputBox.Size = UDim2.new(1, -5, 0, 42)
+    ChatInputBox.Position = UDim2.new(0, 0, 1, -45)
+    ChatInputBox.BackgroundColor3 = Color3.fromRGB(18, 18, 25)
+    Corner(ChatInputBox, 8)
+    Stroke(ChatInputBox, Accent, 1)
+
+    local ScriptChatInp = Instance.new("TextBox")
+    ScriptChatInp.Parent = ChatInputBox
+    ScriptChatInp.Size = UDim2.new(1, -100, 1, 0)
+    ScriptChatInp.Position = UDim2.fromOffset(12, 0)
+    ScriptChatInp.BackgroundTransparency = 1
+    ScriptChatInp.PlaceholderText = "Nhập tin nhắn tới người dùng script..."
+    ScriptChatInp.Text = ""
+    ScriptChatInp.TextColor3 = Color3.new(1, 1, 1)
+    ScriptChatInp.Font = Enum.Font.Gotham
+    ScriptChatInp.TextXAlignment = Enum.TextXAlignment.Left
+
+    local SendScriptChatBtn = Instance.new("TextButton")
+    SendScriptChatBtn.Parent = ChatInputBox
+    SendScriptChatBtn.Size = UDim2.fromOffset(80, 28)
+    SendScriptChatBtn.Position = UDim2.new(1, -88, 0.5, -14)
+    SendScriptChatBtn.BackgroundColor3 = Accent
+    SendScriptChatBtn.Text = "💬 GỬI"
+    SendScriptChatBtn.TextColor3 = Color3.new(1, 1, 1)
+    SendScriptChatBtn.Font = Enum.Font.GothamBold
+    Corner(SendScriptChatBtn, 6)
+
+    local function AddChatMessage(senderName, messageText)
+        local MsgCard = Instance.new("Frame")
+        MsgCard.Parent = ChatHistoryScroll
+        MsgCard.Size = UDim2.new(1, -10, 0, 36)
+        MsgCard.BackgroundColor3 = Color3.fromRGB(22, 22, 32)
+        Corner(MsgCard, 6)
+
+        local MsgTextLbl = Instance.new("TextLabel")
+        MsgTextLbl.Parent = MsgCard
+        MsgTextLbl.Size = UDim2.new(1, -20, 1, 0)
+        MsgTextLbl.Position = UDim2.fromOffset(10, 0)
+        MsgTextLbl.BackgroundTransparency = 1
+        MsgTextLbl.Text = "[" .. senderName .. "]: " .. messageText
+        MsgTextLbl.TextColor3 = (senderName == LocalPlayer.DisplayName) and Accent or Color3.fromRGB(220, 220, 235)
+        MsgTextLbl.Font = Enum.Font.GothamMedium
+        MsgTextLbl.TextSize = 11
+        MsgTextLbl.TextXAlignment = Enum.TextXAlignment.Left
+
+        ChatHistoryScroll.CanvasPosition = Vector2.new(0, ChatHistoryScroll.AbsoluteCanvasSize.Y)
+    end
+
+    local function SendScriptMessage()
+        local txt = ScriptChatInp.Text:gsub("^%s*(.-)%s*$", "%1")
+        if txt ~= "" then
+            ScriptChatEvent:Fire({Sender = LocalPlayer.DisplayName, Message = txt})
+            ScriptChatInp.Text = ""
+        end
+    end
+
+    SendScriptChatBtn.MouseButton1Click:Connect(SendScriptMessage)
+    ScriptChatInp.FocusLost:Connect(function(enter) if enter then SendScriptMessage() end end)
+
+    ScriptChatEvent.Event:Connect(function(data)
+        if data and data.Sender and data.Message then
+            AddChatMessage(data.Sender, data.Message)
         end
     end)
 
-    -- TAB 4: WAYPOINTS
-    PageTitle(PosPage, "Teleport Waypoints", "Lưu tọa độ mong muốn")
-    local SavedCFrame = nil
-    local SaveBtn = Instance.new("TextButton")
-    SaveBtn.Parent = PosPage
-    SaveBtn.Size = UDim2.new(0.48, 0, 0, 36)
-    SaveBtn.Position = UDim2.fromOffset(0, 55)
-    SaveBtn.BackgroundColor3 = Accent
-    SaveBtn.Text = "📍 LƯU VỊ TRÍ"
-    SaveBtn.TextColor3 = Color3.new(1, 1, 1)
-    SaveBtn.Font = Enum.Font.GothamBold
-    Corner(SaveBtn, 8)
-
-    local LoadBtn = Instance.new("TextButton")
-    LoadBtn.Parent = PosPage
-    LoadBtn.Size = UDim2.new(0.48, 0, 0, 36)
-    LoadBtn.Position = UDim2.new(0.5, 5, 0, 55)
-    LoadBtn.BackgroundColor3 = Color3.fromRGB(35, 35, 45)
-    LoadBtn.Text = "🌀 DỊCH CHUYỂN"
-    LoadBtn.TextColor3 = Color3.new(1, 1, 1)
-    LoadBtn.Font = Enum.Font.GothamBold
-    Corner(LoadBtn, 8)
-
-    SaveBtn.MouseButton1Click:Connect(function()
-        if LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
-            SavedCFrame = LocalPlayer.Character.HumanoidRootPart.CFrame
-            SetStatus("Đã lưu tọa độ vị trí!")
-        end
-    end)
-
-    LoadBtn.MouseButton1Click:Connect(function()
-        if SavedCFrame and LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
-            LocalPlayer.Character.HumanoidRootPart.CFrame = SavedCFrame
-            SetStatus("Đã dịch chuyển về vị trí cũ!")
-        end
-    end)
-
-    -- TAB 5: SERVER HOP HUB (3 NÚT CHÍNH + DÁN JOB ID + COPY JOB ID)
+    -- TAB 4: SERVER HOP HUB
     PageTitle(ServerPage, "Server Hop Hub", "Quản lý chuyển Server, nhập Job ID hoặc sao chép mã Server")
 
-    -- PHẦN NHẬP JOB ID + NÚT JOIN + NÚT COPY JOB ID
     local JobContainer = Instance.new("Frame")
     JobContainer.Parent = ServerPage
     JobContainer.Size = UDim2.new(1, -5, 0, 42)
@@ -545,7 +561,6 @@ local function StartMainDashboard()
         CopyJobBtn.Text = "📋 COPY JOB"
     end)
 
-    -- 3 NÚT TÌM SERVER (1 NGƯỜI / PING THẤP / TREO CỦ)
     local Find1PlayerBtn = Instance.new("TextButton")
     Find1PlayerBtn.Parent = ServerPage
     Find1PlayerBtn.Size = UDim2.new(1, -5, 0, 38)
@@ -608,24 +623,43 @@ local function StartMainDashboard()
     FindLowPingBtn.MouseButton1Click:Connect(function() TeleportToCustomServer("lowping") end)
     FindOldServerBtn.MouseButton1Click:Connect(function() TeleportToCustomServer("old") end)
 
-    -- TAB 6: SCRIPT HUB
-    PageTitle(ScriptHubPage, "Script Hub Library", "Khởi chạy script hỗ trợ an toàn")
-    local IyBtn = Instance.new("TextButton")
-    IyBtn.Parent = ScriptHubPage
-    IyBtn.Size = UDim2.new(1, -5, 0, 40)
-    IyBtn.Position = UDim2.fromOffset(0, 55)
-    IyBtn.BackgroundColor3 = Accent
-    IyBtn.Text = "⚡ RUN INFINITE YIELD ADMIN"
-    IyBtn.TextColor3 = Color3.new(1, 1, 1)
-    IyBtn.Font = Enum.Font.GothamBold
-    Corner(IyBtn, 8)
+    -- TAB 5: ĐIỀU KHIỂN BẢO TRÌ (MAINTENANCE CONTROL)
+    PageTitle(MaintPage, "System & Maintenance Control", "Cài đặt chế độ bảo trì hệ thống")
 
-    IyBtn.MouseButton1Click:Connect(function()
-        SetStatus("Đang tải Infinite Yield Admin...")
-        loadstring(game:HttpGet('https://raw.githubusercontent.com/EdgeIY/infiniteyield/master/source'))()
+    local MaintToggleBtn = Instance.new("TextButton")
+    MaintToggleBtn.Parent = MaintPage
+    MaintToggleBtn.Size = UDim2.new(1, -5, 0, 40)
+    MaintToggleBtn.Position = UDim2.fromOffset(0, 55)
+    MaintToggleBtn.BackgroundColor3 = MAINTENANCE_CONFIG.Enabled and Color3.fromRGB(230, 50, 60) or Color3.fromRGB(40, 180, 90)
+    MaintToggleBtn.Text = MAINTENANCE_CONFIG.Enabled and "🛠️ BẢO TRÌ: ĐANG BẬT" or "🛠️ BẢO TRÌ: ĐANG TẮT"
+    MaintToggleBtn.TextColor3 = Color3.new(1, 1, 1)
+    MaintToggleBtn.Font = Enum.Font.GothamBold
+    Corner(MaintToggleBtn, 8)
+
+    local ReasonInp = Instance.new("TextBox")
+    ReasonInp.Parent = MaintPage
+    ReasonInp.Size = UDim2.new(1, -5, 0, 40)
+    ReasonInp.Position = UDim2.fromOffset(0, 105)
+    ReasonInp.BackgroundColor3 = Color3.fromRGB(18, 18, 25)
+    ReasonInp.PlaceholderText = "Nhập lý do bảo trì..."
+    ReasonInp.Text = MAINTENANCE_CONFIG.Reason
+    ReasonInp.TextColor3 = Accent
+    ReasonInp.Font = Enum.Font.Gotham
+    Corner(ReasonInp, 8)
+
+    MaintToggleBtn.MouseButton1Click:Connect(function()
+        MAINTENANCE_CONFIG.Enabled = not MAINTENANCE_CONFIG.Enabled
+        MaintToggleBtn.Text = MAINTENANCE_CONFIG.Enabled and "🛠️ BẢO TRÌ: ĐANG BẬT" or "🛠️ BẢO TRÌ: ĐANG TẮT"
+        MaintToggleBtn.BackgroundColor3 = MAINTENANCE_CONFIG.Enabled and Color3.fromRGB(230, 50, 60) or Color3.fromRGB(40, 180, 90)
+        SetStatus(MAINTENANCE_CONFIG.Enabled and "Đã bật chế độ bảo trì" or "Đã tắt chế độ bảo trì")
     end)
 
-    -- TAB 7: CREATOR INFO
+    ReasonInp.FocusLost:Connect(function()
+        MAINTENANCE_CONFIG.Reason = ReasonInp.Text
+        SetStatus("Cập nhật lý do bảo trì!")
+    end)
+
+    -- TAB 6: CREATOR INFO
     PageTitle(CreatorPage, "Developer & Socials", "Thông tin tác giả Kit_n67")
 
     local DevCard = Instance.new("Frame")
@@ -695,10 +729,9 @@ local function StartMainDashboard()
 
     HomeNav.MouseButton1Click:Connect(function() ShowPage("Home") end)
     PlayersNav.MouseButton1Click:Connect(function() ShowPage("Players") end)
-    EspNav.MouseButton1Click:Connect(function() ShowPage("Esp") end)
-    PosNav.MouseButton1Click:Connect(function() ShowPage("Positions") end)
+    ChatNav.MouseButton1Click:Connect(function() ShowPage("Chat") end)
     ServerNav.MouseButton1Click:Connect(function() ShowPage("Server") end)
-    ScriptHubNav.MouseButton1Click:Connect(function() ShowPage("ScriptHub") end)
+    MaintNav.MouseButton1Click:Connect(function() ShowPage("Maintenance") end)
     CreatorNav.MouseButton1Click:Connect(function() ShowPage("Creator") end)
 
     ShowPage("Home")
@@ -716,7 +749,7 @@ local function StartMainDashboard()
     end)
 end
 
--- BẢO TRÌ SYSTEM
+-- KÍCH HOẠT MENU (CÓ FIX HẾT THỜI GIAN TỰ TỰ MỞ MENU BÌNH THƯỜNG)
 if MAINTENANCE_CONFIG.Enabled and not isAdmin then
     SetStatus("Hệ thống đang bảo trì...")
     local MaintFrame = Instance.new("Frame")
@@ -735,6 +768,15 @@ if MAINTENANCE_CONFIG.Enabled and not isAdmin then
     MaintTitle.Text = "🛠️ HỆ THỐNG ĐANG BẢO TRÌ"
     MaintTitle.TextColor3 = Color3.fromRGB(255, 100, 100)
     MaintTitle.Font = Enum.Font.GothamBold
+
+    local ReasonLbl = Instance.new("TextLabel")
+    ReasonLbl.Parent = MaintFrame
+    ReasonLbl.Size = UDim2.new(1, -20, 0, 30)
+    ReasonLbl.Position = UDim2.fromOffset(10, 55)
+    ReasonLbl.BackgroundTransparency = 1
+    ReasonLbl.Text = MAINTENANCE_CONFIG.Reason
+    ReasonLbl.TextColor3 = Color3.fromRGB(200, 200, 210)
+    ReasonLbl.Font = Enum.Font.Gotham
 
     local TimerLabel = Instance.new("TextLabel")
     TimerLabel.Parent = MaintFrame
@@ -759,4 +801,4 @@ else
     StartMainDashboard()
 end
 
-print("Luxury Dashboard Perfect Server Hop Loaded!")
+print("Luxury Dashboard System Fixed Loaded!")
