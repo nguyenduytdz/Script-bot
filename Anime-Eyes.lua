@@ -1,4 +1,4 @@
--- // Axiom Clean Win Teleporter (Loại bỏ hoàn toàn quái vật, chỉ dịch chuyển đến bục Win)
+- // Axiom Clean Win Teleporter (Loại bỏ hoàn toàn quái vật, chỉ dịch chuyển đến bục Win)
 local CoreGui = game:GetService("CoreGui")
 local Players = game:GetService("Players")
 local LocalPlayer = Players.LocalPlayer
