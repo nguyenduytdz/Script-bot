@@ -130,7 +130,7 @@ ToggleButton.Parent = MainFrame
 
 local ButtonCorner = Instance.new("UICorner")
 ButtonCorner.CornerRadius = UDim.new(0, 10)
-ButtonCorner.Parent = ButtonButton or ButtonCorner
+ButtonCorner.Parent = ToggleButton
 
 local FooterLabel = Instance.new("TextLabel")
 FooterLabel.Size = UDim2.new(1, -20, 0, 45)
@@ -301,7 +301,7 @@ end)
 
 local frameCount = 0
 local lastFpsUpdate = tick()
-currentFps = 60
+local currentFps = 60
 
 RunService.RenderStepped:Connect(function()
     frameCount = frameCount + 1
@@ -334,8 +334,10 @@ RunService.RenderStepped:Connect(function()
     else
         StatusLabel.Text = string.format(
             " ⏱️ Đã chạy: 00:00:00 | 🇻🇳 %s\n 🎮 Game: %s\n ⚡ FPS: %d | 📶 Ping: %dms",
-            vnClockStr, vnClockStr, cachedGameName, currentFps, ping
+            runTimeStr, vnClockStr, cachedGameName, currentFps, ping
         )
         FooterLabel.Text = string.format("Đã gửi: %d thú về Discord\nTrạng thái: 🔴 Đang dừng (Stopped)", petsCaughtCount)
     end
 end)
+
+print("🚀 Menu UI Throw Food For Animals đã tải và sẵn sàng hoạt động!")
