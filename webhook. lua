@@ -144,7 +144,7 @@ FooterLabel.Text = "Đã gửi: 0 thú\nTrạng thái: 🔴 Đang dừng (Stoppe
 FooterLabel.Parent = MainFrame
 
 -- ==========================================
--- HÀM QUÉT SIZE RIÊNG BIỆT (ĐÃ THÊM ĐỦ CÁC CẤP ĐỘ)
+-- HÀM QUÉT SIZE CHUẨN XÁC TỪ MÀN HÌNH & ITEM
 -- ==========================================
 local ListOfSizes = {
     "BIG", "LARGE", "HUGE", "COLOSSAL", 
@@ -152,48 +152,47 @@ local ListOfSizes = {
 }
 
 local function extractSize(item)
-    -- 1. Quét trong các thuộc tính (Attributes) của vật phẩm
-    for key, val in pairs(item:GetAttributes()) do
-        local valStr = string.upper(tostring(val))
-        for _, sizeName in ipairs(ListOfSizes) do
-            if valStr == sizeName then
-                return sizeName
-            end
-        end
-    end
-
-    -- 2. Quét trong các con của vật phẩm (ValueBase hoặc TextLabel như trong ảnh bạn gửi)
-    for _, child in ipairs(item:GetDescendants()) do
-        local checkStr = ""
-        if child:IsA("ValueBase") then
-            checkStr = string.upper(tostring(child.Value))
-        elseif child:IsA("TextLabel") and child.Text ~= "" then
-            checkStr = string.upper(child.Text)
-        end
-
-        for _, sizeName in ipairs(ListOfSizes) do
-            if checkStr == sizeName then
-                return sizeName
-            end
-        end
-    end
-
-    -- 3. Quét màn hình game (PlayerGui) nếu không thấy trong item
+    -- 1. Ưu tiên quét trực tiếp trên màn hình game (PlayerGui) để bắt đúng chữ Size đang hiển thị pop-up
     local pGui = LocalPlayer:FindFirstChild("PlayerGui")
     if pGui then
         for _, gui in ipairs(pGui:GetDescendants()) do
             if gui:IsA("TextLabel") and gui.Visible and gui.Text ~= "" then
-                local guiText = string.upper(gui.Text)
-                for _, sizeName in ipairs(ListOfSizes) do
-                    if guiText == sizeName then
-                        return sizeName
+                local txt = string.upper(gui.Text)
+                for _, s in ipairs(ListOfSizes) do
+                    if txt == s then
+                        return s
                     end
                 end
             end
         end
     end
 
-    return "Normal" -- Mặc định nếu không phải Size đặc biệt
+    -- 2. Quét trong Attributes của vật phẩm
+    for key, val in pairs(item:GetAttributes()) do
+        local valStr = string.upper(tostring(val))
+        for _, s in ipairs(ListOfSizes) do
+            if valStr == s then
+                return s
+            end
+        end
+    end
+
+    -- 3. Quét trong các con của vật phẩm
+    for _, child in ipairs(item:GetDescendants()) do
+        if child:IsA("ValueBase") then
+            local valStr = string.upper(tostring(child.Value))
+            for _, s in ipairs(ListOfSizes) do
+                if valStr == s then return s end
+            end
+        elseif child:IsA("TextLabel") and child.Text ~= "" then
+            local valStr = string.upper(child.Text)
+            for _, s in ipairs(ListOfSizes) do
+                if valStr == s then return s end
+            end
+        end
+    end
+
+    return "Normal"
 end
 
 -- ==========================================
@@ -215,15 +214,17 @@ local function getRarityColor(rarity)
 end
 
 local function extractPetInfo(item)
+    -- Đợi 0.8 giây để game load đầy đủ UI thông báo Size và chỉ số lên màn hình
+    task.wait(0.8)
+
     local info = {
         Name = item.Name,
         Rarity = "Thường (Common)",
         Mutation = "Mặc định (Normal)",
-        Size = extractSize(item), -- Gọi hàm quét Size riêng ở trên
+        Size = extractSize(item),
         RawMoney = nil
     }
 
-    -- Quét Độ hiếm, Đột biến và Tiền
     for key, val in pairs(item:GetAttributes()) do
         local k = string.lower(key)
         local vStr = tostring(val)
@@ -247,6 +248,11 @@ local function extractPetInfo(item)
                 info.Mutation = vStr
             elseif (string.find(k, "rate") or string.find(k, "income") or string.find(k, "cps") or string.find(k, "sec") or string.find(k, "money") or string.find(k, "cash") or string.find(k, "earn")) and not info.RawMoney then
                 info.RawMoney = child.Value
+            end
+        elseif child:IsA("TextLabel") and child.Text ~= "" then
+            local txt = child.Text
+            if string.find(txt, "/s") or string.find(txt, "%$") or string.find(txt, "spd") or string.find(txt, "nod") or string.find(txt, "vg") then
+                info.RawMoney = txt
             end
         end
     end
@@ -302,16 +308,16 @@ local function sendDiscordWebhook(petData)
 end
 
 -- ==========================================
--- THEO DÕI TÚI ĐỒ VỚI BỘ LỌC CHỐNG TRÙNG LẶP
+-- THEO DÕI TÚI ĐỒ VỚI BỘ LỌC CHỐNG TRÙNG LẶP TUYỆT ĐỐI
 -- ==========================================
 local function handleNewItem(newItem)
     if not isRunning then return end
 
+    -- Lấy mã định danh duy nhất của item (chống quét trùng lặp)
     local itemUID = newItem:GetAttribute("UUID") or newItem:GetAttribute("Id") or newItem:GetAttribute("ID") or newItem:GetDebugId()
     if processedItems[itemUID] then return end
-    processedItems[itemUID] = true
+    processedItems[itemUID] = true -- Đánh dấu đã xử lý ngay lập tức
 
-    task.wait(0.4)
     local itemNameLower = string.lower(newItem.Name)
     if string.find(itemNameLower, "food") or string.find(itemNameLower, "bait") or string.find(itemNameLower, "apple") or string.find(itemNameLower, "meat") then
         if not newItem:GetAttribute("Rarity") then
