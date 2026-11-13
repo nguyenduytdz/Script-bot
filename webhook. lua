@@ -144,59 +144,7 @@ FooterLabel.Text = "Đã gửi: 0 thú\nTrạng thái: 🔴 Đang dừng (Stoppe
 FooterLabel.Parent = MainFrame
 
 -- ==========================================
--- HÀM QUÉT SIZE CHUẨN XÁC TỪ MÀN HÌNH & ITEM
--- ==========================================
-local ListOfSizes = {
-    "BIG", "LARGE", "HUGE", "COLOSSAL", 
-    "GIGANTIC", "TITANIC", "MONSTROUS", "COSMIC", "INFINITE"
-}
-
-local function extractSize(item)
-    -- 1. Ưu tiên quét trực tiếp trên màn hình game (PlayerGui) để bắt đúng chữ Size đang hiển thị pop-up
-    local pGui = LocalPlayer:FindFirstChild("PlayerGui")
-    if pGui then
-        for _, gui in ipairs(pGui:GetDescendants()) do
-            if gui:IsA("TextLabel") and gui.Visible and gui.Text ~= "" then
-                local txt = string.upper(gui.Text)
-                for _, s in ipairs(ListOfSizes) do
-                    if txt == s then
-                        return s
-                    end
-                end
-            end
-        end
-    end
-
-    -- 2. Quét trong Attributes của vật phẩm
-    for key, val in pairs(item:GetAttributes()) do
-        local valStr = string.upper(tostring(val))
-        for _, s in ipairs(ListOfSizes) do
-            if valStr == s then
-                return s
-            end
-        end
-    end
-
-    -- 3. Quét trong các con của vật phẩm
-    for _, child in ipairs(item:GetDescendants()) do
-        if child:IsA("ValueBase") then
-            local valStr = string.upper(tostring(child.Value))
-            for _, s in ipairs(ListOfSizes) do
-                if valStr == s then return s end
-            end
-        elseif child:IsA("TextLabel") and child.Text ~= "" then
-            local valStr = string.upper(child.Text)
-            for _, s in ipairs(ListOfSizes) do
-                if valStr == s then return s end
-            end
-        end
-    end
-
-    return "Normal"
-end
-
--- ==========================================
--- HÀM TỔNG HỢP THÔNG TIN THÚ
+-- HÀM QUÉT THÔNG TIN THÚ & HÌNH ẢNH (THUMBNAIL)
 -- ==========================================
 local function getRarityColor(rarity)
     local r = string.lower(tostring(rarity))
@@ -214,17 +162,17 @@ local function getRarityColor(rarity)
 end
 
 local function extractPetInfo(item)
-    -- Đợi 0.8 giây để game load đầy đủ UI thông báo Size và chỉ số lên màn hình
-    task.wait(0.8)
+    task.wait(0.4)
 
     local info = {
         Name = item.Name,
         Rarity = "Thường (Common)",
         Mutation = "Mặc định (Normal)",
-        Size = extractSize(item),
-        RawMoney = nil
+        RawMoney = nil,
+        ImageId = nil
     }
 
+    -- Quét thuộc tính (Attributes) để tìm link ảnh hoặc ID ảnh của thú
     for key, val in pairs(item:GetAttributes()) do
         local k = string.lower(key)
         local vStr = tostring(val)
@@ -235,9 +183,12 @@ local function extractPetInfo(item)
             info.Mutation = vStr
         elseif string.find(k, "rate") or string.find(k, "income") or string.find(k, "cps") or string.find(k, "mps") or string.find(k, "sec") or string.find(k, "money") or string.find(k, "cash") or string.find(k, "earn") or string.find(k, "value") or string.find(k, "dps") then
             info.RawMoney = val
+        elseif string.find(k, "image") or string.find(k, "icon") or string.find(k, "texture") or string.find(k, "thumb") then
+            info.ImageId = vStr
         end
     end
 
+    -- Quét các đối tượng con bên trong item (ImageLabel, Decal, Texture...)
     for _, child in ipairs(item:GetDescendants()) do
         local k = string.lower(child.Name)
         if child:IsA("ValueBase") then
@@ -249,11 +200,8 @@ local function extractPetInfo(item)
             elseif (string.find(k, "rate") or string.find(k, "income") or string.find(k, "cps") or string.find(k, "sec") or string.find(k, "money") or string.find(k, "cash") or string.find(k, "earn")) and not info.RawMoney then
                 info.RawMoney = child.Value
             end
-        elseif child:IsA("TextLabel") and child.Text ~= "" then
-            local txt = child.Text
-            if string.find(txt, "/s") or string.find(txt, "%$") or string.find(txt, "spd") or string.find(txt, "nod") or string.find(txt, "vg") then
-                info.RawMoney = txt
-            end
+        elseif (child:IsA("ImageLabel") or child:IsA("Decal") or child:IsA("Texture")) and child.Image ~= "" then
+            info.ImageId = child.Image
         end
     end
 
@@ -277,18 +225,28 @@ local function sendDiscordWebhook(petData)
     local displayName = LocalPlayer.DisplayName
     local userId = tostring(LocalPlayer.UserId)
     local profileLink = "https://www.roblox.com/users/" .. userId .. "/profile"
-    local avatarThumb = "https://www.roblox.com/headshot-thumbnail/image?userId=" .. userId .. "&width=420&height=420&format=png"
+    
+    -- Xử lý lấy link ảnh của thú (nếu item có chứa ID ảnh rbxassetid, chuyển đổi sang link URL của Roblox)
+    local petThumbnailUrl = "https://www.roblox.com/headshot-thumbnail/image?userId=" .. userId .. "&width=420&height=420&format=png" -- Mặc định là Avatar người chơi
+    
+    if petData.ImageId and petData.ImageId ~= "" then
+        local numericId = string.match(petData.ImageId, "%d+")
+        if numericId then
+            petThumbnailUrl = "https://www.roblox.com/asset-thumbnail/image?assetId=" .. numericId .. "&width=420&height=420&format=png"
+        elseif string.find(petData.ImageId, "http") then
+            petThumbnailUrl = petData.ImageId
+        end
+    end
 
     local payload = {
         ["content"] = "<@" .. DiscordUserID .. "> 🎉 Bạn vừa bắt được một sinh vật mới!",
         ["embeds"] = {{
             ["title"] = "🐾 BẮT ĐƯỢC THÚ MỚI: " .. petData.Name,
             ["color"] = getRarityColor(petData.Rarity),
-            ["thumbnail"] = { ["url"] = avatarThumb },
+            ["thumbnail"] = { ["url"] = petThumbnailUrl }, -- Hiển thị ảnh con thú ở ô khoanh bên phải
             ["fields"] = {
                 { ["name"] = "✨ Độ hiếm (Rarity)", ["value"] = "`" .. petData.Rarity .. "`", ["inline"] = true },
                 { ["name"] = "🧬 Đột biến (Mutation)", ["value"] = "`" .. petData.Mutation .. "`", ["inline"] = true },
-                { ["name"] = "📏 Kích thước (Size)", ["value"] = "`" .. petData.Size .. "`", ["inline"] = true },
                 { ["name"] = "💸 Tiền / Giây (Income)", ["value"] = "`" .. petData.MoneyPerSec .. "`", ["inline"] = true },
                 { ["name"] = "👤 Nhân vật Roblox", ["value"] = string.format("[%s (@%s)](%s)\n**ID:** `%s`", displayName, playerName, profileLink, userId), ["inline"] = false }
             },
@@ -308,15 +266,18 @@ local function sendDiscordWebhook(petData)
 end
 
 -- ==========================================
--- THEO DÕI TÚI ĐỒ VỚI BỘ LỌC CHỐNG TRÙNG LẶP TUYỆT ĐỐI
+-- BỘ LỌC CHỐNG TRÙNG LẶP TUYỆT ĐỐI
 -- ==========================================
 local function handleNewItem(newItem)
     if not isRunning then return end
 
-    -- Lấy mã định danh duy nhất của item (chống quét trùng lặp)
     local itemUID = newItem:GetAttribute("UUID") or newItem:GetAttribute("Id") or newItem:GetAttribute("ID") or newItem:GetDebugId()
+    if not itemUID then
+        itemUID = newItem.Name .. tostring(os.clock())
+    end
+
     if processedItems[itemUID] then return end
-    processedItems[itemUID] = true -- Đánh dấu đã xử lý ngay lập tức
+    processedItems[itemUID] = true
 
     local itemNameLower = string.lower(newItem.Name)
     if string.find(itemNameLower, "food") or string.find(itemNameLower, "bait") or string.find(itemNameLower, "apple") or string.find(itemNameLower, "meat") then
