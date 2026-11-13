@@ -1,0 +1,200 @@
+-- ==========================================
+-- CẤU HÌNH THÔNG TIN CỦA BẠN
+-- ==========================================
+local WebhookURL = "DÁN_LINK_WEBHOOK_DISCORD_CỦA_BẠN_VÀO_ĐÂY"
+local DiscordUserID = "DÁN_ID_DISCORD_CỦA_BẠN_VÀO_ĐÂY" -- Ví dụ: "987654321012345678"
+
+-- ==========================================
+-- KHỞI TẠO DỊCH VỤ & HÀM HỖ TRỢ
+-- ==========================================
+local HttpService = game:GetService("HttpService")
+local Players = game:GetService("Players")
+local LocalPlayer = Players.LocalPlayer
+
+-- Kiểm tra hàm gửi HTTP của Executor
+local httpRequest = (syn and syn.request) or (http and http.request) or http_request or (fluxus and fluxus.request) or request
+
+if not httpRequest then
+    warn("❌ Executor của bạn không hỗ trợ hàm HTTP Request!")
+    return
+end
+
+-- Hàm lấy màu Embed dựa theo độ hiếm
+local function getRarityColor(rarity)
+    local r = string.lower(tostring(rarity))
+    if string.find(r, "mythic") or string.find(r, "secret") then
+        return 16711680 -- Đỏ rực
+    elseif string.find(r, "legendary") then
+        return 16766720 -- Vàng cam
+    elseif string.find(r, "epic") then
+        return 10181046 -- Tím
+    elseif string.find(r, "rare") then
+        return 3447003 -- Xanh dương
+    elseif string.find(r, "uncommon") then
+        return 3066993 -- Xanh lá
+    else
+        return 9807270 -- Xám (Common / Mặc định)
+    end
+end
+
+-- Hàm tìm kiếm thông tin chi tiết bên trong vật phẩm/thú vừa bắt được
+local function extractPetInfo(item)
+    local info = {
+        Name = item.Name,
+        Weight = "Không rõ",
+        Rarity = "Thường (Common)",
+        Value = "0",
+        Area = "Không rõ"
+    }
+
+    -- 1. Quét trong Attributes của object
+    local attributes = item:GetAttributes()
+    for key, val in pairs(attributes) do
+        local k = string.lower(key)
+        if string.find(k, "weight") or string.find(k, "kg") or string.find(k, "mass") then
+            info.Weight = tostring(val)
+        elseif string.find(k, "rarity") or string.find(k, "tier") then
+            info.Rarity = tostring(val)
+        elseif string.find(k, "value") or string.find(k, "price") or string.find(k, "worth") or string.find(k, "money") then
+            info.Value = tostring(val)
+        elseif string.find(k, "area") or string.find(k, "zone") or string.find(k, "biome") or string.find(k, "world") then
+            info.Area = tostring(val)
+        end
+    end
+
+    -- 2. Quét trong các thư mục con (ValueBase: StringValue, NumberValue, IntValue...)
+    for _, child in ipairs(item:GetDescendants()) do
+        if child:IsA("ValueBase") then
+            local k = string.lower(child.Name)
+            if string.find(k, "weight") or string.find(k, "kg") then
+                info.Weight = tostring(child.Value)
+            elseif string.find(k, "rarity") or string.find(k, "tier") then
+                info.Rarity = tostring(child.Value)
+            elseif string.find(k, "value") or string.find(k, "price") or string.find(k, "worth") or string.find(k, "money") then
+                info.Value = tostring(child.Value)
+            elseif string.find(k, "area") or string.find(k, "zone") or string.find(k, "biome") then
+                info.Area = tostring(child.Value)
+            end
+        end
+    end
+
+    -- 3. Nếu khu vực chưa có trong item, thử lấy vị trí khu vực hiện tại của nhân vật
+    if info.Area == "Không rõ" then
+        local currentZone = LocalPlayer:GetAttribute("CurrentArea") or LocalPlayer:GetAttribute("Zone") or LocalPlayer:GetAttribute("Area")
+        if currentZone then
+            info.Area = tostring(currentZone)
+        end
+    end
+
+    return info
+end
+
+-- Hàm gửi Webhook về Discord
+local function sendDiscordWebhook(petData)
+    local playerName = LocalPlayer.Name
+    local displayName = LocalPlayer.DisplayName
+    local userId = tostring(LocalPlayer.UserId)
+    local profileLink = "https://www.roblox.com/users/" .. userId .. "/profile"
+    local avatarThumb = "https://www.roblox.com/headshot-thumbnail/image?userId=" .. userId .. "&width=420&height=420&format=png"
+
+    local payload = {
+        ["content"] = "<@" .. DiscordUserID .. "> 🎉 Bạn vừa bắt được một sinh vật mới!",
+        ["embeds"] = {{
+            ["title"] = "🐾 BẮT ĐƯỢC THÚ MỚI: " .. petData.Name,
+            ["color"] = getRarityColor(petData.Rarity),
+            ["thumbnail"] = {
+                ["url"] = avatarThumb
+            },
+            ["fields"] = {
+                {
+                    ["name"] = "✨ Độ hiếm (Rarity)",
+                    ["value"] = "`" .. petData.Rarity .. "`",
+                    ["inline"] = true
+                },
+                {
+                    ["name"] = "⚖️ Cân nặng (Weight)",
+                    ["value"] = "`" .. petData.Weight .. "`",
+                    ["inline"] = true
+                },
+                {
+                    ["name"] = "💰 Giá trị / Tiền",
+                    ["value"] = "`" .. petData.Value .. "`",
+                    ["inline"] = true
+                },
+                {
+                    ["name"] = "🗺️ Khu vực (Area)",
+                    ["value"] = "`" .. petData.Area .. "`",
+                    ["inline"] = true
+                },
+                {
+                    ["name"] = "👤 Nhân vật Roblox",
+                    ["value"] = string.format("[%s (@%s)](%s)\n**ID:** `%s`", displayName, playerName, profileLink, userId),
+                    ["inline"] = false
+                }
+            },
+            ["footer"] = {
+                ["text"] = "Throw Food For Animals • Auto Logger"
+            },
+            ["timestamp"] = os.date("!%Y-%m-%dT%H:%M:%SZ")
+        }}
+    }
+
+    local success, err = pcall(function()
+        httpRequest({
+            Url = WebhookURL,
+            Method = "POST",
+            Headers = {
+                ["Content-Type"] = "application/json"
+            },
+            Body = HttpService:JSONEncode(payload)
+        })
+    end)
+
+    if success then
+        print("✅ Đã gửi thông tin [" .. petData.Name .. "] về Discord!")
+    else
+        warn("❌ Lỗi gửi Webhook:", err)
+    end
+end
+
+-- ==========================================
+-- THEO DÕI KHI BẮT ĐƯỢC THÚ MỚI
+-- ==========================================
+local function monitorContainer(container)
+    if not container then return end
+    
+    container.ChildAdded:Connect(function(newItem)
+        -- Đợi 0.3s để game load đầy đủ chỉ số (cân nặng, độ hiếm...) vào vật phẩm
+        task.wait(0.3)
+        
+        -- Bỏ qua các công cụ cơ bản như thức ăn ném (Food/Bait) nếu không phải thú
+        local itemNameLower = string.lower(newItem.Name)
+        if string.find(itemNameLower, "food") or string.find(itemNameLower, "bait") or string.find(itemNameLower, "apple") then
+            -- Nếu bạn muốn lọc kỹ hơn, hãy kiểm tra xem item có thuộc tính Weight hoặc Rarity không
+            if not newItem:GetAttribute("Weight") and not newItem:GetAttribute("Rarity") and not newItem:FindFirstChild("Weight") then
+                return
+            end
+        end
+
+        local petInfo = extractPetInfo(newItem)
+        sendDiscordWebhook(petInfo)
+    end)
+end
+
+-- Lắng nghe trong Backpack (túi đồ chính của Roblox)
+monitorContainer(LocalPlayer:WaitForChild("Backpack"))
+
+-- Nếu nhân vật hồi sinh (Reset), kết nối lại với Backpack mới
+LocalPlayer.CharacterAdded:Connect(function()
+    monitorContainer(LocalPlayer:WaitForChild("Backpack"))
+end)
+
+-- Kiểm tra xem game có lưu thú trong thư mục dữ liệu riêng của Player không (ví dụ: Pets, Animals, Inventory)
+for _, folderName in ipairs({"Pets", "Animals", "Inventory", "CapturedAnimals"}) do
+    local folder = LocalPlayer:FindFirstChild(folderName)
+    if folder then
+        monitorContainer(folder)
+    end
+end
+
+print("🚀 Script Webhook Throw Food For Animals đã kích hoạt thành công!")
