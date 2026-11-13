@@ -118,6 +118,7 @@ local StatusCorner = Instance.new("UICorner")
 StatusCorner.CornerRadius = UDim.new(0, 8)
 StatusCorner.Parent = StatusLabel
 
+-- Nút Toggle Start / Stop (Sử dụng TextButton kết hợp InputBegan để nhận click/tap nhạy nhất)
 local ToggleButton = Instance.new("TextButton")
 ToggleButton.Size = UDim2.new(1, -20, 0, 42)
 ToggleButton.Position = UDim2.new(0, 10, 0, 125)
@@ -169,7 +170,6 @@ local function extractPetInfo(item)
         RawMoney = nil
     }
 
-    -- 1. Quét trong Attributes
     for key, val in pairs(item:GetAttributes()) do
         local k = string.lower(key)
         local vStr = tostring(val)
@@ -183,7 +183,6 @@ local function extractPetInfo(item)
         end
     end
 
-    -- 2. Quét trong các con của item
     for _, child in ipairs(item:GetDescendants()) do
         local k = string.lower(child.Name)
         if child:IsA("ValueBase") then
@@ -285,20 +284,26 @@ LocalPlayer.CharacterAdded:Connect(function()
 end)
 
 -- ==========================================
--- NÚT BẤM & HIỂN THỊ THỜI GIAN THỰC (VN)
+-- XỬ LÝ SỰ KIỆN NÚT BẤM (HỖ TRỢ CẢ CLICK VÀ TAP TRÊN ĐIỆN THOẠI)
 -- ==========================================
-ToggleButton.MouseButton1Click:Connect(function()
+local function toggleScriptState()
     isRunning = not isRunning
     if isRunning then
         startTime = tick()
         ToggleButton.Text = "STOP SCRIPT"
-        ToggleButton.BackgroundColor3 = Color3.fromRGB(46, 204, 113)
+        ToggleButton.BackgroundColor3 = Color3.fromRGB(46, 204, 113) -- Xanh lá
     else
         ToggleButton.Text = "START SCRIPT"
-        ToggleButton.BackgroundColor3 = Color3.fromRGB(224, 86, 36)
+        ToggleButton.BackgroundColor3 = Color3.fromRGB(224, 86, 36) -- Cam đỏ
     end
-end)
+end
 
+ToggleButton.MouseButton1Click:Connect(toggleScriptState)
+ToggleButton.TouchTap:Connect(toggleScriptState)
+
+-- ==========================================
+-- VÒNG LẶP CẬP NHẬT TRẠNG THÁI & THỜI GIAN
+-- ==========================================
 local frameCount = 0
 local lastFpsUpdate = tick()
 local currentFps = 60
@@ -334,7 +339,7 @@ RunService.RenderStepped:Connect(function()
     else
         StatusLabel.Text = string.format(
             " ⏱️ Đã chạy: 00:00:00 | 🇻🇳 %s\n 🎮 Game: %s\n ⚡ FPS: %d | 📶 Ping: %dms",
-            runTimeStr, vnClockStr, cachedGameName, currentFps, ping
+            vnClockStr, vnClockStr, cachedGameName, currentFps, ping
         )
         FooterLabel.Text = string.format("Đã gửi: %d thú về Discord\nTrạng thái: 🔴 Đang dừng (Stopped)", petsCaughtCount)
     end
