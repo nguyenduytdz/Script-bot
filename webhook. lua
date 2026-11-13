@@ -23,9 +23,8 @@ end
 local isRunning = false
 local startTime = 0
 local petsCaughtCount = 0
-local processedItems = {} -- Bộ nhớ chống gửi trùng 1 con 2 lần
+local processedItems = {} 
 
--- Lấy tên game 1 lần duy nhất để tránh lag FPS
 local cachedGameName = "Throw Food For Animals"
 pcall(function()
     cachedGameName = MarketplaceService:GetProductInfo(game.PlaceId).Name
@@ -108,7 +107,7 @@ FooterLabel.Text = "Đã gửi: 0 thú\nTrạng thái: 🔴 Đang dừng (Stoppe
 FooterLabel.Parent = MainFrame
 
 -- ==========================================
--- HÀM QUÉT SÂU TOÀN BỘ DỮ LIỆU THÚ & KHU VỰC
+-- HÀM QUÉT ĐỘ HIẾM & TIỀN/S (INCOME / CASH PER SEC)
 -- ==========================================
 local function getRarityColor(rarity)
     local r = string.lower(tostring(rarity))
@@ -125,103 +124,58 @@ local function getRarityColor(rarity)
     end
 end
 
--- Hàm dò khu vực hiện tại từ UI trên màn hình hoặc vị trí nhân vật
-local function detectCurrentArea()
-    -- 1. Kiểm tra Attributes của Player
-    for k, v in pairs(LocalPlayer:GetAttributes()) do
-        local kl = string.lower(k)
-        if string.find(kl, "area") or string.find(kl, "zone") or string.find(kl, "biome") or string.find(kl, "world") or string.find(kl, "region") then
-            if tostring(v) ~= "" then return tostring(v) end
+-- Quét chuyên sâu chỉ số Tiền/s từ item và giao diện màn hình
+local function extractPetInfo(item)
+    local info = {
+        Name = item.Name,
+        Rarity = "Thường (Common)",
+        MoneyPerSec = "Không rõ"
+    }
+
+    -- 1. Quét trong Attributes của item
+    for key, val in pairs(item:GetAttributes()) do
+        local k = string.lower(key)
+        local vStr = tostring(val)
+
+        if string.find(k, "rarity") or string.find(k, "tier") or string.find(k, "grade") then
+            info.Rarity = vStr
+        elseif string.find(k, "rate") or string.find(k, "income") or string.find(k, "cps") or string.find(k, "mps") or string.find(k, "sec") or string.find(k, "money") or string.find(k, "cash") or string.find(k, "earn") or string.find(k, "value") then
+            info.MoneyPerSec = vStr .. "/s"
         end
     end
 
-    -- 2. Quét trong PlayerGui xem có nhãn (TextLabel) nào hiển thị tên khu vực không
-    local pGui = LocalPlayer:FindFirstChild("PlayerGui")
-    if pGui then
-        for _, guiObj in ipairs(pGui:GetDescendants()) do
-            if guiObj:IsA("TextLabel") and guiObj.Visible and guiObj.Text ~= "" then
-                local n = string.lower(guiObj.Name)
-                if string.find(n, "area") or string.find(n, "zone") or string.find(n, "biome") or string.find(n, "location") then
-                    return guiObj.Text
-                end
+    -- 2. Quét trong các ValueBase & TextLabel (BillboardGui/ToolTip) gắn trên thú
+    for _, child in ipairs(item:GetDescendants()) do
+        local k = string.lower(child.Name)
+        if child:IsA("ValueBase") then
+            local vStr = tostring(child.Value)
+            if (string.find(k, "rarity") or string.find(k, "tier")) and info.Rarity == "Thường (Common)" then
+                info.Rarity = vStr
+            elseif (string.find(k, "rate") or string.find(k, "income") or string.find(k, "cps") or string.find(k, "sec") or string.find(k, "money") or string.find(k, "cash") or string.find(k, "earn")) and info.MoneyPerSec == "Không rõ" then
+                info.MoneyPerSec = vStr .. "/s"
+            end
+        elseif child:IsA("TextLabel") and child.Text ~= "" then
+            local txt = child.Text
+            if string.find(txt, "/s") or string.find(txt, "%$") then
+                info.MoneyPerSec = txt
             end
         end
     end
 
-    -- 3. Kiểm tra xem nhân vật đang đứng trong vùng Part/Folder nào trong Workspace
-    local char = LocalPlayer.Character
-    local hrp = char and char:FindFirstChild("HumanoidRootPart")
-    if hrp then
-        for _, folderName in ipairs({"Zones", "Areas", "Biomes", "Maps", "Regions"}) do
-            local zoneFolder = workspace:FindFirstChild(folderName)
-            if zoneFolder then
-                for _, zone in ipairs(zoneFolder:GetChildren()) do
-                    if zone:IsA("BasePart") then
-                        local dist = (hrp.Position - zone.Position).Magnitude
-                        if dist <= (zone.Size.Magnitude / 2) then
-                            return zone.Name
-                        end
+    -- 3. Quét các thông báo/UI trên màn hình có định dạng tiền/s (VD: "$500/s" hoặc "+1.2K/s")
+    if info.MoneyPerSec == "Không rõ" then
+        local pGui = LocalPlayer:FindFirstChild("PlayerGui")
+        if pGui then
+            for _, gui in ipairs(pGui:GetDescendants()) do
+                if gui:IsA("TextLabel") and gui.Visible and gui.Text ~= "" then
+                    local txt = gui.Text
+                    if (string.find(txt, "/s") or string.find(string.lower(txt), "per sec")) and string.len(txt) < 25 then
+                        info.MoneyPerSec = txt
+                        break
                     end
                 end
             end
         end
-    end
-
-    return "Không rõ"
-end
-
-local function extractPetInfo(item)
-    local info = {
-        Name = item.Name,
-        Weight = "Không rõ",
-        Rarity = "Thường (Common)",
-        Value = "Không rõ",
-        Area = "Không rõ",
-        ExtraDump = {} -- Lưu lại toàn bộ các chỉ số khác tìm thấy trong item
-    }
-
-    -- Quét tất cả Attributes trong item
-    for key, val in pairs(item:GetAttributes()) do
-        local k = string.lower(key)
-        local vStr = tostring(val)
-        table.insert(info.ExtraDump, key .. ": " .. vStr)
-
-        if string.find(k, "weight") or string.find(k, "kg") or string.find(k, "mass") or string.find(k, "size") then
-            info.Weight = vStr
-        elseif string.find(k, "rarity") or string.find(k, "tier") or string.find(k, "grade") then
-            info.Rarity = vStr
-        elseif string.find(k, "value") or string.find(k, "price") or string.find(k, "worth") or string.find(k, "money") or string.find(k, "cash") or string.find(k, "coin") or string.find(k, "sell") or string.find(k, "earn") or string.find(k, "income") then
-            info.Value = vStr
-        elseif string.find(k, "area") or string.find(k, "zone") or string.find(k, "biome") or string.find(k, "world") then
-            info.Area = vStr
-        end
-    end
-
-    -- Quét tất cả ValueBase và TextLabel con bên trong item (bao gồm ToolTip/BillboardGui gắn trên thú)
-    for _, child in ipairs(item:GetDescendants()) do
-        local k = string.lower(child.Name)
-        local vStr = nil
-        if child:IsA("ValueBase") then
-            vStr = tostring(child.Value)
-            table.insert(info.ExtraDump, child.Name .. ": " .. vStr)
-        elseif child:IsA("TextLabel") and child.Text ~= "" then
-            vStr = child.Text
-            if string.find(vStr, "%$") or string.find(string.lower(vStr), "coin") or string.find(string.lower(vStr), "/s") then
-                if info.Value == "Không rõ" then info.Value = vStr end
-            end
-        end
-
-        if vStr then
-            if (string.find(k, "weight") or string.find(k, "kg")) and info.Weight == "Không rõ" then info.Weight = vStr end
-            if (string.find(k, "rarity") or string.find(k, "tier")) and info.Rarity == "Thường (Common)" then info.Rarity = vStr end
-            if (string.find(k, "value") or string.find(k, "price") or string.find(k, "worth") or string.find(k, "money") or string.find(k, "cash") or string.find(k, "sell") or string.find(k, "earn")) and info.Value == "Không rõ" then info.Value = vStr end
-            if (string.find(k, "area") or string.find(k, "zone") or string.find(k, "biome")) and info.Area == "Không rõ" then info.Area = vStr end
-        end
-    end
-
-    -- Nếu item không ghi khu vực, tự dò khu vực hiện tại của nhân vật
-    if info.Area == "Không rõ" then
-        info.Area = detectCurrentArea()
     end
 
     return info
@@ -237,9 +191,6 @@ local function sendDiscordWebhook(petData)
     local profileLink = "https://www.roblox.com/users/" .. userId .. "/profile"
     local avatarThumb = "https://www.roblox.com/headshot-thumbnail/image?userId=" .. userId .. "&width=420&height=420&format=png"
 
-    -- Gom các chỉ số phụ tìm thấy (nếu game đặt tên biến lạ thì nó sẽ hiện hết ở đây)
-    local rawDetails = #petData.ExtraDump > 0 and table.concat(petData.ExtraDump, " | ") or "Không có thuộc tính ẩn"
-
     local payload = {
         ["content"] = "<@" .. DiscordUserID .. "> 🎉 Bạn vừa bắt được một sinh vật mới!",
         ["embeds"] = {{
@@ -247,11 +198,8 @@ local function sendDiscordWebhook(petData)
             ["color"] = getRarityColor(petData.Rarity),
             ["thumbnail"] = { ["url"] = avatarThumb },
             ["fields"] = {
-                { ["name"] = "✨ Độ hiếm", ["value"] = "`" .. petData.Rarity .. "`", ["inline"] = true },
-                { ["name"] = "⚖️ Cân nặng", ["value"] = "`" .. petData.Weight .. "`", ["inline"] = true },
-                { ["name"] = "💰 Giá trị / Tiền", ["value"] = "`" .. petData.Value .. "`", ["inline"] = true },
-                { ["name"] = "🗺️ Khu vực", ["value"] = "`" .. petData.Area .. "`", ["inline"] = true },
-                { ["name"] = "📊 Dữ liệu gốc (Raw Stats)", ["value"] = "```" .. rawDetails .. "```", ["inline"] = false },
+                { ["name"] = "✨ Độ hiếm (Rarity)", ["value"] = "`" .. petData.Rarity .. "`", ["inline"] = true },
+                { ["name"] = "💸 Tiền / Giây (Income)", ["value"] = "`" .. petData.MoneyPerSec .. "`", ["inline"] = true },
                 { ["name"] = "👤 Nhân vật Roblox", ["value"] = string.format("[%s (@%s)](%s)\n**ID:** `%s`", displayName, playerName, profileLink, userId), ["inline"] = false }
             },
             ["footer"] = { ["text"] = "Throw Food For Animals • Auto Logger" },
@@ -270,24 +218,19 @@ local function sendDiscordWebhook(petData)
 end
 
 -- ==========================================
--- THEO DÕI TÚI ĐỒ VỚI BỘ LỌC CHỐNG GỬI TRÙNG
+-- THEO DÕI TÚI ĐỒ VỚI BỘ LỌC CHỐNG TRÙNG LẶP
 -- ==========================================
 local function handleNewItem(newItem)
     if not isRunning then return end
 
-    -- Tạo mã định danh duy nhất cho vật phẩm để chống gửi 2 lần
     local itemUID = newItem:GetAttribute("UUID") or newItem:GetAttribute("Id") or newItem:GetAttribute("ID") or newItem:GetDebugId()
-    if processedItems[itemUID] then
-        return -- Đã gửi con này rồi thì bỏ qua ngay!
-    end
+    if processedItems[itemUID] then return end
     processedItems[itemUID] = true
 
-    task.wait(0.5) -- Đợi game load đầy đủ chỉ số
-
-    -- Bỏ qua thức ăn / mồi câu
+    task.wait(0.4)
     local itemNameLower = string.lower(newItem.Name)
     if string.find(itemNameLower, "food") or string.find(itemNameLower, "bait") or string.find(itemNameLower, "apple") or string.find(itemNameLower, "meat") then
-        if not newItem:GetAttribute("Weight") and not newItem:GetAttribute("Rarity") then
+        if not newItem:GetAttribute("Rarity") then
             return
         end
     end
@@ -301,14 +244,13 @@ local function monitorContainer(container)
     container.ChildAdded:Connect(handleNewItem)
 end
 
--- Chỉ theo dõi Backpack (vì thú bắt được luôn vào Backpack trước)
 monitorContainer(LocalPlayer:WaitForChild("Backpack"))
 LocalPlayer.CharacterAdded:Connect(function()
     monitorContainer(LocalPlayer:WaitForChild("Backpack"))
 end)
 
 -- ==========================================
--- XỬ LÝ NÚT BẤM & CẬP NHẬT GIỜ VIỆT NAM (UTC+7)
+-- NÚT BẤM & HIỂN THỊ THỜI GIAN THỰC (VN)
 -- ==========================================
 ToggleButton.MouseButton1Click:Connect(function()
     isRunning = not isRunning
@@ -322,7 +264,6 @@ ToggleButton.MouseButton1Click:Connect(function()
     end
 end)
 
--- Tính FPS chuẩn không gây lag
 local frameCount = 0
 local lastFpsUpdate = tick()
 local currentFps = 60
@@ -335,7 +276,6 @@ RunService.RenderStepped:Connect(function()
         lastFpsUpdate = tick()
     end
 
-    -- Tính giờ Việt Nam chuẩn (UTC + 7 tiếng = 25200 giây)
     local vnTime = os.date("!*t", os.time() + 25200)
     local vnClockStr = string.format("%02d:%02d:%02d", vnTime.hour, vnTime.min, vnTime.sec)
 
@@ -358,12 +298,6 @@ RunService.RenderStepped:Connect(function()
         FooterLabel.Text = string.format("Đã gửi: %d thú về Discord\nTrạng thái: 🟢 Đang chạy (Active)", petsCaughtCount)
     else
         StatusLabel.Text = string.format(
-            " ⏱️ Đã chạy: 00:00:00 | 🇻🇳 %s\n 🎮 Game: %s\n ⚡ FPS: %d | 📶 Ping: %dms",
-            vnClockStr, cachedGameName, currentFps, ping
-        )
-        FooterLabel.Text = string.format("Đã gửi: %d thú về Discord\nTrạng thái: 🔴 Đang dừng (Stopped)", petsCaughtCount)
-    end
-end)
             " ⏱️ Đã chạy: 00:00:00 | 🇻🇳 %s\n 🎮 Game: %s\n ⚡ FPS: %d | 📶 Ping: %dms",
             vnClockStr, cachedGameName, currentFps, ping
         )
