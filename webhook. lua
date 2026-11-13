@@ -144,7 +144,7 @@ FooterLabel.Text = "Đã gửi: 0 thú\nTrạng thái: 🔴 Đang dừng (Stoppe
 FooterLabel.Parent = MainFrame
 
 -- ==========================================
--- HÀM QUÉT THÔNG TIN THÚ & HÌNH ẢNH (THUMBNAIL)
+-- HÀM QUÉT THÔNG TIN THÚ (CHỈ LẤY TÊN, RARITY, MUTATION, TIỀN)
 -- ==========================================
 local function getRarityColor(rarity)
     local r = string.lower(tostring(rarity))
@@ -168,11 +168,9 @@ local function extractPetInfo(item)
         Name = item.Name,
         Rarity = "Thường (Common)",
         Mutation = "Mặc định (Normal)",
-        RawMoney = nil,
-        ImageId = nil
+        RawMoney = nil
     }
 
-    -- Quét thuộc tính (Attributes) để tìm link ảnh hoặc ID ảnh của thú
     for key, val in pairs(item:GetAttributes()) do
         local k = string.lower(key)
         local vStr = tostring(val)
@@ -183,12 +181,9 @@ local function extractPetInfo(item)
             info.Mutation = vStr
         elseif string.find(k, "rate") or string.find(k, "income") or string.find(k, "cps") or string.find(k, "mps") or string.find(k, "sec") or string.find(k, "money") or string.find(k, "cash") or string.find(k, "earn") or string.find(k, "value") or string.find(k, "dps") then
             info.RawMoney = val
-        elseif string.find(k, "image") or string.find(k, "icon") or string.find(k, "texture") or string.find(k, "thumb") then
-            info.ImageId = vStr
         end
     end
 
-    -- Quét các đối tượng con bên trong item (ImageLabel, Decal, Texture...)
     for _, child in ipairs(item:GetDescendants()) do
         local k = string.lower(child.Name)
         if child:IsA("ValueBase") then
@@ -200,8 +195,11 @@ local function extractPetInfo(item)
             elseif (string.find(k, "rate") or string.find(k, "income") or string.find(k, "cps") or string.find(k, "sec") or string.find(k, "money") or string.find(k, "cash") or string.find(k, "earn")) and not info.RawMoney then
                 info.RawMoney = child.Value
             end
-        elseif (child:IsA("ImageLabel") or child:IsA("Decal") or child:IsA("Texture")) and child.Image ~= "" then
-            info.ImageId = child.Image
+        elseif child:IsA("TextLabel") and child.Text ~= "" then
+            local txt = child.Text
+            if string.find(txt, "/s") or string.find(txt, "%$") or string.find(txt, "spd") or string.find(txt, "nod") or string.find(txt, "vg") then
+                info.RawMoney = txt
+            end
         end
     end
 
@@ -225,25 +223,14 @@ local function sendDiscordWebhook(petData)
     local displayName = LocalPlayer.DisplayName
     local userId = tostring(LocalPlayer.UserId)
     local profileLink = "https://www.roblox.com/users/" .. userId .. "/profile"
-    
-    -- Xử lý lấy link ảnh của thú (nếu item có chứa ID ảnh rbxassetid, chuyển đổi sang link URL của Roblox)
-    local petThumbnailUrl = "https://www.roblox.com/headshot-thumbnail/image?userId=" .. userId .. "&width=420&height=420&format=png" -- Mặc định là Avatar người chơi
-    
-    if petData.ImageId and petData.ImageId ~= "" then
-        local numericId = string.match(petData.ImageId, "%d+")
-        if numericId then
-            petThumbnailUrl = "https://www.roblox.com/asset-thumbnail/image?assetId=" .. numericId .. "&width=420&height=420&format=png"
-        elseif string.find(petData.ImageId, "http") then
-            petThumbnailUrl = petData.ImageId
-        end
-    end
+    local avatarThumb = "https://www.roblox.com/headshot-thumbnail/image?userId=" .. userId .. "&width=420&height=420&format=png"
 
     local payload = {
         ["content"] = "<@" .. DiscordUserID .. "> 🎉 Bạn vừa bắt được một sinh vật mới!",
         ["embeds"] = {{
             ["title"] = "🐾 BẮT ĐƯỢC THÚ MỚI: " .. petData.Name,
             ["color"] = getRarityColor(petData.Rarity),
-            ["thumbnail"] = { ["url"] = petThumbnailUrl }, -- Hiển thị ảnh con thú ở ô khoanh bên phải
+            ["thumbnail"] = { ["url"] = avatarThumb },
             ["fields"] = {
                 { ["name"] = "✨ Độ hiếm (Rarity)", ["value"] = "`" .. petData.Rarity .. "`", ["inline"] = true },
                 { ["name"] = "🧬 Đột biến (Mutation)", ["value"] = "`" .. petData.Mutation .. "`", ["inline"] = true },
@@ -266,7 +253,7 @@ local function sendDiscordWebhook(petData)
 end
 
 -- ==========================================
--- BỘ LỌC CHỐNG TRÙNG LẶP TUYỆT ĐỐI
+-- BỘ LỌC CHỐNG TRÙNG LẶP TUYỆT ĐỐI (1 THÚ = 1 TIN NHẮN)
 -- ==========================================
 local function handleNewItem(newItem)
     if not isRunning then return end
