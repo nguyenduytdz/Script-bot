@@ -1,8 +1,8 @@
 -- ==========================================
 -- CẤU HÌNH THÔNG TIN CỦA BẠN
 -- ==========================================
-local WebhookURL = "DÁN_LINK_WEBHOOK_DISCORD_CỦA_BẠN_VÀO_ĐÂY"
-local DiscordUserID = "DÁN_ID_DISCORD_CỦA_BẠN_VÀO_ĐÂY" -- Ví dụ: "987654321012345678"
+local WebhookURL = "https://discord.com/api/webhooks/1570446166754201803/pPCEG-HczkXcUA2fWQd6pYo62wgLmeBxf1ri812j1AO2W87wWCz1LzoF-6s8tgem5yEo"
+local DiscordUserID = "1494250347731091497" -- Ví dụ: "987654321012345678"
 
 -- ==========================================
 -- KHỞI TẠO DỊCH VỤ & HÀM HỖ TRỢ
