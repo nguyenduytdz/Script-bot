@@ -2,52 +2,136 @@
 -- CẤU HÌNH THÔNG TIN CỦA BẠN
 -- ==========================================
 local WebhookURL = "https://discord.com/api/webhooks/1570446166754201803/pPCEG-HczkXcUA2fWQd6pYo62wgLmeBxf1ri812j1AO2W87wWCz1LzoF-6s8tgem5yEo"
-local DiscordUserID = "1494250347731091497" -- Ví dụ: "987654321012345678"
+local DiscordUserID = "1494250347731091497"
 
 -- ==========================================
--- KHỞI TẠO DỊCH VỤ & HÀM HỖ TRỢ
+-- KHỞI TẠO DỊCH VỤ & BIẾN TRẠNG THÁI
 -- ==========================================
 local HttpService = game:GetService("HttpService")
 local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local CoreGui = game:GetService("CoreGui")
 local LocalPlayer = Players.LocalPlayer
 
--- Kiểm tra hàm gửi HTTP của Executor
 local httpRequest = (syn and syn.request) or (http and http.request) or http_request or (fluxus and fluxus.request) or request
-
 if not httpRequest then
     warn("❌ Executor của bạn không hỗ trợ hàm HTTP Request!")
     return
 end
 
--- Hàm lấy màu Embed dựa theo độ hiếm
+local isRunning = false -- Trạng thái Start / Stop
+local startTime = 0     -- Thời gian bắt đầu chạy
+local petsCaughtCount = 0 -- Số lượng thú đã bắt được từ lúc bật
+
+-- ==========================================
+-- TẠO GIAO DIỆN (UI) MENU TRỰC QUAN
+-- ==========================================
+-- Xóa UI cũ nếu có để tránh trùng lặp
+if CoreGui:FindFirstChild("ThrowFoodAutoMenu") then
+    CoreGui.ThrowFoodAutoMenu:Destroy()
+end
+
+local ScreenGui = Instance.new("ScreenGui")
+ScreenGui.Name = "ThrowFoodAutoMenu"
+ScreenGui.Parent = CoreGui
+ScreenGui.ResetOnSpawn = false
+
+-- Khung chính hình vuông bo góc
+local MainFrame = Instance.new("Frame")
+MainFrame.Name = "MainFrame"
+MainFrame.Size = UDim2.new(0, 260, 0, 220)
+MainFrame.Position = UDim2.new(0.05, 0, 0.2, 0)
+MainFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 35)
+MainFrame.BorderSizePixel = 0
+MainFrame.Active = true
+MainFrame.Draggable = true -- Cho phép kéo thả menu trên màn hình
+MainFrame.Parent = ScreenGui
+
+local UICorner = Instance.new("UICorner")
+UICorner.CornerRadius = UDim.new(0, 12)
+UICorner.Parent = MainFrame
+
+-- Tiêu đề Menu
+local TitleLabel = Instance.new("TextLabel")
+TitleLabel.Size = UDim2.new(1, 0, 0, 35)
+TitleLabel.BackgroundTransparency = 1
+TitleLabel.Text = "🐾 Throw Food Auto Logger"
+TitleLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+TitleLabel.TextSize = 14
+TitleLabel.Font = Enum.Font.GothamBold
+TitleLabel.Parent = MainFrame
+
+-- Trạng thái Status & Thời gian
+local StatusLabel = Instance.new("TextLabel")
+StatusLabel.Size = UDim2.new(1, -20, 0, 50)
+StatusLabel.Position = UDim2.new(0, 10, 0, 40)
+StatusLabel.BackgroundColor3 = Color3.fromRGB(45, 45, 52)
+StatusLabel.TextColor3 = Color3.fromRGB(200, 200, 200)
+StatusLabel.TextSize = 12
+StatusLabel.Font = Enum.Font.Code
+StatusLabel.TextWrapped = true
+StatusLabel.TextXAlignment = Enum.TextXAlignment.Left
+StatusLabel.TextYAlignment = Enum.TextYAlignment.Top
+StatusLabel.Parent = MainFrame
+
+local StatusCorner = Instance.new("UICorner")
+StatusCorner.CornerRadius = UDim.new(0, 8)
+StatusCorner.Parent = StatusLabel
+
+-- Nút Toggle Start / Stop
+local ToggleButton = Instance.new("TextButton")
+ToggleButton.Size = UDim2.new(1, -20, 0, 40)
+ToggleButton.Position = UDim2.new(0, 10, 0, 100)
+ToggleButton.BackgroundColor3 = Color3.fromRGB(224, 86, 36) -- Màu cam mặc định (Stop)
+ToggleButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+ToggleButton.TextSize = 15
+ToggleButton.Font = Enum.Font.GothamBold
+ToggleButton.Text = "START SCRIPT"
+ToggleButton.Parent = MainFrame
+
+local ButtonCorner = Instance.new("UICorner")
+ButtonCorner.CornerRadius = UDim.new(0, 8)
+ButtonCorner.Parent = ToggleButton
+
+-- Thống kê phụ dưới cùng
+local FooterLabel = Instance.new("TextLabel")
+FooterLabel.Size = UDim2.new(1, -20, 0, 50)
+FooterLabel.Position = UDim2.new(0, 10, 0, 155)
+FooterLabel.BackgroundTransparency = 1
+FooterLabel.TextColor3 = Color3.fromRGB(150, 150, 160)
+FooterLabel.TextSize = 11
+FooterLabel.Font = Enum.Font.Gotham
+FooterLabel.TextWrapped = true
+FooterLabel.Text = "Đã bắt: 0 thú\nTrạng thái: Đang tắt"
+FooterLabel.Parent = MainFrame
+
+-- ==========================================
+-- HÀM XỬ LÝ DỮ LIỆU THÚ & DISCORD
+-- ==========================================
 local function getRarityColor(rarity)
     local r = string.lower(tostring(rarity))
-    if string.find(r, "mythic") or string.find(r, "secret") then
-        return 16711680 -- Đỏ rực
+    if string.find(r, "sovereign") or string.find(r, "mythic") or string.find(r, "secret") then
+        return 16711680
     elseif string.find(r, "legendary") then
-        return 16766720 -- Vàng cam
+        return 16766720
     elseif string.find(r, "epic") then
-        return 10181046 -- Tím
+        return 10181046
     elseif string.find(r, "rare") then
-        return 3447003 -- Xanh dương
-    elseif string.find(r, "uncommon") then
-        return 3066993 -- Xanh lá
+        return 3447003
     else
-        return 9807270 -- Xám (Common / Mặc định)
+        return 9807270
     end
 end
 
--- Hàm tìm kiếm thông tin chi tiết bên trong vật phẩm/thú vừa bắt được
 local function extractPetInfo(item)
     local info = {
         Name = item.Name,
         Weight = "Không rõ",
         Rarity = "Thường (Common)",
-        Value = "0",
+        Value = "Không rõ",
         Area = "Không rõ"
     }
 
-    -- 1. Quét trong Attributes của object
     local attributes = item:GetAttributes()
     for key, val in pairs(attributes) do
         local k = string.lower(key)
@@ -57,40 +141,36 @@ local function extractPetInfo(item)
             info.Rarity = tostring(val)
         elseif string.find(k, "value") or string.find(k, "price") or string.find(k, "worth") or string.find(k, "money") then
             info.Value = tostring(val)
-        elseif string.find(k, "area") or string.find(k, "zone") or string.find(k, "biome") or string.find(k, "world") then
+        elseif string.find(k, "area") or string.find(k, "zone") or string.find(k, "biome") then
             info.Area = tostring(val)
         end
     end
 
-    -- 2. Quét trong các thư mục con (ValueBase: StringValue, NumberValue, IntValue...)
     for _, child in ipairs(item:GetDescendants()) do
-        if child:IsA("ValueBase") then
-            local k = string.lower(child.Name)
-            if string.find(k, "weight") or string.find(k, "kg") then
-                info.Weight = tostring(child.Value)
-            elseif string.find(k, "rarity") or string.find(k, "tier") then
-                info.Rarity = tostring(child.Value)
-            elseif string.find(k, "value") or string.find(k, "price") or string.find(k, "worth") or string.find(k, "money") then
-                info.Value = tostring(child.Value)
-            elseif string.find(k, "area") or string.find(k, "zone") or string.find(k, "biome") then
-                info.Area = tostring(child.Value)
-            end
+        local k = string.lower(child.Name)
+        local valStr = child:IsA("ValueBase") and tostring(child.Value) or nil
+        if valStr then
+            if (string.find(k, "weight") or string.find(k, "kg")) and info.Weight == "Không rõ" then info.Weight = valStr end
+            if (string.find(k, "rarity") or string.find(k, "tier")) and info.Rarity == "Thường (Common)" then info.Rarity = valStr end
+            if (string.find(k, "value") or string.find(k, "price") or string.find(k, "worth")) and info.Value == "Không rõ" then info.Value = valStr end
+            if (string.find(k, "area") or string.find(k, "zone")) and info.Area == "Không rõ" then info.Area = valStr end
         end
     end
 
-    -- 3. Nếu khu vực chưa có trong item, thử lấy vị trí khu vực hiện tại của nhân vật
     if info.Area == "Không rõ" then
-        local currentZone = LocalPlayer:GetAttribute("CurrentArea") or LocalPlayer:GetAttribute("Zone") or LocalPlayer:GetAttribute("Area")
-        if currentZone then
-            info.Area = tostring(currentZone)
+        for _, attrName in ipairs({"CurrentArea", "Zone", "Area", "Biome"}) do
+            local zoneVal = LocalPlayer:GetAttribute(attrName)
+            if zoneVal then info.Area = tostring(zoneVal) break end
         end
     end
 
     return info
 end
 
--- Hàm gửi Webhook về Discord
 local function sendDiscordWebhook(petData)
+    if not isRunning then return end
+    petsCaughtCount = petsCaughtCount + 1
+
     local playerName = LocalPlayer.Name
     local displayName = LocalPlayer.DisplayName
     local userId = tostring(LocalPlayer.UserId)
@@ -102,99 +182,100 @@ local function sendDiscordWebhook(petData)
         ["embeds"] = {{
             ["title"] = "🐾 BẮT ĐƯỢC THÚ MỚI: " .. petData.Name,
             ["color"] = getRarityColor(petData.Rarity),
-            ["thumbnail"] = {
-                ["url"] = avatarThumb
-            },
+            ["thumbnail"] = { ["url"] = avatarThumb },
             ["fields"] = {
-                {
-                    ["name"] = "✨ Độ hiếm (Rarity)",
-                    ["value"] = "`" .. petData.Rarity .. "`",
-                    ["inline"] = true
-                },
-                {
-                    ["name"] = "⚖️ Cân nặng (Weight)",
-                    ["value"] = "`" .. petData.Weight .. "`",
-                    ["inline"] = true
-                },
-                {
-                    ["name"] = "💰 Giá trị / Tiền",
-                    ["value"] = "`" .. petData.Value .. "`",
-                    ["inline"] = true
-                },
-                {
-                    ["name"] = "🗺️ Khu vực (Area)",
-                    ["value"] = "`" .. petData.Area .. "`",
-                    ["inline"] = true
-                },
-                {
-                    ["name"] = "👤 Nhân vật Roblox",
-                    ["value"] = string.format("[%s (@%s)](%s)\n**ID:** `%s`", displayName, playerName, profileLink, userId),
-                    ["inline"] = false
-                }
+                { ["name"] = "✨ Độ hiếm", ["value"] = "`" .. petData.Rarity .. "`", ["inline"] = true },
+                { ["name"] = "⚖️ Cân nặng", ["value"] = "`" .. petData.Weight .. "`", ["inline"] = true },
+                { ["name"] = "💰 Giá trị", ["value"] = "`" .. petData.Value .. "`", ["inline"] = true },
+                { ["name"] = "🗺️ Khu vực", ["value"] = "`" .. petData.Area .. "`", ["inline"] = true },
+                { ["name"] = "👤 Nhân vật Roblox", ["value"] = string.format("[%s (@%s)](%s)\n**ID:** `%s`", displayName, playerName, profileLink, userId), ["inline"] = false }
             },
-            ["footer"] = {
-                ["text"] = "Throw Food For Animals • Auto Logger"
-            },
+            ["footer"] = { ["text"] = "Throw Food For Animals • Auto Logger" },
             ["timestamp"] = os.date("!%Y-%m-%dT%H:%M:%SZ")
         }}
     }
 
-    local success, err = pcall(function()
+    pcall(function()
         httpRequest({
             Url = WebhookURL,
             Method = "POST",
-            Headers = {
-                ["Content-Type"] = "application/json"
-            },
+            Headers = { ["Content-Type"] = "application/json" },
             Body = HttpService:JSONEncode(payload)
         })
     end)
-
-    if success then
-        print("✅ Đã gửi thông tin [" .. petData.Name .. "] về Discord!")
-    else
-        warn("❌ Lỗi gửi Webhook:", err)
-    end
 end
 
 -- ==========================================
--- THEO DÕI KHI BẮT ĐƯỢC THÚ MỚI
+-- THEO DÕI SỰ KIỆN TÚI ĐỒ (BACKPACK)
 -- ==========================================
 local function monitorContainer(container)
     if not container then return end
-    
     container.ChildAdded:Connect(function(newItem)
-        -- Đợi 0.3s để game load đầy đủ chỉ số (cân nặng, độ hiếm...) vào vật phẩm
-        task.wait(0.3)
-        
-        -- Bỏ qua các công cụ cơ bản như thức ăn ném (Food/Bait) nếu không phải thú
+        if not isRunning then return end
+        task.wait(0.4)
         local itemNameLower = string.lower(newItem.Name)
-        if string.find(itemNameLower, "food") or string.find(itemNameLower, "bait") or string.find(itemNameLower, "apple") then
-            -- Nếu bạn muốn lọc kỹ hơn, hãy kiểm tra xem item có thuộc tính Weight hoặc Rarity không
-            if not newItem:GetAttribute("Weight") and not newItem:GetAttribute("Rarity") and not newItem:FindFirstChild("Weight") then
+        if string.find(itemNameLower, "food") or string.find(itemNameLower, "bait") then
+            if not newItem:GetAttribute("Weight") and not newItem:GetAttribute("Rarity") then
                 return
             end
         end
-
         local petInfo = extractPetInfo(newItem)
         sendDiscordWebhook(petInfo)
     end)
 end
 
--- Lắng nghe trong Backpack (túi đồ chính của Roblox)
 monitorContainer(LocalPlayer:WaitForChild("Backpack"))
-
--- Nếu nhân vật hồi sinh (Reset), kết nối lại với Backpack mới
 LocalPlayer.CharacterAdded:Connect(function()
     monitorContainer(LocalPlayer:WaitForChild("Backpack"))
 end)
-
--- Kiểm tra xem game có lưu thú trong thư mục dữ liệu riêng của Player không (ví dụ: Pets, Animals, Inventory)
-for _, folderName in ipairs({"Pets", "Animals", "Inventory", "CapturedAnimals"}) do
+for _, folderName in ipairs({"Pets", "Animals", "Inventory", "CapturedAnimals", "Collection"}) do
     local folder = LocalPlayer:FindFirstChild(folderName)
-    if folder then
-        monitorContainer(folder)
-    end
+    if folder then monitorContainer(folder) end
 end
 
-print("🚀 Script Webhook Throw Food For Animals đã kích hoạt thành công!")
+-- ==========================================
+-- XỬ LÝ NÚT BẤM & CẬP NHẬT THỜI GIAN THỰC
+-- ==========================================
+ToggleButton.MouseButton1Click:Connect(function()
+    isRunning = not isRunning
+    if isRunning then
+        startTime = tick()
+        ToggleButton.Text = "STOP SCRIPT"
+        ToggleButton.BackgroundColor3 = Color3.fromRGB(46, 204, 113) -- Xanh lá (Start)
+    else
+        ToggleButton.Text = "START SCRIPT"
+        ToggleButton.BackgroundColor3 = Color3.fromRGB(224, 86, 36) -- Cam đỏ (Stop)
+    end
+end)
+
+-- Vòng lặp cập nhật thông số theo thời gian thực (FPS, Ping, Thời gian chạy, Tên Game)
+RunService.RenderStepped:Connect(function()
+    local gameName = "Throw Food For Animals"
+    local success, name = pcall(function()
+        return MarketPlaceService:GetProductInfo(game.PlaceId).Name
+    end)
+    if success and name then gameName = name end
+
+    -- Tính FPS và Ping thực tế
+    local fps = math.floor(1 / RunService.RenderStepped:Wait())
+    local ping = 0
+    pcall(function()
+        ping = math.floor(LocalPlayer:GetNetworkPing() * 1000)
+    end)
+
+    if isRunning then
+        local elapsedSeconds = math.floor(tick() - startTime)
+        local hours = math.floor(elapsedSeconds / 3600)
+        local minutes = math.floor((elapsedSeconds % 3600) / 60)
+        local seconds = elapsedSeconds % 60
+        local timeString = string.format("%02d:%02d:%02d", hours, minutes, seconds)
+
+        StatusLabel.Text = string.format(" ⏱️ Thời gian: %s\n 🎮 Game: %s\n ⚡ FPS: %d | Ping: %dms", timeString, gameName, fps, ping)
+        FooterLabel.Text = string.format("Đã gửi: %d thú về Discord\nTrạng thái: 🟢 Đang chạy (Active)", petsCaughtCount)
+    else
+        StatusLabel.Text = string.format(" ⏱️ Thời gian: 00:00:00\n 🎮 Game: %s\n ⚡ FPS: %d | Ping: %dms", gameName, fps, ping)
+        FooterLabel.Text = string.format("Đã gửi: %d thú về Discord\nTrạng thái: 🔴 Đang dừng (Stopped)", petsCaughtCount)
+    end
+end)
+
+print("🚀 Menu UI Throw Food For Animals đã tải thành công!")
