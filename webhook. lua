@@ -1,5 +1,5 @@
 -- ==========================================
--- CẤU HÌNH THÔNG TIN CỦA BẠN
+-- CẤU HÌNH THÔNG TIN CỦA BẠN (Dán chính xác vào trong ngoặc kép)
 -- ==========================================
 local WebhookURL = "https://discord.com/api/webhooks/1570446166754201803/pPCEG-HczkXcUA2fWQd6pYo62wgLmeBxf1ri812j1AO2W87wWCz1LzoF-6s8tgem5yEo"
 local DiscordUserID = "1494250347731091497"
@@ -14,10 +14,10 @@ local MarketplaceService = game:GetService("MarketplaceService")
 local CoreGui = game:GetService("CoreGui")
 local LocalPlayer = Players.LocalPlayer
 
+-- Kiểm tra Executor HTTP Request (Hỗ trợ tất cả các loại Executor phổ biến)
 local httpRequest = (syn and syn.request) or (http and http.request) or http_request or (fluxus and fluxus.request) or request
 if not httpRequest then
-    warn("❌ Executor của bạn không hỗ trợ hàm HTTP Request!")
-    return
+    warn("❌ CẢNH BÁO: Executor của bạn không hỗ trợ hàm HTTP Request (request) nên không thể gửi Webhook!")
 end
 
 local isRunning = false
@@ -31,14 +31,13 @@ pcall(function()
 end)
 
 -- ==========================================
--- BẢNG HẬU TỐ SỐ LỚN SIÊU MỞ RỘNG
+-- BẢNG HẬU TỐ SỐ LỚN (K -> Spd -> Nod -> Vg...)
 -- ==========================================
 local Suffixes = {
     "", "K", "M", "B", "T", "Qa", "Qi", "Sx", "Sp", "Oc", "No", 
     "Dc", "Ud", "Dd", "Td", "Qad", "Qid", "Sxd", "Spd", "Ocd", "Nod", 
     "Vg", "Uvg", "Dvg", "Tvg", "Qavg", "Qivg", "Sxvg", "Spvg", "Ocvg", "Novg", 
-    "Tg", "Utg", "Dtg", "Ttg", "Qatg", "Qitg", "Sxtg", "Sptg", "Octg", "Notg", 
-    "Qag", "Uqag", "Dqag", "Tqag", "Qaqag", "Qiqag", "Sxag", "Spag", "Ocag", "Noag", "Tg"
+    "Tg", "Utg", "Dtg", "Ttg", "Qatg", "Qitg", "Sxtg", "Sptg", "Octg", "Notg"
 }
 
 local function formatBigNumber(val)
@@ -118,7 +117,7 @@ local StatusCorner = Instance.new("UICorner")
 StatusCorner.CornerRadius = UDim.new(0, 8)
 StatusCorner.Parent = StatusLabel
 
--- Nút Toggle Start / Stop (Sử dụng TextButton kết hợp InputBegan để nhận click/tap nhạy nhất)
+-- Nút Toggle Start / Stop
 local ToggleButton = Instance.new("TextButton")
 ToggleButton.Size = UDim2.new(1, -20, 0, 42)
 ToggleButton.Position = UDim2.new(0, 10, 0, 125)
@@ -176,7 +175,7 @@ local function extractPetInfo(item)
 
         if string.find(k, "rarity") or string.find(k, "tier") or string.find(k, "grade") then
             info.Rarity = vStr
-        elseif string.find(k, "mut") or string.find(k, "variant") or string.find(k, "type") or string.find(k, "rainbow") or string.find(k, "ruby") or string.find(k, "emerald") or string.find(k, "diamond") or string.find(k, "gold") then
+        elseif string.find(k, "mut") or string.find(k, "variant") or string.find(k, "rainbow") or string.find(k, "ruby") or string.find(k, "emerald") or string.find(k, "diamond") or string.find(k, "gold") then
             info.Mutation = vStr
         elseif string.find(k, "rate") or string.find(k, "income") or string.find(k, "cps") or string.find(k, "mps") or string.find(k, "sec") or string.find(k, "money") or string.find(k, "cash") or string.find(k, "earn") or string.find(k, "value") or string.find(k, "dps") then
             info.RawMoney = val
@@ -186,18 +185,12 @@ local function extractPetInfo(item)
     for _, child in ipairs(item:GetDescendants()) do
         local k = string.lower(child.Name)
         if child:IsA("ValueBase") then
-            local vStr = tostring(child.Value)
             if (string.find(k, "rarity") or string.find(k, "tier")) and info.Rarity == "Thường (Common)" then
-                info.Rarity = vStr
-            elseif (string.find(k, "mut") or string.find(k, "variant") or string.find(k, "mutation")) and info.Mutation == "Mặc định (Normal)" then
-                info.Mutation = vStr
+                info.Rarity = tostring(child.Value)
+            elseif (string.find(k, "mut") or string.find(k, "variant")) and info.Mutation == "Mặc định (Normal)" then
+                info.Mutation = tostring(child.Value)
             elseif (string.find(k, "rate") or string.find(k, "income") or string.find(k, "cps") or string.find(k, "sec") or string.find(k, "money") or string.find(k, "cash") or string.find(k, "earn")) and not info.RawMoney then
                 info.RawMoney = child.Value
-            end
-        elseif child:IsA("TextLabel") and child.Text ~= "" then
-            local txt = child.Text
-            if string.find(txt, "/s") or string.find(txt, "%$") or string.find(txt, "spd") or string.find(txt, "nod") or string.find(txt, "vg") then
-                info.RawMoney = txt
             end
         end
     end
@@ -216,6 +209,11 @@ end
 
 local function sendDiscordWebhook(petData)
     if not isRunning then return end
+    if not httpRequest then
+        print("❌ Lỗi: Không thể gửi Webhook vì thiếu hàm httpRequest!")
+        return
+    end
+
     petsCaughtCount = petsCaughtCount + 1
 
     local playerName = LocalPlayer.Name
@@ -241,7 +239,7 @@ local function sendDiscordWebhook(petData)
         }}
     }
 
-    pcall(function()
+    local success, err = pcall(function()
         httpRequest({
             Url = WebhookURL,
             Method = "POST",
@@ -249,10 +247,16 @@ local function sendDiscordWebhook(petData)
             Body = HttpService:JSONEncode(payload)
         })
     end)
+
+    if success then
+        print("✅ Đã gửi thông tin thú [" .. petData.Name .. "] về Discord thành công!")
+    else
+        print("❌ Gửi Webhook thất bại, lỗi: " .. tostring(err))
+    end
 end
 
 -- ==========================================
--- THEO DÕI TÚI ĐỒ VỚI BỘ LỌC CHỐNG TRÙNG LẶP
+-- THEO DÕI TÚI ĐỒ (BACKPACK)
 -- ==========================================
 local function handleNewItem(newItem)
     if not isRunning then return end
@@ -278,13 +282,17 @@ local function monitorContainer(container)
     container.ChildAdded:Connect(handleNewItem)
 end
 
-monitorContainer(LocalPlayer:WaitForChild("Backpack"))
-LocalPlayer.CharacterAdded:Connect(function()
-    monitorContainer(LocalPlayer:WaitForChild("Backpack"))
+if LocalPlayer:FindFirstChild("Backpack") then
+    monitorContainer(LocalPlayer.Backpack)
+end
+
+LocalPlayer.CharacterAdded:Connect(function(char)
+    local bp = LocalPlayer:WaitForChild("Backpack", 5)
+    if bp then monitorContainer(bp) end
 end)
 
 -- ==========================================
--- XỬ LÝ SỰ KIỆN NÚT BẤM (HỖ TRỢ CẢ CLICK VÀ TAP TRÊN ĐIỆN THOẠI)
+-- SỰ KIỆN BẤM NÚT START / STOP (ĐẢM BẢO NHẬN CLICK 100%)
 -- ==========================================
 local function toggleScriptState()
     isRunning = not isRunning
@@ -292,9 +300,11 @@ local function toggleScriptState()
         startTime = tick()
         ToggleButton.Text = "STOP SCRIPT"
         ToggleButton.BackgroundColor3 = Color3.fromRGB(46, 204, 113) -- Xanh lá
+        print("🟢 Script đã được BẬT (START)")
     else
         ToggleButton.Text = "START SCRIPT"
         ToggleButton.BackgroundColor3 = Color3.fromRGB(224, 86, 36) -- Cam đỏ
+        print("🔴 Script đã bị DỪNG (STOP)")
     end
 end
 
@@ -302,20 +312,9 @@ ToggleButton.MouseButton1Click:Connect(toggleScriptState)
 ToggleButton.TouchTap:Connect(toggleScriptState)
 
 -- ==========================================
--- VÒNG LẶP CẬP NHẬT TRẠNG THÁI & THỜI GIAN
+-- VÒNG LẶP CẬP NHẬT GIAO DIỆN
 -- ==========================================
-local frameCount = 0
-local lastFpsUpdate = tick()
-local currentFps = 60
-
 RunService.RenderStepped:Connect(function()
-    frameCount = frameCount + 1
-    if tick() - lastFpsUpdate >= 0.5 then
-        currentFps = math.floor(frameCount / (tick() - lastFpsUpdate))
-        frameCount = 0
-        lastFpsUpdate = tick()
-    end
-
     local vnTime = os.date("!*t", os.time() + 25200)
     local vnClockStr = string.format("%02d:%02d:%02d", vnTime.hour, vnTime.min, vnTime.sec)
 
@@ -332,17 +331,17 @@ RunService.RenderStepped:Connect(function()
         local runTimeStr = string.format("%02d:%02d:%02d", h, m, s)
 
         StatusLabel.Text = string.format(
-            " ⏱️ Đã chạy: %s | 🇻🇳 %s\n 🎮 Game: %s\n ⚡ FPS: %d | 📶 Ping: %dms",
-            runTimeStr, vnClockStr, cachedGameName, currentFps, ping
+            " ⏱️ Đã chạy: %s | 🇻🇳 %s\n 🎮 Game: %s\n 📶 Ping: %dms",
+            runTimeStr, vnClockStr, cachedGameName, ping
         )
         FooterLabel.Text = string.format("Đã gửi: %d thú về Discord\nTrạng thái: 🟢 Đang chạy (Active)", petsCaughtCount)
     else
         StatusLabel.Text = string.format(
-            " ⏱️ Đã chạy: 00:00:00 | 🇻🇳 %s\n 🎮 Game: %s\n ⚡ FPS: %d | 📶 Ping: %dms",
-            vnClockStr, vnClockStr, cachedGameName, currentFps, ping
+            " ⏱️ Đã chạy: 00:00:00 | 🇻🇳 %s\n 🎮 Game: %s\n 📶 Ping: %dms",
+            vnClockStr, cachedGameName, ping
         )
-        FooterLabel.Text = string.format("Đã gửi: %d thú về Discord\nTrạng thái: 🔴 Đang dừng (Stopped)", petsCaughtCount)
+        FooterLabel.Text = string.format("Đã gửi: %d thú về Discord\nTrạng thái: 🔴 Đang dừng (Stopped)", petsCaughtConfig or petsCaughtCount)
     end
 end)
 
-print("🚀 Menu UI Throw Food For Animals đã tải và sẵn sàng hoạt động!")
+print("🚀 Menu UI đã tải thành công! Hãy bấm nút Start trên màn hình.")
