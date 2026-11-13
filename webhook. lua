@@ -31,7 +31,7 @@ pcall(function()
 end)
 
 -- ==========================================
--- BẢNG HẬU TỐ SỐ LỚN SIÊU MỞ RỘNG (K -> Spd -> Nod -> Vg -> Hằng hà sa số)
+-- BẢNG HẬU TỐ SỐ LỚN SIÊU MỞ RỘNG
 -- ==========================================
 local Suffixes = {
     "", "K", "M", "B", "T", "Qa", "Qi", "Sx", "Sp", "Oc", "No", 
@@ -42,10 +42,8 @@ local Suffixes = {
 }
 
 local function formatBigNumber(val)
-    -- Nếu game trả về sẵn chuỗi có chữ (VD: "2,18spd/s", "5.4nod/s") thì giữ nguyên
     if type(val) == "string" then
         if string.find(val, "e%+") or tonumber(val) then
-            -- Nếu lỡ là chuỗi dạng số khoa học thì cho qua hàm số học bên dưới
             val = tonumber(val)
         else
             return val
@@ -65,7 +63,6 @@ local function formatBigNumber(val)
         local formatted = string.format("%.2f", scaled):gsub("%.", ",")
         return formatted .. suffix:lower()
     else
-        -- Trường hợp vượt qua cả bảng danh sách trên thì hiển thị dạng khoa học chuẩn
         return string.format("%.2e", num)
     end
 end
@@ -133,7 +130,7 @@ ToggleButton.Parent = MainFrame
 
 local ButtonCorner = Instance.new("UICorner")
 ButtonCorner.CornerRadius = UDim.new(0, 10)
-ButtonCorner.Parent = ToggleButton
+ButtonCorner.Parent = ButtonButton or ButtonCorner
 
 local FooterLabel = Instance.new("TextLabel")
 FooterLabel.Size = UDim2.new(1, -20, 0, 45)
@@ -147,7 +144,7 @@ FooterLabel.Text = "Đã gửi: 0 thú\nTrạng thái: 🔴 Đang dừng (Stoppe
 FooterLabel.Parent = MainFrame
 
 -- ==========================================
--- HÀM QUÉT ĐỘ HIẾM & TIỀN/S SIÊU NHẠY
+-- HÀM QUÉT THÔNG TIN THÚ
 -- ==========================================
 local function getRarityColor(rarity)
     local r = string.lower(tostring(rarity))
@@ -168,25 +165,33 @@ local function extractPetInfo(item)
     local info = {
         Name = item.Name,
         Rarity = "Thường (Common)",
+        Mutation = "Mặc định (Normal)",
         RawMoney = nil
     }
 
     -- 1. Quét trong Attributes
     for key, val in pairs(item:GetAttributes()) do
         local k = string.lower(key)
+        local vStr = tostring(val)
+
         if string.find(k, "rarity") or string.find(k, "tier") or string.find(k, "grade") then
-            info.Rarity = tostring(val)
+            info.Rarity = vStr
+        elseif string.find(k, "mut") or string.find(k, "variant") or string.find(k, "type") or string.find(k, "rainbow") or string.find(k, "ruby") or string.find(k, "emerald") or string.find(k, "diamond") or string.find(k, "gold") then
+            info.Mutation = vStr
         elseif string.find(k, "rate") or string.find(k, "income") or string.find(k, "cps") or string.find(k, "mps") or string.find(k, "sec") or string.find(k, "money") or string.find(k, "cash") or string.find(k, "earn") or string.find(k, "value") or string.find(k, "dps") then
             info.RawMoney = val
         end
     end
 
-    -- 2. Quét trong các con của item (ValueBase hoặc TextLabel)
+    -- 2. Quét trong các con của item
     for _, child in ipairs(item:GetDescendants()) do
         local k = string.lower(child.Name)
         if child:IsA("ValueBase") then
+            local vStr = tostring(child.Value)
             if (string.find(k, "rarity") or string.find(k, "tier")) and info.Rarity == "Thường (Common)" then
-                info.Rarity = tostring(child.Value)
+                info.Rarity = vStr
+            elseif (string.find(k, "mut") or string.find(k, "variant") or string.find(k, "mutation")) and info.Mutation == "Mặc định (Normal)" then
+                info.Mutation = vStr
             elseif (string.find(k, "rate") or string.find(k, "income") or string.find(k, "cps") or string.find(k, "sec") or string.find(k, "money") or string.find(k, "cash") or string.find(k, "earn")) and not info.RawMoney then
                 info.RawMoney = child.Value
             end
@@ -198,7 +203,6 @@ local function extractPetInfo(item)
         end
     end
 
-    -- Xử lý định dạng tiền cuối cùng
     local finalMoney = "Không rõ"
     if info.RawMoney then
         finalMoney = formatBigNumber(info.RawMoney)
@@ -229,6 +233,7 @@ local function sendDiscordWebhook(petData)
             ["thumbnail"] = { ["url"] = avatarThumb },
             ["fields"] = {
                 { ["name"] = "✨ Độ hiếm (Rarity)", ["value"] = "`" .. petData.Rarity .. "`", ["inline"] = true },
+                { ["name"] = "🧬 Đột biến (Mutation)", ["value"] = "`" .. petData.Mutation .. "`", ["inline"] = true },
                 { ["name"] = "💸 Tiền / Giây (Income)", ["value"] = "`" .. petData.MoneyPerSec .. "`", ["inline"] = true },
                 { ["name"] = "👤 Nhân vật Roblox", ["value"] = string.format("[%s (@%s)](%s)\n**ID:** `%s`", displayName, playerName, profileLink, userId), ["inline"] = false }
             },
@@ -296,7 +301,7 @@ end)
 
 local frameCount = 0
 local lastFpsUpdate = tick()
-local currentFps = 60
+currentFps = 60
 
 RunService.RenderStepped:Connect(function()
     frameCount = frameCount + 1
@@ -329,7 +334,7 @@ RunService.RenderStepped:Connect(function()
     else
         StatusLabel.Text = string.format(
             " ⏱️ Đã chạy: 00:00:00 | 🇻🇳 %s\n 🎮 Game: %s\n ⚡ FPS: %d | 📶 Ping: %dms",
-            vnClockStr, cachedGameName, cachedGameName, currentFps, ping
+            vnClockStr, vnClockStr, cachedGameName, currentFps, ping
         )
         FooterLabel.Text = string.format("Đã gửi: %d thú về Discord\nTrạng thái: 🔴 Đang dừng (Stopped)", petsCaughtCount)
     end
