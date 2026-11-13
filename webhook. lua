@@ -364,3 +364,9 @@ RunService.RenderStepped:Connect(function()
         FooterLabel.Text = string.format("Đã gửi: %d thú về Discord\nTrạng thái: 🔴 Đang dừng (Stopped)", petsCaughtCount)
     end
 end)
+            " ⏱️ Đã chạy: 00:00:00 | 🇻🇳 %s\n 🎮 Game: %s\n ⚡ FPS: %d | 📶 Ping: %dms",
+            vnClockStr, cachedGameName, currentFps, ping
+        )
+        FooterLabel.Text = string.format("Đã gửi: %d thú về Discord\nTrạng thái: 🔴 Đang dừng (Stopped)", petsCaughtCount)
+    end
+end)
