@@ -27,7 +27,6 @@ local isRunning = false
 local startTime = 0
 local petsCaughtCount = 0
 local processedItems = {} 
-local petHistoryList = {} -- Bảng lưu lịch sử pet đã bắt
 
 local cachedGameName = "Throw Food For Animals"
 pcall(function()
@@ -106,7 +105,7 @@ ScreenGui.ResetOnSpawn = false
 
 local MainFrame = Instance.new("Frame")
 MainFrame.Name = "MainFrame"
-MainFrame.Size = UDim2.new(0, 300, 0, 310)
+MainFrame.Size = UDim2.new(0, 310, 0, 310)
 MainFrame.Position = UDim2.new(0.05, 0, 0.2, 0)
 MainFrame.BackgroundColor3 = Color3.fromRGB(25, 25, 30)
 MainFrame.BorderSizePixel = 0
@@ -127,7 +126,7 @@ TitleLabel.TextSize = 13
 TitleLabel.Font = Enum.Font.GothamBold
 TitleLabel.Parent = MainFrame
 
--- --- THANH CHUYỂN TAB (TAB MENU) ---
+-- --- THANH CHUYỂN TAB ---
 local TabContainer = Instance.new("Frame")
 TabContainer.Size = UDim2.new(1, -20, 0, 30)
 TabContainer.Position = UDim2.new(0, 10, 0, 32)
@@ -136,7 +135,7 @@ TabContainer.Parent = MainFrame
 
 local Tab1Btn = Instance.new("TextButton")
 Tab1Btn.Size = UDim2.new(0.48, 0, 1, 0)
-Tab1Btn.BackgroundColor3 = Color3.fromRGB(46, 204, 113) -- Mặc định sáng Tab 1
+Tab1Btn.BackgroundColor3 = Color3.fromRGB(46, 204, 113)
 Tab1Btn.TextColor3 = Color3.fromRGB(255, 255, 255)
 Tab1Btn.TextSize = 11
 Tab1Btn.Font = Enum.Font.GothamBold
@@ -161,7 +160,7 @@ local Tab2Corner = Instance.new("UICorner")
 Tab2Corner.CornerRadius = UDim.new(0, 6)
 Tab2Corner.Parent = Tab2Btn
 
--- --- KHUNG NỘI DUNG TAB 1 (GỬI WEBHOOK & ĐIỀU KHIỂN) ---
+-- --- TAB 1: GỬI WEBHOOK & ĐIỀU KHIỂN ---
 local Tab1Content = Instance.new("Frame")
 Tab1Content.Size = UDim2.new(1, 0, 1, -70)
 Tab1Content.Position = UDim2.new(0, 0, 0, 65)
@@ -185,7 +184,6 @@ local StatusCorner = Instance.new("UICorner")
 StatusCorner.CornerRadius = UDim.new(0, 8)
 StatusCorner.Parent = StatusLabel
 
--- Nút Dropdown Lọc Tiền
 local FilterDropdownBtn = Instance.new("TextButton")
 FilterDropdownBtn.Size = UDim2.new(1, -20, 0, 28)
 FilterDropdownBtn.Position = UDim2.new(0, 10, 0, 72)
@@ -272,7 +270,6 @@ FilterDropdownBtn.TouchTap:Connect(function()
     end
 end)
 
--- Nút Toggle Start / Stop
 local ToggleButton = Instance.new("TextButton")
 ToggleButton.Size = UDim2.new(1, -20, 0, 36)
 ToggleButton.Position = UDim2.new(0, 10, 0, 105)
@@ -314,7 +311,7 @@ DropdownListFrame:GetPropertyChangedSignal("Visible"):Connect(function()
     end
 end)
 
--- --- KHUNG NỘI DUNG TAB 2 (LỊCH SỬ PET) ---
+-- --- TAB 2: LỊCH SỬ PET (HIỂN THỊ ĐỘT BIẾN) ---
 local Tab2Content = Instance.new("ScrollingFrame")
 Tab2Content.Size = UDim2.new(1, -10, 1, -70)
 Tab2Content.Position = UDim2.new(0, 5, 0, 65)
@@ -329,7 +326,6 @@ HistoryLayout.SortOrder = Enum.SortOrder.LayoutOrder
 HistoryLayout.Padding = UDim.new(0, 5)
 HistoryLayout.Parent = Tab2Content
 
--- Chức năng chuyển đổi qua lại giữa 2 Tab
 Tab1Btn.MouseButton1Click:Connect(function()
     Tab1Content.Visible = true
     Tab2Content.Visible = false
@@ -347,12 +343,9 @@ Tab2Btn.MouseButton1Click:Connect(function()
     Tab1Btn.TextColor3 = Color3.fromRGB(180, 180, 180)
 end)
 
--- ==========================================
--- HÀM CẬP NHẬT GIAO DIỆN LỊCH SỬ PET
--- ==========================================
 local function addPetToHistoryUI(petData, timeStr)
     local itemFrame = Instance.new("Frame")
-    itemFrame.Size = UDim2.new(1, -5, 0, 50)
+    itemFrame.Size = UDim2.new(1, -5, 0, 62)
     itemFrame.BackgroundColor3 = Color3.fromRGB(35, 35, 42)
     itemFrame.BorderSizePixel = 0
     itemFrame.Parent = Tab2Content
@@ -371,12 +364,12 @@ local function addPetToHistoryUI(petData, timeStr)
     descLabel.TextXAlignment = Enum.TextXAlignment.Left
     descLabel.TextYAlignment = Enum.TextYAlignment.Center
     descLabel.TextWrapped = true
-    descLabel.Text = string.format("🐾 %s\n✨ %s | 💸 %s\n⏰ %s", petData.Name, petData.Rarity, petData.MoneyPerSec, timeStr)
+    -- Hiển thị đầy đủ Tên, Độ hiếm, Đột biến, Tiền và Thời gian VN
+    descLabel.Text = string.format("🐾 %s\n✨ %s | 🧬 %s\n💸 %s | ⏰ %s", petData.Name, petData.Rarity, petData.Mutation, petData.MoneyPerSec, timeStr)
     descLabel.Parent = itemFrame
 
-    -- Tự động tăng chiều dài vùng cuộn lịch sử
     local totalItems = #Tab2Content:GetChildren() - 1
-    Tab2Content.CanvasSize = UDim2.new(0, 0, 0, totalItems * 55)
+    Tab2Content.CanvasSize = UDim2.new(0, 0, 0, totalItems * 67)
 end
 
 -- ==========================================
@@ -485,11 +478,9 @@ local function sendDiscordWebhook(petData)
 
     petsCaughtCount = petsCaughtCount + 1
 
-    -- Lấy thời gian chuẩn theo giờ Việt Nam (UTC+7)
     local vnTimeTable = os.date("!*t", os.time() + 25200)
     local vnTimeString = string.format("%02d:%02d:%02d - %02d/%02d/%d", vnTimeTable.hour, vnTimeTable.min, vnTimeTable.sec, vnTimeTable.day, vnTimeTable.month, vnTimeTable.year)
 
-    -- Đưa vào lịch sử hiển thị trên Tab 2
     addPetToHistoryUI(petData, vnTimeString)
 
     local playerName = LocalPlayer.Name
@@ -536,7 +527,7 @@ local function handleNewItem(newItem)
         itemUID = newItem.Name .. tostring(os.clock())
     end
 
-    if processedItems[itemUID] then return end
+ if processedItems[itemUID] then return end
     processedItems[itemUID] = true
 
     local itemNameLower = string.lower(newItem.Name)
