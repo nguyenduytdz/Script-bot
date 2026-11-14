@@ -4,6 +4,9 @@
 local WebhookURL = "https://discord.com/api/webhooks/1570446166754201803/pPCEG-HczkXcUA2fWQd6pYo62wgLmeBxf1ri812j1AO2W87wWCz1LzoF-6s8tgem5yEo"
 local DiscordUserID = "1494250347731091497"
 
+-- Biến lưu mức lọc tiền hiện tại (Mặc định là 0: Nhận tất cả)
+local CURRENT_MIN_MONEY = 0 
+
 -- ==========================================
 -- KHỞI TẠO DỊCH VỤ & BIẾN TRẠNG THÁI
 -- ==========================================
@@ -39,6 +42,28 @@ local Suffixes = {
     "Vg", "Uvg", "Dvg", "Tvg", "Qavg", "Qivg", "Sxvg", "Spvg", "Ocvg", "Novg", 
     "Tg", "Utg", "Dtg", "Ttg", "Qatg", "Qitg", "Sxtg", "Sptg", "Octg", "Notg"
 }
+
+local function parseRawMoneyToNumber(val)
+    if type(val) == "number" then return val end
+    if type(val) ~= "string" then return 0 end
+
+    val = val:gsub("%$", ""):gsub("/s", ""):gsub(",", ""):gsub("%s+", "")
+    local numPart = tonumber(val:match("[%d%.]+"))
+    if not numPart then return 0 end
+
+    local suffixPart = string.upper(val:match("[%a]+") or "")
+    local multipliers = {
+        K = 1e3, M = 1e6, B = 1e9, T = 1e12,
+        QA = 1e15, QI = 1e18, SX = 1e21, SP = 1e24, OC = 1e27, NO = 1e30,
+        DC = 1e33, UD = 1e36, DD = 1e39, TD = 1e42, QAD = 1e45, QID = 1e48,
+        SXD = 1e51, SPD = 1e54, OCD = 1e57, NOD = 1e60, VG = 1e63
+    }
+
+    if multipliers[suffixPart] then
+        return numPart * multipliers[suffixPart]
+    end
+    return numPart
+end
 
 local function formatBigNumber(val)
     if type(val) == "string" then
@@ -78,9 +103,10 @@ ScreenGui.Name = "ThrowFoodAutoMenu"
 ScreenGui.Parent = CoreGui
 ScreenGui.ResetOnSpawn = false
 
+-- Khung chính mở rộng nhẹ chiều cao lên 270 để chứa menu lọc
 local MainFrame = Instance.new("Frame")
 MainFrame.Name = "MainFrame"
-MainFrame.Size = UDim2.new(0, 270, 0, 230)
+MainFrame.Size = UDim2.new(0, 270, 0, 270)
 MainFrame.Position = UDim2.new(0.05, 0, 0.2, 0)
 MainFrame.BackgroundColor3 = Color3.fromRGB(25, 25, 30)
 MainFrame.BorderSizePixel = 0
@@ -102,8 +128,8 @@ TitleLabel.Font = Enum.Font.GothamBold
 TitleLabel.Parent = MainFrame
 
 local StatusLabel = Instance.new("TextLabel")
-StatusLabel.Size = UDim2.new(1, -20, 0, 75)
-StatusLabel.Position = UDim2.new(0, 10, 0, 40)
+StatusLabel.Size = UDim2.new(1, -20, 0, 70)
+StatusLabel.Position = UDim2.new(0, 10, 0, 36)
 StatusLabel.BackgroundColor3 = Color3.fromRGB(38, 38, 46)
 StatusLabel.TextColor3 = Color3.fromRGB(220, 220, 220)
 StatusLabel.TextSize = 11
@@ -117,34 +143,148 @@ local StatusCorner = Instance.new("UICorner")
 StatusCorner.CornerRadius = UDim.new(0, 8)
 StatusCorner.Parent = StatusLabel
 
--- Nút Toggle Start / Stop
+-- ==========================================
+-- NÚT BẤM MỞ RỘNG DANH SÁCH LỌC TIỀN (Nằm sát trên nút Start)
+-- ==========================================
+local FilterDropdownBtn = Instance.new("TextButton")
+FilterDropdownBtn.Size = UDim2.new(1, -20, 0, 30)
+FilterDropdownBtn.Position = UDim2.new(0, 10, 0, 112)
+FilterDropdownBtn.BackgroundColor3 = Color3.fromRGB(45, 45, 55)
+FilterDropdownBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+FilterDropdownBtn.TextSize = 12
+FilterDropdownBtn.Font = Enum.Font.GothamBold
+FilterDropdownBtn.Text = "🔽 Lọc Tiền: Tất cả (0)"
+FilterDropdownBtn.Parent = MainFrame
+
+local FilterBtnCorner = Instance.new("UICorner")
+FilterBtnCorner.CornerRadius = UDim.new(0, 6)
+FilterBtnCorner.Parent = FilterDropdownBtn
+
+-- Danh sách lựa chọn các mốc tiền (Ẩn mặc định)
+local DropdownListFrame = Instance.new("ScrollingFrame")
+DropdownListFrame.Size = UDim2.new(1, -20, 0, 95)
+DropdownListFrame.Position = UDim2.new(0, 10, 0, 145)
+DropdownListFrame.BackgroundColor3 = Color3.fromRGB(35, 35, 42)
+DropdownListFrame.BorderSizePixel = 0
+DropdownListFrame.Visible = false
+DropdownListFrame.CanvasSize = UDim2.new(0, 0, 0, 220)
+DropdownListFrame.ScrollBarThickness = 4
+DropdownListFrame.Parent = MainFrame
+
+local DropdownCorner = Instance.new("UICorner")
+DropdownCorner.CornerRadius = Instance.new("UICorner") and UDim.new(0, 6)
+DropdownCorner.Parent = DropdownListFrame
+
+local UIListLayout = Instance.new("UIListLayout")
+UIListLayout.SortOrder = Enum.SortOrder.LayoutOrder
+UIListLayout.Padding = UDim.new(0, 3)
+UIListLayout.Parent = DropdownListFrame
+
+-- Hàm tạo các lựa chọn mốc tiền trong danh sách
+local function createFilterOption(name, val)
+    local optBtn = Instance.new("TextButton")
+    optBtn.Size = UDim2.new(1, -4, 0, 24)
+    optBtn.BackgroundColor3 = Color3.fromRGB(50, 50, 60)
+    optBtn.TextColor3 = Color3.fromRGB(240, 240, 240)
+    optBtn.TextSize = 11
+    optBtn.Font = Enum.Font.Gotham
+    optBtn.Text = name
+    optBtn.Parent = DropdownListFrame
+
+    local optCorner = Instance.new("UICorner")
+    optCorner.CornerRadius = UDim.new(0, 4)
+    optCorner.Parent = optBtn
+
+    optBtn.MouseButton1Click:Connect(function()
+        CURRENT_MIN_MONEY = val
+        FilterDropdownBtn.Text = "🔽 Lọc Tiền: " .. name
+        DropdownListFrame.Visible = false
+    end)
+    optBtn.TouchTap:Connect(function()
+        CURRENT_MIN_MONEY = val
+        FilterDropdownBtn.Text = "🔽 Lọc Tiền: " .. name
+        DropdownListFrame.Visible = false
+    end)
+end
+
+-- Thêm các mốc lọc tiền tùy chọn
+createFilterOption("Tất cả (Nhận hết)", 0)
+createFilterOption("Từ 1M+ /s", 1e6)
+createFilterOption("Từ 1B+ /s", 1e9)
+createFilterOption("Từ 1T+ /s", 1e12)
+createFilterOption("Từ 1Qa+ /s", 1e15)
+createFilterOption("Từ 1spd+ /s", 1e54)
+
+-- Sự kiện bấm nút mũi tên để ẩn/hiện danh sách lọc tiền
+local isDropdownOpen = false
+FilterDropdownBtn.MouseButton1Click:Connect(function()
+    isDropdownOpen = not isDropdownOpen
+    DropdownListFrame.Visible = isDropdownOpen
+    if isDropdownOpen then
+        FilterDropdownBtn.Text = "🔼 Đóng bảng lọc tiền"
+    else
+        FilterDropdownBtn.Text = "🔽 Lọc Tiền: " .. (CURRENT_MIN_MONEY == 0 and "Tất cả" or formatBigNumber(CURRENT_MIN_MONEY) .. "+")
+    end
+end)
+FilterDropdownBtn.TouchTap:Connect(function()
+    isDropdownOpen = not isDropdownOpen
+    DropdownListFrame.Visible = isDropdownOpen
+    if isDropdownOpen then
+        FilterDropdownBtn.Text = "🔼 Đóng bảng lọc tiền"
+    else
+        FilterDropdownBtn.Text = "🔽 Lọc Tiền: " .. (CURRENT_MIN_MONEY == 0 and "Tất cả" or formatBigNumber(CURRENT_MIN_MONEY) .. "+")
+    end
+end)
+
+-- ==========================================
+-- NÚT TOGGLE START / STOP (Định vị dịch xuống dưới một chút)
+-- ==========================================
 local ToggleButton = Instance.new("TextButton")
-ToggleButton.Size = UDim2.new(1, -20, 0, 42)
-ToggleButton.Position = UDim2.new(0, 10, 0, 125)
+ToggleButton.Size = UDim2.new(1, -20, 0, 38)
+ToggleButton.Position = UDim2.new(0, 10, 0, 146) -- Đổi vị trí nằm ngay dưới nút lọc khi đóng menu
+DropdownListFrame:GetPropertyChangedSignal("Visible"):Connect(function()
+    if DropdownListFrame.Visible then
+        ToggleButton.Position = UDim2.new(0, 10, 0, 245)
+    else
+        ToggleButton.Position = UDim2.new(0, 10, 0, 146)
+    end
+end)
+
 ToggleButton.BackgroundColor3 = Color3.fromRGB(224, 86, 36)
 ToggleButton.TextColor3 = Color3.fromRGB(255, 255, 255)
-ToggleButton.TextSize = 15
+ToggleButton.TextSize = 14
 ToggleButton.Font = Enum.Font.GothamBold
 ToggleButton.Text = "START SCRIPT"
 ToggleButton.Parent = MainFrame
 
 local ButtonCorner = Instance.new("UICorner")
-ButtonCorner.CornerRadius = UDim.new(0, 10)
+ButtonCorner.CornerRadius = UDim.new(0, 8)
 ButtonCorner.Parent = ToggleButton
 
 local FooterLabel = Instance.new("TextLabel")
-FooterLabel.Size = UDim2.new(1, -20, 0, 45)
-FooterLabel.Position = UDim2.new(0, 10, 0, 175)
+FooterLabel.Size = UDim2.new(1, -20, 0, 35)
+FooterLabel.Position = UDim2.new(0, 10, 0, 228)
 FooterLabel.BackgroundTransparency = 1
 FooterLabel.TextColor3 = Color3.fromRGB(160, 160, 170)
 FooterLabel.TextSize = 11
 FooterLabel.Font = Enum.Font.Gotham
 FooterLabel.TextWrapped = true
-FooterLabel.Text = "Đã gửi: 0 thú\nTrạng thái: 🔴 Đang dừng (Stopped)"
+FooterLabel.Text = "Đã gửi: 0 thú | Trạng thái: 🔴 Đang dừng"
 FooterLabel.Parent = MainFrame
 
+-- Tự động điều chỉnh vị trí Footer khi mở/đóng danh sách lọc
+DropdownListFrame:GetPropertyChangedSignal("Visible"):Connect(function()
+    if DropdownListFrame.Visible then
+        MainFrame.Size = UDim2.new(0, 270, 0, 320)
+        FooterLabel.Position = UDim2.new(0, 10, 0, 285)
+    else
+        MainFrame.Size = UDim2.new(0, 270, 0, 270)
+        FooterLabel.Position = UDim2.new(0, 10, 0, 228)
+    end
+end)
+
 -- ==========================================
--- HÀM QUÉT THÔNG TIN THÚ (CHỈ LẤY TÊN, RARITY, MUTATION, TIỀN)
+-- HÀM QUÉT THÔNG TIN THÚ & GỬI WEBHOOK
 -- ==========================================
 local function getRarityColor(rarity)
     local r = string.lower(tostring(rarity))
@@ -168,7 +308,8 @@ local function extractPetInfo(item)
         Name = item.Name,
         Rarity = "Thường (Common)",
         Mutation = "Mặc định (Normal)",
-        RawMoney = nil
+        RawMoney = nil,
+        NumericMoney = 0
     }
 
     for key, val in pairs(item:GetAttributes()) do
@@ -203,6 +344,10 @@ local function extractPetInfo(item)
         end
     end
 
+    if info.RawMoney then
+        info.NumericMoney = parseRawMoneyToNumber(info.RawMoney)
+    end
+
     local finalMoney = "Không rõ"
     if info.RawMoney then
         finalMoney = formatBigNumber(info.RawMoney)
@@ -217,6 +362,12 @@ end
 
 local function sendDiscordWebhook(petData)
     if not isRunning then return end
+
+    -- Lọc theo mốc tiền được chọn trên giao diện menu
+    if CURRENT_MIN_MONEY > 0 and petData.NumericMoney < CURRENT_MIN_MONEY then
+        return 
+    end
+
     petsCaughtCount = petsCaughtCount + 1
 
     local playerName = LocalPlayer.Name
@@ -253,7 +404,7 @@ local function sendDiscordWebhook(petData)
 end
 
 -- ==========================================
--- BỘ LỌC CHỐNG TRÙNG LẶP TUYỆT ĐỐI (1 THÚ = 1 TIN NHẮN)
+-- BỘ LỌC CHỐNG TRÙNG LẶP (1 THÚ = 1 TIN NHẮN)
 -- ==========================================
 local function handleNewItem(newItem)
     if not isRunning then return end
@@ -288,7 +439,7 @@ LocalPlayer.CharacterAdded:Connect(function()
 end)
 
 -- ==========================================
--- XỬ LÝ SỰ KIỆN NÚT BẤM
+-- XỬ LÝ SỰ KIỆN NÚT BẤM START/STOP
 -- ==========================================
 local function toggleScriptState()
     isRunning = not isRunning
@@ -339,12 +490,12 @@ RunService.RenderStepped:Connect(function()
             " ⏱️ Đã chạy: %s | 🇻🇳 %s\n 🎮 Game: %s\n ⚡ FPS: %d | 📶 Ping: %dms",
             runTimeStr, vnClockStr, cachedGameName, currentFps, ping
         )
-        FooterLabel.Text = string.format("Đã gửi: %d thú về Discord\nTrạng thái: 🟢 Đang chạy (Active)", petsCaughtCount)
+        FooterLabel.Text = string.format("Đã gửi: %d thú | Trạng thái: 🟢 Đang chạy", petsCaughtCount)
     else
         StatusLabel.Text = string.format(
             " ⏱️ Đã chạy: 00:00:00 | 🇻🇳 %s\n 🎮 Game: %s\n ⚡ FPS: %d | 📶 Ping: %dms",
-            vnClockStr, vnClockStr, cachedGameName, currentFps, ping
+            vnClockStr, cachedGameName, currentFps, ping
         )
-        FooterLabel.Text = string.format("Đã gửi: %d thú về Discord\nTrạng thái: 🔴 Đang dừng (Stopped)", petsCaughtCount)
+        FooterLabel.Text = string.format("Đã gửi: %d thú | Trạng thái: 🔴 Đang dừng", petsCaughtCount)
     end
 end)
