@@ -103,7 +103,6 @@ ScreenGui.Name = "ThrowFoodAutoMenu"
 ScreenGui.Parent = CoreGui
 ScreenGui.ResetOnSpawn = false
 
--- Khung chính mở rộng nhẹ chiều cao lên 270 để chứa menu lọc
 local MainFrame = Instance.new("Frame")
 MainFrame.Name = "MainFrame"
 MainFrame.Size = UDim2.new(0, 270, 0, 270)
@@ -143,9 +142,7 @@ local StatusCorner = Instance.new("UICorner")
 StatusCorner.CornerRadius = UDim.new(0, 8)
 StatusCorner.Parent = StatusLabel
 
--- ==========================================
--- NÚT BẤM MỞ RỘNG DANH SÁCH LỌC TIỀN (Nằm sát trên nút Start)
--- ==========================================
+-- Nút Dropdown Lọc Tiền
 local FilterDropdownBtn = Instance.new("TextButton")
 FilterDropdownBtn.Size = UDim2.new(1, -20, 0, 30)
 FilterDropdownBtn.Position = UDim2.new(0, 10, 0, 112)
@@ -160,7 +157,6 @@ local FilterBtnCorner = Instance.new("UICorner")
 FilterBtnCorner.CornerRadius = UDim.new(0, 6)
 FilterBtnCorner.Parent = FilterDropdownBtn
 
--- Danh sách lựa chọn các mốc tiền (Ẩn mặc định)
 local DropdownListFrame = Instance.new("ScrollingFrame")
 DropdownListFrame.Size = UDim2.new(1, -20, 0, 95)
 DropdownListFrame.Position = UDim2.new(0, 10, 0, 145)
@@ -172,7 +168,7 @@ DropdownListFrame.ScrollBarThickness = 4
 DropdownListFrame.Parent = MainFrame
 
 local DropdownCorner = Instance.new("UICorner")
-DropdownCorner.CornerRadius = Instance.new("UICorner") and UDim.new(0, 6)
+DropdownCorner.CornerRadius = UDim.new(0, 6)
 DropdownCorner.Parent = DropdownListFrame
 
 local UIListLayout = Instance.new("UIListLayout")
@@ -180,7 +176,6 @@ UIListLayout.SortOrder = Enum.SortOrder.LayoutOrder
 UIListLayout.Padding = UDim.new(0, 3)
 UIListLayout.Parent = DropdownListFrame
 
--- Hàm tạo các lựa chọn mốc tiền trong danh sách
 local function createFilterOption(name, val)
     local optBtn = Instance.new("TextButton")
     optBtn.Size = UDim2.new(1, -4, 0, 24)
@@ -207,7 +202,6 @@ local function createFilterOption(name, val)
     end)
 end
 
--- Thêm các mốc lọc tiền tùy chọn
 createFilterOption("Tất cả (Nhận hết)", 0)
 createFilterOption("Từ 1M+ /s", 1e6)
 createFilterOption("Từ 1B+ /s", 1e9)
@@ -215,7 +209,6 @@ createFilterOption("Từ 1T+ /s", 1e12)
 createFilterOption("Từ 1Qa+ /s", 1e15)
 createFilterOption("Từ 1spd+ /s", 1e54)
 
--- Sự kiện bấm nút mũi tên để ẩn/hiện danh sách lọc tiền
 local isDropdownOpen = false
 FilterDropdownBtn.MouseButton1Click:Connect(function()
     isDropdownOpen = not isDropdownOpen
@@ -236,12 +229,10 @@ FilterDropdownBtn.TouchTap:Connect(function()
     end
 end)
 
--- ==========================================
--- NÚT TOGGLE START / STOP (Định vị dịch xuống dưới một chút)
--- ==========================================
+-- Nút Toggle Start / Stop
 local ToggleButton = Instance.new("TextButton")
 ToggleButton.Size = UDim2.new(1, -20, 0, 38)
-ToggleButton.Position = UDim2.new(0, 10, 0, 146) -- Đổi vị trí nằm ngay dưới nút lọc khi đóng menu
+ToggleButton.Position = UDim2.new(0, 10, 0, 146)
 DropdownListFrame:GetPropertyChangedSignal("Visible"):Connect(function()
     if DropdownListFrame.Visible then
         ToggleButton.Position = UDim2.new(0, 10, 0, 245)
@@ -272,7 +263,6 @@ FooterLabel.TextWrapped = true
 FooterLabel.Text = "Đã gửi: 0 thú | Trạng thái: 🔴 Đang dừng"
 FooterLabel.Parent = MainFrame
 
--- Tự động điều chỉnh vị trí Footer khi mở/đóng danh sách lọc
 DropdownListFrame:GetPropertyChangedSignal("Visible"):Connect(function()
     if DropdownListFrame.Visible then
         MainFrame.Size = UDim2.new(0, 270, 0, 320)
@@ -284,20 +274,42 @@ DropdownListFrame:GetPropertyChangedSignal("Visible"):Connect(function()
 end)
 
 -- ==========================================
--- HÀM QUÉT THÔNG TIN THÚ & GỬI WEBHOOK
+-- HÀM QUÉT MÀU SẮC TRỰC TIẾP TỪ THÚ TRONG GAME
 -- ==========================================
-local function getRarityColor(rarity)
-    local r = string.lower(tostring(rarity))
-    if string.find(r, "sovereign") or string.find(r, "mythic") or string.find(r, "secret") then
-        return 16711680
+local function getPetRealColor(item, rarityStr)
+    -- 1. Ưu tiên quét các thuộc tính màu sắc (Color3 / BrickColor) trực tiếp từ vật phẩm trong game
+    for key, val in pairs(item:GetAttributes()) do
+        local k = string.lower(key)
+        if (string.find(k, "color") or string.find(k, "colour") or string.find(k, "rgb")) and typeof(val) == "Color3" then
+            return math.floor(val.R * 255) * 65536 + math.floor(val.G * 255) * 256 + math.floor(val.B * 255)
+        end
+    end
+
+    -- 2. Quét các phần tử con bên trong item có chứa thông tin màu sắc
+    for _, child in ipairs(item:GetDescendants()) do
+        if child:IsA("BasePart") then
+            local col = child.Color
+            return math.floor(col.R * 255) * 65536 + math.floor(col.G * 255) * 256 + math.floor(col.B * 255)
+        elseif child:IsA("Highlight") and child.FillColor then
+            local col = child.FillColor
+            return math.floor(col.R * 255) * 65536 + math.floor(col.G * 255) * 256 + math.floor(col.B * 255)
+        end
+    end
+
+    -- 3. Fallback theo tên độ hiếm thực tế trong game nếu item không có thuộc tính màu 3D
+    local r = string.lower(tostring(rarityStr))
+    if string.find(r, "sovereign") or string.find(r, "secret") then
+        return 16711680 -- Đỏ rực
+    elseif string.find(r, "mythic") then
+        return 11141375 -- Hồng / Tím đặc biệt
     elseif string.find(r, "legendary") then
-        return 16766720
+        return 16766720 -- Vàng óng
     elseif string.find(r, "epic") then
-        return 10181046
+        return 10181046 -- Tím đậm
     elseif string.find(r, "rare") then
-        return 3447003
+        return 3447003  -- Xanh dương
     else
-        return 9807270
+        return 9807270  -- Xám / Thường
     end
 end
 
@@ -357,13 +369,13 @@ local function extractPetInfo(item)
     end
 
     info.MoneyPerSec = finalMoney
+    info.EmbedColor = getPetRealColor(item, info.Rarity) -- Lấy màu thực tế của thú
     return info
 end
 
 local function sendDiscordWebhook(petData)
     if not isRunning then return end
 
-    -- Lọc theo mốc tiền được chọn trên giao diện menu
     if CURRENT_MIN_MONEY > 0 and petData.NumericMoney < CURRENT_MIN_MONEY then
         return 
     end
@@ -380,7 +392,7 @@ local function sendDiscordWebhook(petData)
         ["content"] = "<@" .. DiscordUserID .. "> 🎉 Bạn vừa bắt được một sinh vật mới!",
         ["embeds"] = {{
             ["title"] = "🐾 BẮT ĐƯỢC THÚ MỚI: " .. petData.Name,
-            ["color"] = getRarityColor(petData.Rarity),
+            ["color"] = petData.EmbedColor, -- Màu sắc chuẩn xác của thú trong game
             ["thumbnail"] = { ["url"] = avatarThumb },
             ["fields"] = {
                 { ["name"] = "✨ Độ hiếm (Rarity)", ["value"] = "`" .. petData.Rarity .. "`", ["inline"] = true },
@@ -404,7 +416,7 @@ local function sendDiscordWebhook(petData)
 end
 
 -- ==========================================
--- BỘ LỌC CHỐNG TRÙNG LẶP (1 THÚ = 1 TIN NHẮN)
+-- BỘ LỌC CHỐNG TRÙNG LẶP TUYỆT ĐỐI
 -- ==========================================
 local function handleNewItem(newItem)
     if not isRunning then return end
