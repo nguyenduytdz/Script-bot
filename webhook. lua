@@ -311,7 +311,7 @@ DropdownListFrame:GetPropertyChangedSignal("Visible"):Connect(function()
     end
 end)
 
--- --- TAB 2: LỊCH SỬ PET (HIỂN THỊ ĐỘT BIẾN) ---
+-- --- TAB 2: LỊCH SỬ PET (TÁCH BIỆT RÕ RÀNG TÊN, ĐỘ HIẾM, ĐỘT BIẾN, TIỀN, GIỜ) ---
 local Tab2Content = Instance.new("ScrollingFrame")
 Tab2Content.Size = UDim2.new(1, -10, 1, -70)
 Tab2Content.Position = UDim2.new(0, 5, 0, 65)
@@ -345,7 +345,7 @@ end)
 
 local function addPetToHistoryUI(petData, timeStr)
     local itemFrame = Instance.new("Frame")
-    itemFrame.Size = UDim2.new(1, -5, 0, 62)
+    itemFrame.Size = UDim2.new(1, -5, 0, 72)
     itemFrame.BackgroundColor3 = Color3.fromRGB(35, 35, 42)
     itemFrame.BorderSizePixel = 0
     itemFrame.Parent = Tab2Content
@@ -364,12 +364,12 @@ local function addPetToHistoryUI(petData, timeStr)
     descLabel.TextXAlignment = Enum.TextXAlignment.Left
     descLabel.TextYAlignment = Enum.TextYAlignment.Center
     descLabel.TextWrapped = true
-    -- Hiển thị đầy đủ Tên, Độ hiếm, Đột biến, Tiền và Thời gian VN
-    descLabel.Text = string.format("🐾 %s\n✨ %s | 🧬 %s\n💸 %s | ⏰ %s", petData.Name, petData.Rarity, petData.Mutation, petData.MoneyPerSec, timeStr)
+    -- Tách biệt rõ ràng từng dòng thông tin y hệt yêu cầu của bạn
+    descLabel.Text = string.format("🐾 Tên: %s\n✨ Độ hiếm: %s\n🧬 Đột biến: %s\n💸 Tiền/s: %s\n⏰ Lúc: %s", petData.Name, petData.Rarity, petData.Mutation, petData.MoneyPerSec, timeStr)
     descLabel.Parent = itemFrame
 
     local totalItems = #Tab2Content:GetChildren() - 1
-    Tab2Content.CanvasSize = UDim2.new(0, 0, 0, totalItems * 67)
+    Tab2Content.CanvasSize = UDim2.new(0, 0, 0, totalItems * 77)
 end
 
 -- ==========================================
@@ -527,7 +527,7 @@ local function handleNewItem(newItem)
         itemUID = newItem.Name .. tostring(os.clock())
     end
 
- if processedItems[itemUID] then return end
+    if processedItems[itemUID] then return end
     processedItems[itemUID] = true
 
     local itemNameLower = string.lower(newItem.Name)
