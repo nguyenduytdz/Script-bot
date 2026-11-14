@@ -27,6 +27,7 @@ local isRunning = false
 local startTime = 0
 local petsCaughtCount = 0
 local processedItems = {} 
+local petHistoryList = {} -- Bảng lưu lịch sử pet đã bắt
 
 local cachedGameName = "Throw Food For Animals"
 pcall(function()
@@ -92,7 +93,7 @@ local function formatBigNumber(val)
 end
 
 -- ==========================================
--- TẠO GIAO DIỆN (UI) MENU TRỰC QUAN
+-- TẠO GIAO DIỆN (UI) MENU 2 TAB TRỰC QUAN
 -- ==========================================
 if CoreGui:FindFirstChild("ThrowFoodAutoMenu") then
     CoreGui.ThrowFoodAutoMenu:Destroy()
@@ -105,7 +106,7 @@ ScreenGui.ResetOnSpawn = false
 
 local MainFrame = Instance.new("Frame")
 MainFrame.Name = "MainFrame"
-MainFrame.Size = UDim2.new(0, 270, 0, 270)
+MainFrame.Size = UDim2.new(0, 300, 0, 310)
 MainFrame.Position = UDim2.new(0.05, 0, 0.2, 0)
 MainFrame.BackgroundColor3 = Color3.fromRGB(25, 25, 30)
 MainFrame.BorderSizePixel = 0
@@ -118,17 +119,59 @@ UICorner.CornerRadius = UDim.new(0, 14)
 UICorner.Parent = MainFrame
 
 local TitleLabel = Instance.new("TextLabel")
-TitleLabel.Size = UDim2.new(1, 0, 0, 36)
+TitleLabel.Size = UDim2.new(1, 0, 0, 32)
 TitleLabel.BackgroundTransparency = 1
 TitleLabel.Text = "🐾 Throw Food Auto Logger"
 TitleLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
-TitleLabel.TextSize = 14
+TitleLabel.TextSize = 13
 TitleLabel.Font = Enum.Font.GothamBold
 TitleLabel.Parent = MainFrame
 
+-- --- THANH CHUYỂN TAB (TAB MENU) ---
+local TabContainer = Instance.new("Frame")
+TabContainer.Size = UDim2.new(1, -20, 0, 30)
+TabContainer.Position = UDim2.new(0, 10, 0, 32)
+TabContainer.BackgroundTransparency = 1
+TabContainer.Parent = MainFrame
+
+local Tab1Btn = Instance.new("TextButton")
+Tab1Btn.Size = UDim2.new(0.48, 0, 1, 0)
+Tab1Btn.BackgroundColor3 = Color3.fromRGB(46, 204, 113) -- Mặc định sáng Tab 1
+Tab1Btn.TextColor3 = Color3.fromRGB(255, 255, 255)
+Tab1Btn.TextSize = 11
+Tab1Btn.Font = Enum.Font.GothamBold
+Tab1Btn.Text = "🚀 Gửi Webhook"
+Tab1Btn.Parent = TabContainer
+
+local Tab1Corner = Instance.new("UICorner")
+Tab1Corner.CornerRadius = UDim.new(0, 6)
+Tab1Corner.Parent = Tab1Btn
+
+local Tab2Btn = Instance.new("TextButton")
+Tab2Btn.Size = UDim2.new(0.48, 0, 1, 0)
+Tab2Btn.Position = UDim2.new(0.52, 0, 0, 0)
+Tab2Btn.BackgroundColor3 = Color3.fromRGB(45, 45, 55)
+Tab2Btn.TextColor3 = Color3.fromRGB(180, 180, 180)
+Tab2Btn.TextSize = 11
+Tab2Btn.Font = Enum.Font.GothamBold
+Tab2Btn.Text = "📜 Lịch sử Pet"
+Tab2Btn.Parent = TabContainer
+
+local Tab2Corner = Instance.new("UICorner")
+Tab2Corner.CornerRadius = UDim.new(0, 6)
+Tab2Corner.Parent = Tab2Btn
+
+-- --- KHUNG NỘI DUNG TAB 1 (GỬI WEBHOOK & ĐIỀU KHIỂN) ---
+local Tab1Content = Instance.new("Frame")
+Tab1Content.Size = UDim2.new(1, 0, 1, -70)
+Tab1Content.Position = UDim2.new(0, 0, 0, 65)
+Tab1Content.BackgroundTransparency = 1
+Tab1Content.Visible = true
+Tab1Content.Parent = MainFrame
+
 local StatusLabel = Instance.new("TextLabel")
-StatusLabel.Size = UDim2.new(1, -20, 0, 70)
-StatusLabel.Position = UDim2.new(0, 10, 0, 36)
+StatusLabel.Size = UDim2.new(1, -20, 0, 65)
+StatusLabel.Position = UDim2.new(0, 10, 0, 0)
 StatusLabel.BackgroundColor3 = Color3.fromRGB(38, 38, 46)
 StatusLabel.TextColor3 = Color3.fromRGB(220, 220, 220)
 StatusLabel.TextSize = 11
@@ -136,7 +179,7 @@ StatusLabel.Font = Enum.Font.Code
 StatusLabel.TextWrapped = true
 StatusLabel.TextXAlignment = Enum.TextXAlignment.Left
 StatusLabel.TextYAlignment = Enum.TextYAlignment.Top
-StatusLabel.Parent = MainFrame
+StatusLabel.Parent = Tab1Content
 
 local StatusCorner = Instance.new("UICorner")
 StatusCorner.CornerRadius = UDim.new(0, 8)
@@ -144,28 +187,28 @@ StatusCorner.Parent = StatusLabel
 
 -- Nút Dropdown Lọc Tiền
 local FilterDropdownBtn = Instance.new("TextButton")
-FilterDropdownBtn.Size = UDim2.new(1, -20, 0, 30)
-FilterDropdownBtn.Position = UDim2.new(0, 10, 0, 112)
+FilterDropdownBtn.Size = UDim2.new(1, -20, 0, 28)
+FilterDropdownBtn.Position = UDim2.new(0, 10, 0, 72)
 FilterDropdownBtn.BackgroundColor3 = Color3.fromRGB(45, 45, 55)
 FilterDropdownBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-FilterDropdownBtn.TextSize = 12
+FilterDropdownBtn.TextSize = 11
 FilterDropdownBtn.Font = Enum.Font.GothamBold
 FilterDropdownBtn.Text = "🔽 Lọc Tiền: Tất cả (0)"
-FilterDropdownBtn.Parent = MainFrame
+FilterDropdownBtn.Parent = Tab1Content
 
 local FilterBtnCorner = Instance.new("UICorner")
 FilterBtnCorner.CornerRadius = UDim.new(0, 6)
 FilterBtnCorner.Parent = FilterDropdownBtn
 
 local DropdownListFrame = Instance.new("ScrollingFrame")
-DropdownListFrame.Size = UDim2.new(1, -20, 0, 95)
-DropdownListFrame.Position = UDim2.new(0, 10, 0, 145)
+DropdownListFrame.Size = UDim2.new(1, -20, 0, 90)
+DropdownListFrame.Position = UDim2.new(0, 10, 0, 103)
 DropdownListFrame.BackgroundColor3 = Color3.fromRGB(35, 35, 42)
 DropdownListFrame.BorderSizePixel = 0
 DropdownListFrame.Visible = false
-DropdownListFrame.CanvasSize = UDim2.new(0, 0, 0, 220)
+DropdownListFrame.CanvasSize = UDim2.new(0, 0, 0, 200)
 DropdownListFrame.ScrollBarThickness = 4
-DropdownListFrame.Parent = MainFrame
+DropdownListFrame.Parent = Tab1Content
 
 local DropdownCorner = Instance.new("UICorner")
 DropdownCorner.CornerRadius = UDim.new(0, 6)
@@ -231,53 +274,115 @@ end)
 
 -- Nút Toggle Start / Stop
 local ToggleButton = Instance.new("TextButton")
-ToggleButton.Size = UDim2.new(1, -20, 0, 38)
-ToggleButton.Position = UDim2.new(0, 10, 0, 146)
+ToggleButton.Size = UDim2.new(1, -20, 0, 36)
+ToggleButton.Position = UDim2.new(0, 10, 0, 105)
 DropdownListFrame:GetPropertyChangedSignal("Visible"):Connect(function()
     if DropdownListFrame.Visible then
-        ToggleButton.Position = UDim2.new(0, 10, 0, 245)
+        ToggleButton.Position = UDim2.new(0, 10, 0, 198)
     else
-        ToggleButton.Position = UDim2.new(0, 10, 0, 146)
+        ToggleButton.Position = UDim2.new(0, 10, 0, 105)
     end
 end)
 
 ToggleButton.BackgroundColor3 = Color3.fromRGB(224, 86, 36)
 ToggleButton.TextColor3 = Color3.fromRGB(255, 255, 255)
-ToggleButton.TextSize = 14
+ToggleButton.TextSize = 13
 ToggleButton.Font = Enum.Font.GothamBold
 ToggleButton.Text = "START SCRIPT"
-ToggleButton.Parent = MainFrame
+ToggleButton.Parent = Tab1Content
 
 local ButtonCorner = Instance.new("UICorner")
 ButtonCorner.CornerRadius = UDim.new(0, 8)
 ButtonCorner.Parent = ToggleButton
 
 local FooterLabel = Instance.new("TextLabel")
-FooterLabel.Size = UDim2.new(1, -20, 0, 35)
-FooterLabel.Position = UDim2.new(0, 10, 0, 228)
+FooterLabel.Size = UDim2.new(1, -20, 0, 30)
+FooterLabel.Position = UDim2.new(0, 10, 0, 195)
 FooterLabel.BackgroundTransparency = 1
 FooterLabel.TextColor3 = Color3.fromRGB(160, 160, 170)
 FooterLabel.TextSize = 11
 FooterLabel.Font = Enum.Font.Gotham
 FooterLabel.TextWrapped = true
 FooterLabel.Text = "Đã gửi: 0 thú | Trạng thái: 🔴 Đang dừng"
-FooterLabel.Parent = MainFrame
+FooterLabel.Parent = Tab1Content
 
 DropdownListFrame:GetPropertyChangedSignal("Visible"):Connect(function()
     if DropdownListFrame.Visible then
-        MainFrame.Size = UDim2.new(0, 270, 0, 320)
-        FooterLabel.Position = UDim2.new(0, 10, 0, 285)
+        FooterLabel.Position = UDim2.new(0, 10, 0, 238)
     else
-        MainFrame.Size = UDim2.new(0, 270, 0, 270)
-        FooterLabel.Position = UDim2.new(0, 10, 0, 228)
+        FooterLabel.Position = UDim2.new(0, 10, 0, 195)
     end
 end)
 
+-- --- KHUNG NỘI DUNG TAB 2 (LỊCH SỬ PET) ---
+local Tab2Content = Instance.new("ScrollingFrame")
+Tab2Content.Size = UDim2.new(1, -10, 1, -70)
+Tab2Content.Position = UDim2.new(0, 5, 0, 65)
+Tab2Content.BackgroundTransparency = 1
+Tab2Content.Visible = false
+Tab2Content.CanvasSize = UDim2.new(0, 0, 0, 0)
+Tab2Content.ScrollBarThickness = 4
+Tab2Content.Parent = MainFrame
+
+local HistoryLayout = Instance.new("UIListLayout")
+HistoryLayout.SortOrder = Enum.SortOrder.LayoutOrder
+HistoryLayout.Padding = UDim.new(0, 5)
+HistoryLayout.Parent = Tab2Content
+
+-- Chức năng chuyển đổi qua lại giữa 2 Tab
+Tab1Btn.MouseButton1Click:Connect(function()
+    Tab1Content.Visible = true
+    Tab2Content.Visible = false
+    Tab1Btn.BackgroundColor3 = Color3.fromRGB(46, 204, 113)
+    Tab1Btn.TextColor3 = Color3.fromRGB(255, 255, 255)
+    Tab2Btn.BackgroundColor3 = Color3.fromRGB(45, 45, 55)
+    Tab2Btn.TextColor3 = Color3.fromRGB(180, 180, 180)
+end)
+Tab2Btn.MouseButton1Click:Connect(function()
+    Tab1Content.Visible = false
+    Tab2Content.Visible = true
+    Tab2Btn.BackgroundColor3 = Color3.fromRGB(46, 204, 113)
+    Tab2Btn.TextColor3 = Color3.fromRGB(255, 255, 255)
+    Tab1Btn.BackgroundColor3 = Color3.fromRGB(45, 45, 55)
+    Tab1Btn.TextColor3 = Color3.fromRGB(180, 180, 180)
+end)
+
 -- ==========================================
--- HÀM QUÉT MÀU SẮC TRỰC TIẾP TỪ THÚ TRONG GAME
+-- HÀM CẬP NHẬT GIAO DIỆN LỊCH SỬ PET
+-- ==========================================
+local function addPetToHistoryUI(petData, timeStr)
+    local itemFrame = Instance.new("Frame")
+    itemFrame.Size = UDim2.new(1, -5, 0, 50)
+    itemFrame.BackgroundColor3 = Color3.fromRGB(35, 35, 42)
+    itemFrame.BorderSizePixel = 0
+    itemFrame.Parent = Tab2Content
+
+    local itemCorner = Instance.new("UICorner")
+    itemCorner.CornerRadius = UDim.new(0, 6)
+    itemCorner.Parent = itemFrame
+
+    local descLabel = Instance.new("TextLabel")
+    descLabel.Size = UDim2.new(1, -10, 1, 0)
+    descLabel.Position = UDim2.new(0, 5, 0, 0)
+    descLabel.BackgroundTransparency = 1
+    descLabel.TextColor3 = Color3.fromRGB(230, 230, 240)
+    descLabel.TextSize = 11
+    descLabel.Font = Enum.Font.Code
+    descLabel.TextXAlignment = Enum.TextXAlignment.Left
+    descLabel.TextYAlignment = Enum.TextYAlignment.Center
+    descLabel.TextWrapped = true
+    descLabel.Text = string.format("🐾 %s\n✨ %s | 💸 %s\n⏰ %s", petData.Name, petData.Rarity, petData.MoneyPerSec, timeStr)
+    descLabel.Parent = itemFrame
+
+    -- Tự động tăng chiều dài vùng cuộn lịch sử
+    local totalItems = #Tab2Content:GetChildren() - 1
+    Tab2Content.CanvasSize = UDim2.new(0, 0, 0, totalItems * 55)
+end
+
+-- ==========================================
+-- HÀM QUÉT MÀU SẮC & THÔNG TIN THÚ
 -- ==========================================
 local function getPetRealColor(item, rarityStr)
-    -- 1. Ưu tiên quét các thuộc tính màu sắc (Color3 / BrickColor) trực tiếp từ vật phẩm trong game
     for key, val in pairs(item:GetAttributes()) do
         local k = string.lower(key)
         if (string.find(k, "color") or string.find(k, "colour") or string.find(k, "rgb")) and typeof(val) == "Color3" then
@@ -285,7 +390,6 @@ local function getPetRealColor(item, rarityStr)
         end
     end
 
-    -- 2. Quét các phần tử con bên trong item có chứa thông tin màu sắc
     for _, child in ipairs(item:GetDescendants()) do
         if child:IsA("BasePart") then
             local col = child.Color
@@ -296,20 +400,19 @@ local function getPetRealColor(item, rarityStr)
         end
     end
 
-    -- 3. Fallback theo tên độ hiếm thực tế trong game nếu item không có thuộc tính màu 3D
     local r = string.lower(tostring(rarityStr))
     if string.find(r, "sovereign") or string.find(r, "secret") then
-        return 16711680 -- Đỏ rực
+        return 16711680
     elseif string.find(r, "mythic") then
-        return 11141375 -- Hồng / Tím đặc biệt
+        return 11141375
     elseif string.find(r, "legendary") then
-        return 16766720 -- Vàng óng
+        return 16766720
     elseif string.find(r, "epic") then
-        return 10181046 -- Tím đậm
+        return 10181046
     elseif string.find(r, "rare") then
-        return 3447003  -- Xanh dương
+        return 3447003
     else
-        return 9807270  -- Xám / Thường
+        return 9807270
     end
 end
 
@@ -369,7 +472,7 @@ local function extractPetInfo(item)
     end
 
     info.MoneyPerSec = finalMoney
-    info.EmbedColor = getPetRealColor(item, info.Rarity) -- Lấy màu thực tế của thú
+    info.EmbedColor = getPetRealColor(item, info.Rarity)
     return info
 end
 
@@ -382,6 +485,13 @@ local function sendDiscordWebhook(petData)
 
     petsCaughtCount = petsCaughtCount + 1
 
+    -- Lấy thời gian chuẩn theo giờ Việt Nam (UTC+7)
+    local vnTimeTable = os.date("!*t", os.time() + 25200)
+    local vnTimeString = string.format("%02d:%02d:%02d - %02d/%02d/%d", vnTimeTable.hour, vnTimeTable.min, vnTimeTable.sec, vnTimeTable.day, vnTimeTable.month, vnTimeTable.year)
+
+    -- Đưa vào lịch sử hiển thị trên Tab 2
+    addPetToHistoryUI(petData, vnTimeString)
+
     local playerName = LocalPlayer.Name
     local displayName = LocalPlayer.DisplayName
     local userId = tostring(LocalPlayer.UserId)
@@ -392,7 +502,7 @@ local function sendDiscordWebhook(petData)
         ["content"] = "<@" .. DiscordUserID .. "> 🎉 Bạn vừa bắt được một sinh vật mới!",
         ["embeds"] = {{
             ["title"] = "🐾 BẮT ĐƯỢC THÚ MỚI: " .. petData.Name,
-            ["color"] = petData.EmbedColor, -- Màu sắc chuẩn xác của thú trong game
+            ["color"] = petData.EmbedColor,
             ["thumbnail"] = { ["url"] = avatarThumb },
             ["fields"] = {
                 { ["name"] = "✨ Độ hiếm (Rarity)", ["value"] = "`" .. petData.Rarity .. "`", ["inline"] = true },
@@ -400,7 +510,7 @@ local function sendDiscordWebhook(petData)
                 { ["name"] = "💸 Tiền / Giây (Income)", ["value"] = "`" .. petData.MoneyPerSec .. "`", ["inline"] = true },
                 { ["name"] = "👤 Nhân vật Roblox", ["value"] = string.format("[%s (@%s)](%s)\n**ID:** `%s`", displayName, playerName, profileLink, userId), ["inline"] = false }
             },
-            ["footer"] = { ["text"] = "Throw Food For Animals • Auto Logger" },
+            ["footer"] = { ["text"] = "Throw Food For Animals • Bắt lúc: " .. vnTimeString },
             ["timestamp"] = os.date("!%Y-%m-%dT%H:%M:%SZ")
         }}
     }
