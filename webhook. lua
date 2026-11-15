@@ -108,7 +108,6 @@ local function makeSuperClickable(btn, callback)
     btn.TouchTap:Connect(callback)
 end
 
--- --- KHUNG GIAO DIỆN CHÍNH ---
 local MainFrame = Instance.new("Frame")
 MainFrame.Name = "MainFrame"
 MainFrame.Size = UDim2.new(0, 310, 0, 310)
@@ -123,7 +122,6 @@ local UICorner = Instance.new("UICorner")
 UICorner.CornerRadius = UDim.new(0, 14)
 UICorner.Parent = MainFrame
 
--- --- ICON TIA SÉT ---
 local ToggleIconBtn = Instance.new("TextButton")
 ToggleIconBtn.Name = "ToggleIconBtn"
 ToggleIconBtn.Size = UDim2.new(0, 45, 0, 45)
@@ -164,7 +162,6 @@ TitleLabel.TextSize = 13
 TitleLabel.Font = Enum.Font.GothamBold
 TitleLabel.Parent = MainFrame
 
--- --- THANH CHUYỂN TAB ---
 local TabContainer = Instance.new("Frame")
 TabContainer.Size = UDim2.new(1, -20, 0, 30)
 TabContainer.Position = UDim2.new(0, 10, 0, 32)
@@ -198,7 +195,6 @@ local Tab2Corner = Instance.new("UICorner")
 Tab2Corner.CornerRadius = UDim.new(0, 6)
 Tab2Corner.Parent = Tab2Btn
 
--- --- TAB 1: GỬI WEBHOOK & ĐIỀU KHIỂN ---
 local Tab1Content = Instance.new("Frame")
 Tab1Content.Size = UDim2.new(1, 0, 1, -70)
 Tab1Content.Position = UDim2.new(0, 0, 0, 65)
@@ -335,7 +331,6 @@ DropdownListFrame:GetPropertyChangedSignal("Visible"):Connect(function()
     end
 end)
 
--- --- TAB 2: LỊCH SỬ PET ---
 local Tab2Content = Instance.new("ScrollingFrame")
 Tab2Content.Size = UDim2.new(1, -10, 1, -70)
 Tab2Content.Position = UDim2.new(0, 5, 0, 65)
@@ -436,8 +431,6 @@ local function getPetRealColor(item, rarityStr)
 end
 
 local function extractPetInfo(item)
-    task.wait(0.4)
-
     local info = {
         Name = item.Name,
         Rarity = "Thường (Common)",
@@ -513,7 +506,7 @@ local function sendDiscordWebhook(petData)
     local displayName = LocalPlayer.DisplayName
     local userId = tostring(LocalPlayer.UserId)
     local profileLink = "https://www.roblox.com/users/" .. userId .. "/profile"
-    local avatarThumb = "https://www.roblox.com/headshot-thumbnail/image?userId=" .. userId .. "&width=420&height=420&format=png"
+    local avatarThumb = "https://www.roblox.com/headshot-thumbnail/image?userId=" userId .. "&width=420&height=420&format=png"
 
     local payload = {
         ["content"] = "<@" .. DiscordUserID .. "> 🎉 Bạn vừa bắt được một sinh vật mới!",
@@ -527,7 +520,7 @@ local function sendDiscordWebhook(petData)
                 { ["name"] = "💸 Tiền / Giây (Income)", ["value"] = "`" .. petData.MoneyPerSec .. "`", ["inline"] = true },
                 { ["name"] = "👤 Nhân vật Roblox", ["value"] = string.format("[%s (@%s)](%s)\n**ID:** `%s`", displayName, playerName, profileLink, userId), ["inline"] = false }
             },
-            ["footer"] = { ["text"] = "Throw Food For Animals • Bắt lúc: " + vnTimeString },
+            ["footer"] = { ["text"] = "Throw Food For Animals • Bắt lúc: " .. vnTimeString },
             ["timestamp"] = os.date("!%Y-%m-%dT%H:%M:%SZ")
         }}
     }
@@ -543,62 +536,66 @@ local function sendDiscordWebhook(petData)
 end
 
 -- ==========================================
--- BỘ LỌC CHỐNG TRÙNG LẶP (CHỈ QUÉT KHI VÀO KHO / LƯU TRỮ CHÍNH THỨC)
+-- BỘ LỌC CHÍNH XÁC: CHỈ BẮT SỰ KIỆN KHI THÚ ĐƯỢC THÊM VÀO KHO LƯU TRỮ CHÍNH
 -- ==========================================
-local function handleNewItem(newItem)
+local trackedItems = {}
+
+local function isValidPet(item)
+    local name = string.lower(item.Name)
+    -- Loại bỏ các vật phẩm không phải thú hoặc đồ ăn/mồi câu
+    if string.find(name, "food") or string.find(name, "bait") or string.find(name, "apple") or string.find(name, "meat") or string.find(name, "tool") or string.find(name, "coin") then
+        return false
+    end
+    -- Phải có chỉ số tiền hoặc thuộc tính độ hiếm của thú
+    if item:GetAttribute("Rarity") or item:GetAttribute("Income") or item:GetAttribute("CPS") or item:GetAttribute("Money") then
+        return true
+    end
+    return false
+end
+
+local function onNewPetAcquired(item)
     if not isRunning then return end
+    if not isValidPet(item) then return end
 
-    -- Bỏ qua nếu vật phẩm đang nằm trên tay nhân vật (Character) hoặc đang cầm nắm thao tác ngoài
-    if newItem:IsDescendantOf(LocalPlayer.Character) then
-        return
-    end
+    -- Kiểm tra xem item đã được ghi nhận trước đó chưa để tránh lặp
+    local uid = item:GetAttribute("UUID") or item:GetAttribute("Id") or item:GetDebugId()
+    if trackedItems[uid] then return end
+    trackedItems[uid] = true
 
-    local itemUID = newItem:GetAttribute("UUID") or newItem:GetAttribute("Id") or newItem:GetAttribute("ID") or newItem:GetDebugId()
-    if not itemUID then
-        itemUID = newItem.Name .. tostring(os.clock())
-    end
-
-    if processedItems[itemUID] then return end
-    processedItems[itemUID] = true
-
-    local itemNameLower = string.lower(newItem.Name)
-    if string.find(itemNameLower, "food") or string.find(itemNameLower, "bait") or string.find(itemNameLower, "apple") or string.find(itemNameLower, "meat") then
-        if not newItem:GetAttribute("Rarity") then
-            return
-        end
-    end
-
-    local petInfo = extractPetInfo(newItem)
+    -- Đợi một nhịp ngắn để game load đầy đủ thông tin thuộc tính của thú vừa bắt
+    task.wait(0.5)
+    
+    local petInfo = extractPetInfo(item)
     sendDiscordWebhook(petInfo)
 end
 
-local function monitorContainer(container)
-    if not container then return end
-    container.ChildAdded:Connect(handleNewItem)
-end
+-- Lắng nghe sự kiện khi có pet mới xuất hiện trong thư mục dữ liệu kho của game
+local function hookStorage()
+    pcall(function()
+        -- Theo dõi giỏ lưu trữ chính thức của người chơi
+        local inventoryFolder = LocalPlayer:FindFirstChild("PlayerGui")
+        if inventoryFolder then
+            for _, gui in ipairs(inventoryFolder:GetChildren()) do
+                if string.find(string.lower(gui.Name), "inventory") or string.find(string.lower(gui.Name), "pet") or string.find(string.lower(gui.Name), "storage") or string.find(string.lower(gui.Name), "collection") then
+                    gui.DescendantAdded:Connect(onNewPetAcquired)
+                end
+            end
+        end
 
--- Theo dõi khu vực lưu trữ thú của game (thường nằm ở PlayerGui hoặc thư mục dữ liệu kho)
-local function setupStorageListener()
-    local success, err = pcall(function()
-        -- Quét các thư mục lưu trữ pet chính thức khi về nhà/kho
-        monitorContainer(LocalPlayer:WaitForChild("Backpack"))
-        
-        -- Thêm bộ lọc quét thư mục dữ liệu pet nếu game lưu ở PlayerGui/PlayerScripts
-        if LocalPlayer:FindFirstChild("PlayerGui") then
-            for _, gui in ipairs(LocalPlayer.PlayerGui:GetChildren()) do
-                if string.find(string.lower(gui.Name), "inventory") or string.find(string.lower(gui.Name), "pet") or string.find(string.lower(gui.Name), "storage") then
-                    monitorContainer(gui)
+        -- Lắng nghe khi game thông báo nhận thưởng thú mới trên màn hình
+        if LocalPlayer:FindFirstChild("PlayerScripts") then
+            -- Bổ sung cơ chế quét ngầm ReplicatedStorage nếu game lưu dữ liệu pet ở đây
+            local ReplicatedStorage = game:GetService("ReplicatedStorage")
+            for _, v in ipairs(ReplicatedStorage:GetDescendants()) do
+                if v:IsA("Folder") and (string.find(string.lower(v.Name), "pet") or string.find(string.lower(v.Name), "reward")) then
+                    v.ChildAdded:Connect(onNewPetAcquired)
                 end
             end
         end
     end)
 end
 
-setupStorageListener()
-LocalPlayer.CharacterAdded:Connect(function()
-    task.wait(1)
-    monitorContainer(LocalPlayer:WaitForChild("Backpack"))
-end)
+hookStorage()
 
 -- ==========================================
 -- XỬ LÝ SỰ KIỆN NÚT BẤM START/STOP
