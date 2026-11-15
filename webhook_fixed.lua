@@ -1,0 +1,639 @@
+-- ==========================================
+-- CẤU HÌNH THÔNG TIN CỦA BẠN
+-- ==========================================
+local WebhookURL = "https://discord.com/api/webhooks/1570446166754201803/pPCEG-HczkXcUA2fWQd6pYo62wgLmeBxf1ri812j1AO2W87wWCz1LzoF-6s8tgem5yEo"
+local DiscordUserID = "1494250347731091497"
+
+-- Biến lưu mức lọc tiền hiện tại (Mặc định là 0: Nhận tất cả)
+local CURRENT_MIN_MONEY = 0 
+
+-- ==========================================
+-- KHỞI TẠO DỊCH VỤ & BIẾN TRẠNG THÁI
+-- ==========================================
+local HttpService = game:GetService("HttpService")
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local MarketplaceService = game:GetService("MarketplaceService")
+local CoreGui = game:GetService("CoreGui")
+local TweenService = game:GetService("TweenService")
+local LocalPlayer = Players.LocalPlayer
+
+local httpRequest = (syn and syn.request) or (http and http.request) or http_request or (fluxus and fluxus.request) or request
+if not httpRequest then
+    warn("❌ Executor của bạn không hỗ trợ hàm HTTP Request!")
+    return
+end
+
+local isRunning = false
+local startTime = 0
+local petsCaughtCount = 0
+local processedItems = {} 
+
+local cachedGameName = "Throw Food For Animals"
+pcall(function()
+    cachedGameName = MarketplaceService:GetProductInfo(game.PlaceId).Name
+end)
+
+-- ==========================================
+-- BẢNG HẬU TỐ SỐ LỚN SIÊU MỞ RỘNG
+-- ==========================================
+local Suffixes = {
+    "", "K", "M", "B", "T", "Qa", "Qi", "Sx", "Sp", "Oc", "No", 
+    "Dc", "Ud", "Dd", "Td", "Qad", "Qid", "Sxd", "Spd", "Ocd", "Nod", 
+    "Vg", "Uvg", "Dvg", "Tvg", "Qavg", "Qivg", "Sxvg", "Spvg", "Ocvg", "Novg", 
+    "Tg", "Utg", "Dtg", "Ttg", "Qatg", "Qitg", "Sxtg", "Sptg", "Octg", "Notg"
+}
+
+local function parseRawMoneyToNumber(val)
+    if type(val) == "number" then return val end
+    if type(val) ~= "string" then return 0 end
+
+    val = val:gsub("%$", ""):gsub("/s", ""):gsub(",", ""):gsub("%s+", "")
+    local numPart = tonumber(val:match("[%d%.]+"))
+    if not numPart then return 0 end
+
+    local suffixPart = string.upper(val:match("[%a]+") or "")
+    local multipliers = {
+        K = 1e3, M = 1e6, B = 1e9, T = 1e12,
+        QA = 1e15, QI = 1e18, SX = 1e21, SP = 1e24, OC = 1e27, NO = 1e30,
+        DC = 1e33, UD = 1e36, DD = 1e39, TD = 1e42, QAD = 1e45, QID = 1e48,
+        SXD = 1e51, SPD = 1e54, OCD = 1e57, NOD = 1e60, VG = 1e63
+    }
+
+    if multipliers[suffixPart] then
+        return numPart * multipliers[suffixPart]
+    end
+    return numPart
+end
+
+local function formatBigNumber(val)
+    if type(val) == "string" then
+        if string.find(val, "e%+") or tonumber(val) then
+            val = tonumber(val)
+        else
+            return val
+        end
+    end
+
+    local num = tonumber(val)
+    if not num then return "Không rõ" end
+    if num < 1000 then
+        return string.format("%.2f", num):gsub("%.00$", "")
+    end
+
+    local tier = math.floor(math.log10(math.abs(num)) / 3)
+    local suffix = Suffixes[tier + 1]
+    if suffix then
+        local scaled = num / (10 ^ (tier * 3))
+        local formatted = string.format("%.2f", scaled):gsub("%.", ",")
+        return formatted .. suffix:lower()
+    else
+        return string.format("%.2e", num)
+    end
+end
+
+-- ==========================================
+-- TẠO GIAO DIỆN (UI) & ICON TIA SÉT BẬT/TẮT
+-- ==========================================
+if CoreGui:FindFirstChild("ThrowFoodAutoMenu") then
+    CoreGui.ThrowFoodAutoMenu:Destroy()
+end
+
+local ScreenGui = Instance.new("ScreenGui")
+ScreenGui.Name = "ThrowFoodAutoMenu"
+ScreenGui.Parent = CoreGui
+ScreenGui.ResetOnSpawn = false
+
+-- --- ICON TIA SÉT (BẬT / TẮT MENU CHÍNH) ---
+local ToggleIconBtn = Instance.new("TextButton")
+ToggleIconBtn.Name = "ToggleIconBtn"
+ToggleIconBtn.Size = UDim2.new(0, 45, 0, 45)
+ToggleIconBtn.Position = UDim2.new(0.05, 0, 0.12, 0)
+ToggleIconBtn.BackgroundColor3 = Color3.fromRGB(35, 35, 42)
+ToggleIconBtn.TextColor3 = Color3.fromRGB(255, 220, 50)
+ToggleIconBtn.TextSize = 22
+ToggleIconBtn.Font = Enum.Font.GothamBold
+ToggleIconBtn.Text = "⚡"
+ToggleIconBtn.Active = true
+ToggleIconBtn.Draggable = false -- Tránh Draggable giữ thao tác chạm trên điện thoại
+ToggleIconBtn.Parent = ScreenGui
+
+local IconCorner = Instance.new("UICorner")
+IconCorner.CornerRadius = UDim.new(1, 0) -- Hình tròn hoàn hảo
+IconCorner.Parent = ToggleIconBtn
+
+local IconStroke = Instance.new("UIStroke")
+IconStroke.Color = Color3.fromRGB(224, 86, 36)
+IconStroke.Thickness = 2
+IconStroke.Parent = ToggleIconBtn
+
+-- --- KHUNG GIAO DIỆN CHÍNH (MAIN MENU) ---
+local MainFrame = Instance.new("Frame")
+MainFrame.Name = "MainFrame"
+MainFrame.Size = UDim2.new(0, 310, 0, 310)
+MainFrame.Position = UDim2.new(0.05, 0, 0.2, 0)
+MainFrame.BackgroundColor3 = Color3.fromRGB(25, 25, 30)
+MainFrame.BorderSizePixel = 0
+MainFrame.Active = true
+MainFrame.Draggable = true
+MainFrame.Parent = ScreenGui
+
+local UICorner = Instance.new("UICorner")
+UICorner.CornerRadius = UDim.new(0, 14)
+UICorner.Parent = MainFrame
+
+-- Hiệu ứng bấm vào icon tia sét: Xoay vòng & Ẩn/Hiện Menu
+local isMenuVisible = true
+ToggleIconBtn.Activated:Connect(function()
+    isMenuVisible = not isMenuVisible
+    MainFrame.Visible = isMenuVisible
+
+    TweenService:Create(ToggleIconBtn, TweenInfo.new(0.4, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+        Rotation = ToggleIconBtn.Rotation + 360
+    }):Play()
+end)
+
+local TitleLabel = Instance.new("TextLabel")
+TitleLabel.Size = UDim2.new(1, 0, 0, 32)
+TitleLabel.BackgroundTransparency = 1
+TitleLabel.Text = "🐾 Throw Food Auto Logger"
+TitleLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+TitleLabel.TextSize = 13
+TitleLabel.Font = Enum.Font.GothamBold
+TitleLabel.Parent = MainFrame
+
+-- --- THANH CHUYỂN TAB ---
+local TabContainer = Instance.new("Frame")
+TabContainer.Size = UDim2.new(1, -20, 0, 30)
+TabContainer.Position = UDim2.new(0, 10, 0, 32)
+TabContainer.BackgroundTransparency = 1
+TabContainer.Parent = MainFrame
+
+local Tab1Btn = Instance.new("TextButton")
+Tab1Btn.Size = UDim2.new(0.48, 0, 1, 0)
+Tab1Btn.BackgroundColor3 = Color3.fromRGB(46, 204, 113)
+Tab1Btn.TextColor3 = Color3.fromRGB(255, 255, 255)
+Tab1Btn.TextSize = 11
+Tab1Btn.Font = Enum.Font.GothamBold
+Tab1Btn.Text = "🚀 Gửi Webhook"
+Tab1Btn.Parent = TabContainer
+
+local Tab1Corner = Instance.new("UICorner")
+Tab1Corner.CornerRadius = UDim.new(0, 6)
+Tab1Corner.Parent = Tab1Btn
+
+local Tab2Btn = Instance.new("TextButton")
+Tab2Btn.Size = UDim2.new(0.48, 0, 1, 0)
+Tab2Btn.Position = UDim2.new(0.52, 0, 0, 0)
+Tab2Btn.BackgroundColor3 = Color3.fromRGB(45, 45, 55)
+Tab2Btn.TextColor3 = Color3.fromRGB(180, 180, 180)
+Tab2Btn.TextSize = 11
+Tab2Btn.Font = Enum.Font.GothamBold
+Tab2Btn.Text = "📜 Lịch sử Pet"
+Tab2Btn.Parent = TabContainer
+
+local Tab2Corner = Instance.new("UICorner")
+Tab2Corner.CornerRadius = UDim.new(0, 6)
+Tab2Corner.Parent = Tab2Btn
+
+-- --- TAB 1: GỬI WEBHOOK & ĐIỀU KHIỂN ---
+local Tab1Content = Instance.new("Frame")
+Tab1Content.Size = UDim2.new(1, 0, 1, -70)
+Tab1Content.Position = UDim2.new(0, 0, 0, 65)
+Tab1Content.BackgroundTransparency = 1
+Tab1Content.Visible = true
+Tab1Content.Parent = MainFrame
+
+local StatusLabel = Instance.new("TextLabel")
+StatusLabel.Size = UDim2.new(1, -20, 0, 65)
+StatusLabel.Position = UDim2.new(0, 10, 0, 0)
+StatusLabel.BackgroundColor3 = Color3.fromRGB(38, 38, 46)
+StatusLabel.TextColor3 = Color3.fromRGB(220, 220, 220)
+StatusLabel.TextSize = 11
+StatusLabel.Font = Enum.Font.Code
+StatusLabel.TextWrapped = true
+StatusLabel.TextXAlignment = Enum.TextXAlignment.Left
+StatusLabel.TextYAlignment = Enum.TextYAlignment.Top
+StatusLabel.Parent = Tab1Content
+
+local StatusCorner = Instance.new("UICorner")
+StatusCorner.CornerRadius = UDim.new(0, 8)
+StatusCorner.Parent = StatusLabel
+
+local FilterDropdownBtn = Instance.new("TextButton")
+FilterDropdownBtn.Size = UDim2.new(1, -20, 0, 28)
+FilterDropdownBtn.Position = UDim2.new(0, 10, 0, 72)
+FilterDropdownBtn.BackgroundColor3 = Color3.fromRGB(45, 45, 55)
+FilterDropdownBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+FilterDropdownBtn.TextSize = 11
+FilterDropdownBtn.Font = Enum.Font.GothamBold
+FilterDropdownBtn.Text = "🔽 Lọc Tiền: Tất cả (0)"
+FilterDropdownBtn.Parent = Tab1Content
+
+local FilterBtnCorner = Instance.new("UICorner")
+FilterBtnCorner.CornerRadius = UDim.new(0, 6)
+FilterBtnCorner.Parent = FilterDropdownBtn
+
+local DropdownListFrame = Instance.new("ScrollingFrame")
+DropdownListFrame.Size = UDim2.new(1, -20, 0, 90)
+DropdownListFrame.Position = UDim2.new(0, 10, 0, 103)
+DropdownListFrame.BackgroundColor3 = Color3.fromRGB(35, 35, 42)
+DropdownListFrame.BorderSizePixel = 0
+DropdownListFrame.Visible = false
+DropdownListFrame.CanvasSize = UDim2.new(0, 0, 0, 200)
+DropdownListFrame.ScrollBarThickness = 4
+DropdownListFrame.Parent = Tab1Content
+
+local DropdownCorner = Instance.new("UICorner")
+DropdownCorner.CornerRadius = UDim.new(0, 6)
+DropdownCorner.Parent = DropdownListFrame
+
+local UIListLayout = Instance.new("UIListLayout")
+UIListLayout.SortOrder = Enum.SortOrder.LayoutOrder
+UIListLayout.Padding = UDim.new(0, 3)
+UIListLayout.Parent = DropdownListFrame
+
+local function createFilterOption(name, val)
+    local optBtn = Instance.new("TextButton")
+    optBtn.Size = UDim2.new(1, -4, 0, 24)
+    optBtn.BackgroundColor3 = Color3.fromRGB(50, 50, 60)
+    optBtn.TextColor3 = Color3.fromRGB(240, 240, 240)
+    optBtn.TextSize = 11
+    optBtn.Font = Enum.Font.Gotham
+    optBtn.Text = name
+    optBtn.Parent = DropdownListFrame
+
+    local optCorner = Instance.new("UICorner")
+    optCorner.CornerRadius = UDim.new(0, 4)
+    optCorner.Parent = optBtn
+
+    optBtn.Activated:Connect(function()
+        CURRENT_MIN_MONEY = val
+        FilterDropdownBtn.Text = "🔽 Lọc Tiền: " .. name
+        isDropdownOpen = false
+        DropdownListFrame.Visible = false
+    end)
+end
+
+createFilterOption("Tất cả (Nhận hết)", 0)
+createFilterOption("Từ 1M+ /s", 1e6)
+createFilterOption("Từ 1B+ /s", 1e9)
+createFilterOption("Từ 1T+ /s", 1e12)
+createFilterOption("Từ 1Qa+ /s", 1e15)
+createFilterOption("Từ 1spd+ /s", 1e54)
+
+local isDropdownOpen = false
+FilterDropdownBtn.Activated:Connect(function()
+    isDropdownOpen = not isDropdownOpen
+    DropdownListFrame.Visible = isDropdownOpen
+    if isDropdownOpen then
+        FilterDropdownBtn.Text = "🔼 Đóng bảng lọc tiền"
+    else
+        FilterDropdownBtn.Text = "🔽 Lọc Tiền: " .. (CURRENT_MIN_MONEY == 0 and "Tất cả" or formatBigNumber(CURRENT_MIN_MONEY) .. "+")
+    end
+end)
+
+local ToggleButton = Instance.new("TextButton")
+ToggleButton.Size = UDim2.new(1, -20, 0, 36)
+ToggleButton.Position = UDim2.new(0, 10, 0, 105)
+DropdownListFrame:GetPropertyChangedSignal("Visible"):Connect(function()
+    if DropdownListFrame.Visible then
+        ToggleButton.Position = UDim2.new(0, 10, 0, 198)
+    else
+        ToggleButton.Position = UDim2.new(0, 10, 0, 105)
+    end
+end)
+
+ToggleButton.BackgroundColor3 = Color3.fromRGB(224, 86, 36)
+ToggleButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+ToggleButton.TextSize = 13
+ToggleButton.Font = Enum.Font.GothamBold
+ToggleButton.Text = "START SCRIPT"
+ToggleButton.Parent = Tab1Content
+
+local ButtonCorner = Instance.new("UICorner")
+ButtonCorner.CornerRadius = UDim.new(0, 8)
+ButtonCorner.Parent = ToggleButton
+
+local FooterLabel = Instance.new("TextLabel")
+FooterLabel.Size = UDim2.new(1, -20, 0, 30)
+FooterLabel.Position = UDim2.new(0, 10, 0, 195)
+FooterLabel.BackgroundTransparency = 1
+FooterLabel.TextColor3 = Color3.fromRGB(160, 160, 170)
+FooterLabel.TextSize = 11
+FooterLabel.Font = Enum.Font.Gotham
+FooterLabel.TextWrapped = true
+FooterLabel.Text = "Đã gửi: 0 thú | Trạng thái: 🔴 Đang dừng"
+FooterLabel.Parent = Tab1Content
+
+DropdownListFrame:GetPropertyChangedSignal("Visible"):Connect(function()
+    if DropdownListFrame.Visible then
+        FooterLabel.Position = UDim2.new(0, 10, 0, 238)
+    else
+        FooterLabel.Position = UDim2.new(0, 10, 0, 195)
+    end
+end)
+
+-- --- TAB 2: LỊCH SỬ PET (TỰ ĐỘNG CUỘN XUỐNG DƯỚI CÙNG) ---
+local Tab2Content = Instance.new("ScrollingFrame")
+Tab2Content.Size = UDim2.new(1, -10, 1, -70)
+Tab2Content.Position = UDim2.new(0, 5, 0, 65)
+Tab2Content.BackgroundTransparency = 1
+Tab2Content.Visible = false
+Tab2Content.CanvasSize = UDim2.new(0, 0, 0, 0)
+Tab2Content.ScrollBarThickness = 4
+Tab2Content.Parent = MainFrame
+
+local HistoryLayout = Instance.new("UIListLayout")
+HistoryLayout.SortOrder = Enum.SortOrder.LayoutOrder
+HistoryLayout.Padding = UDim.new(0, 5)
+HistoryLayout.Parent = Tab2Content
+
+Tab1Btn.Activated:Connect(function()
+    Tab1Content.Visible = true
+    Tab2Content.Visible = false
+    Tab1Btn.BackgroundColor3 = Color3.fromRGB(46, 204, 113)
+    Tab1Btn.TextColor3 = Color3.fromRGB(255, 255, 255)
+    Tab2Btn.BackgroundColor3 = Color3.fromRGB(45, 45, 55)
+    Tab2Btn.TextColor3 = Color3.fromRGB(180, 180, 180)
+end)
+Tab2Btn.Activated:Connect(function()
+    Tab1Content.Visible = false
+    Tab2Content.Visible = true
+    Tab2Btn.BackgroundColor3 = Color3.fromRGB(46, 204, 113)
+    Tab2Btn.TextColor3 = Color3.fromRGB(255, 255, 255)
+    Tab1Btn.BackgroundColor3 = Color3.fromRGB(45, 45, 55)
+    Tab1Btn.TextColor3 = Color3.fromRGB(180, 180, 180)
+end)
+
+local function addPetToHistoryUI(petData, timeStr)
+    local itemFrame = Instance.new("Frame")
+    itemFrame.Size = UDim2.new(1, -5, 0, 72)
+    itemFrame.BackgroundColor3 = Color3.fromRGB(35, 35, 42)
+    itemFrame.BorderSizePixel = 0
+    itemFrame.Parent = Tab2Content
+
+    local itemCorner = Instance.new("UICorner")
+    itemCorner.CornerRadius = UDim.new(0, 6)
+    itemCorner.Parent = itemFrame
+
+    local descLabel = Instance.new("TextLabel")
+    descLabel.Size = UDim2.new(1, -10, 1, 0)
+    descLabel.Position = UDim2.new(0, 5, 0, 0)
+    descLabel.BackgroundTransparency = 1
+    descLabel.TextColor3 = Color3.fromRGB(230, 230, 240)
+    descLabel.TextSize = 11
+    descLabel.Font = Enum.Font.Code
+    descLabel.TextXAlignment = Enum.TextXAlignment.Left
+    descLabel.TextYAlignment = Enum.TextYAlignment.Center
+    descLabel.TextWrapped = true
+    descLabel.Text = string.format("🐾 Tên: %s\n✨ Độ hiếm: %s\n🧬 Đột biến: %s\n💸 Tiền/s: %s\n⏰ Lúc: %s", petData.Name, petData.Rarity, petData.Mutation, petData.MoneyPerSec, timeStr)
+    descLabel.Parent = itemFrame
+
+    local totalItems = #Tab2Content:GetChildren() - 1
+    local totalHeight = totalItems * 77
+    Tab2Content.CanvasSize = UDim2.new(0, 0, 0, totalHeight)
+
+    -- Tự động cuộn xuống dưới cùng khi có pet mới
+    Tab2Content.CanvasPosition = Vector2.new(0, math.max(0, totalHeight - Tab2Content.AbsoluteWindowSize.Y))
+end
+
+-- ==========================================
+-- HÀM QUÉT MÀU SẮC & THÔNG TIN THÚ
+-- ==========================================
+local function getPetRealColor(item, rarityStr)
+    for key, val in pairs(item:GetAttributes()) do
+        local k = string.lower(key)
+        if (string.find(k, "color") or string.find(k, "colour") or string.find(k, "rgb")) and typeof(val) == "Color3" then
+            return math.floor(val.R * 255) * 65536 + math.floor(val.G * 255) * 256 + math.floor(val.B * 255)
+        end
+    end
+
+    for _, child in ipairs(item:GetDescendants()) do
+        if child:IsA("BasePart") then
+            local col = child.Color
+            return math.floor(col.R * 255) * 65536 + math.floor(col.G * 255) * 256 + math.floor(col.B * 255)
+        elseif child:IsA("Highlight") and child.FillColor then
+            local col = child.FillColor
+            return math.floor(col.R * 255) * 65536 + math.floor(col.G * 255) * 256 + math.floor(col.B * 255)
+        end
+    end
+
+    local r = string.lower(tostring(rarityStr))
+    if string.find(r, "sovereign") or string.find(r, "secret") then
+        return 16711680
+    elseif string.find(r, "mythic") then
+        return 11141375
+    elseif string.find(r, "legendary") then
+        return 16766720
+    elseif string.find(r, "epic") then
+        return 10181046
+    elseif string.find(r, "rare") then
+        return 3447003
+    else
+        return 9807270
+    end
+end
+
+local function extractPetInfo(item)
+    task.wait(0.4)
+
+    local info = {
+        Name = item.Name,
+        Rarity = "Thường (Common)",
+        Mutation = "Mặc định (Normal)",
+        RawMoney = nil,
+        NumericMoney = 0
+    }
+
+    for key, val in pairs(item:GetAttributes()) do
+        local k = string.lower(key)
+        local vStr = tostring(val)
+
+        if string.find(k, "rarity") or string.find(k, "tier") or string.find(k, "grade") then
+            info.Rarity = vStr
+        elseif string.find(k, "mut") or string.find(k, "variant") or string.find(k, "rainbow") or string.find(k, "ruby") or string.find(k, "emerald") or string.find(k, "diamond") or string.find(k, "gold") then
+            info.Mutation = vStr
+        elseif string.find(k, "rate") or string.find(k, "income") or string.find(k, "cps") or string.find(k, "mps") or string.find(k, "sec") or string.find(k, "money") or string.find(k, "cash") or string.find(k, "earn") or string.find(k, "value") or string.find(k, "dps") then
+            info.RawMoney = val
+        end
+    end
+
+    for _, child in ipairs(item:GetDescendants()) do
+        local k = string.lower(child.Name)
+        if child:IsA("ValueBase") then
+            local vStr = tostring(child.Value)
+            if (string.find(k, "rarity") or string.find(k, "tier")) and info.Rarity == "Thường (Common)" then
+                info.Rarity = vStr
+            elseif (string.find(k, "mut") or string.find(k, "variant")) and info.Mutation == "Mặc định (Normal)" then
+                info.Mutation = vStr
+            elseif (string.find(k, "rate") or string.find(k, "income") or string.find(k, "cps") or string.find(k, "sec") or string.find(k, "money") or string.find(k, "cash") or string.find(k, "earn")) and not info.RawMoney then
+                info.RawMoney = child.Value
+            end
+        elseif child:IsA("TextLabel") and child.Text ~= "" then
+            local txt = child.Text
+            if string.find(txt, "/s") or string.find(txt, "%$") or string.find(txt, "spd") or string.find(txt, "nod") or string.find(txt, "vg") then
+                info.RawMoney = txt
+            end
+        end
+    end
+
+    if info.RawMoney then
+        info.NumericMoney = parseRawMoneyToNumber(info.RawMoney)
+    end
+
+    local finalMoney = "Không rõ"
+    if info.RawMoney then
+        finalMoney = formatBigNumber(info.RawMoney)
+        if not string.find(finalMoney, "/s") then
+            finalMoney = finalMoney .. "/s"
+        end
+    end
+
+    info.MoneyPerSec = finalMoney
+    info.EmbedColor = getPetRealColor(item, info.Rarity)
+    return info
+end
+
+local function sendDiscordWebhook(petData)
+    if not isRunning then return end
+
+    if CURRENT_MIN_MONEY > 0 and petData.NumericMoney < CURRENT_MIN_MONEY then
+        return 
+    end
+
+    petsCaughtCount = petsCaughtCount + 1
+
+    local vnTimeTable = os.date("!*t", os.time() + 25200)
+    local vnTimeString = string.format("%02d:%02d:%02d - %02d/%02d/%d", vnTimeTable.hour, vnTimeTable.min, vnTimeTable.sec, vnTimeTable.day, vnTimeTable.month, vnTimeTable.year)
+
+    addPetToHistoryUI(petData, vnTimeString)
+
+    local playerName = LocalPlayer.Name
+    local displayName = LocalPlayer.DisplayName
+    local userId = tostring(LocalPlayer.UserId)
+    local profileLink = "https://www.roblox.com/users/" .. userId .. "/profile"
+    local avatarThumb = "https://www.roblox.com/headshot-thumbnail/image?userId=" .. userId .. "&width=420&height=420&format=png"
+
+    local payload = {
+        ["content"] = "<@" .. DiscordUserID .. "> 🎉 Bạn vừa bắt được một sinh vật mới!",
+        ["embeds"] = {{
+            ["title"] = "🐾 BẮT ĐƯỢC THÚ MỚI: " .. petData.Name,
+            ["color"] = petData.EmbedColor,
+            ["thumbnail"] = { ["url"] = avatarThumb },
+            ["fields"] = {
+                { ["name"] = "✨ Độ hiếm (Rarity)", ["value"] = "`" .. petData.Rarity .. "`", ["inline"] = true },
+                { ["name"] = "🧬 Đột biến (Mutation)", ["value"] = "`" .. petData.Mutation .. "`", ["inline"] = true },
+                { ["name"] = "💸 Tiền / Giây (Income)", ["value"] = "`" .. petData.MoneyPerSec .. "`", ["inline"] = true },
+                { ["name"] = "👤 Nhân vật Roblox", ["value"] = string.format("[%s (@%s)](%s)\n**ID:** `%s`", displayName, playerName, profileLink, userId), ["inline"] = false }
+            },
+            ["footer"] = { ["text"] = "Throw Food For Animals • Bắt lúc: " .. vnTimeString },
+            ["timestamp"] = os.date("!%Y-%m-%dT%H:%M:%SZ")
+        }}
+    }
+
+    pcall(function()
+        httpRequest({
+            Url = WebhookURL,
+            Method = "POST",
+            Headers = { ["Content-Type"] = "application/json" },
+            Body = HttpService:JSONEncode(payload)
+        })
+    end)
+end
+
+-- ==========================================
+-- BỘ LỌC CHỐNG TRÙNG LẶP TUYỆT ĐỐI
+-- ==========================================
+local function handleNewItem(newItem)
+    if not isRunning then return end
+
+    local itemUID = newItem:GetAttribute("UUID") or newItem:GetAttribute("Id") or newItem:GetAttribute("ID") or newItem:GetDebugId()
+    if not itemUID then
+        itemUID = newItem.Name .. tostring(os.clock())
+    end
+
+    if processedItems[itemUID] then return end
+    processedItems[itemUID] = true
+
+    local itemNameLower = string.lower(newItem.Name)
+    if string.find(itemNameLower, "food") or string.find(itemNameLower, "bait") or string.find(itemNameLower, "apple") or string.find(itemNameLower, "meat") then
+        if not newItem:GetAttribute("Rarity") then
+            return
+        end
+    end
+
+    local petInfo = extractPetInfo(newItem)
+    sendDiscordWebhook(petInfo)
+end
+
+local function monitorContainer(container)
+    if not container then return end
+    container.ChildAdded:Connect(handleNewItem)
+end
+
+monitorContainer(LocalPlayer:WaitForChild("Backpack"))
+LocalPlayer.CharacterAdded:Connect(function()
+    monitorContainer(LocalPlayer:WaitForChild("Backpack"))
+end)
+
+-- ==========================================
+-- XỬ LÝ SỰ KIỆN NÚT BẤM START/STOP
+-- ==========================================
+local function toggleScriptState()
+    isRunning = not isRunning
+    if isRunning then
+        startTime = tick()
+        ToggleButton.Text = "STOP SCRIPT"
+        ToggleButton.BackgroundColor3 = Color3.fromRGB(46, 204, 113)
+    else
+        ToggleButton.Text = "START SCRIPT"
+        ToggleButton.BackgroundColor3 = Color3.fromRGB(224, 86, 36)
+    end
+end
+
+ToggleButton.Activated:Connect(toggleScriptState)
+
+-- ==========================================
+-- VÒNG LẶP CẬP NHẬT TRẠNG THÁI & THỜI GIAN
+-- ==========================================
+local frameCount = 0
+local lastFpsUpdate = tick()
+local currentFps = 60
+
+RunService.RenderStepped:Connect(function()
+    frameCount = frameCount + 1
+    if tick() - lastFpsUpdate >= 0.5 then
+        currentFps = math.floor(frameCount / (tick() - lastFpsUpdate))
+        frameCount = 0
+        lastFpsUpdate = tick()
+    end
+
+    local vnTime = os.date("!*t", os.time() + 25200)
+    local vnClockStr = string.format("%02d:%02d:%02d", vnTime.hour, vnTime.min, vnTime.sec)
+
+    local ping = 0
+    pcall(function()
+        ping = math.floor(LocalPlayer:GetNetworkPing() * 1000)
+    end)
+
+    if isRunning then
+        local elapsedSeconds = math.floor(tick() - startTime)
+        local h = math.floor(elapsedSeconds / 3600)
+        local m = math.floor((elapsedSeconds % 3600) / 60)
+        local s = elapsedSeconds % 60
+        local runTimeStr = string.format("%02d:%02d:%02d", h, m, s)
+
+        StatusLabel.Text = string.format(
+            " ⏱️ Đã chạy: %s | 🇻🇳 %s\n 🎮 Game: %s\n ⚡ FPS: %d | 📶 Ping: %dms",
+            runTimeStr, vnClockStr, cachedGameName, currentFps, ping
+        )
+        FooterLabel.Text = string.format("Đã gửi: %d thú | Trạng thái: 🟢 Đang chạy", petsCaughtCount)
+    else
+        StatusLabel.Text = string.format(
+            " ⏱️ Đã chạy: 00:00:00 | 🇻🇳 %s\n 🎮 Game: %s\n ⚡ FPS: %d | 📶 Ping: %dms",
+            vnClockStr, cachedGameName, currentFps, ping
+        )
+        FooterLabel.Text = string.format("Đã gửi: %d thú | Trạng thái: 🔴 Đang dừng", petsCaughtCount)
+    end
+end)
