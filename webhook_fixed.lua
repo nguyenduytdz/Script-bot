@@ -81,7 +81,7 @@ local function formatBigNumber(val)
 end
 
 -- ==========================================
--- TẠO GIAO DIỆN (UI)
+-- TẠO GIAO DIỆN (UI) - SỬA LẠI HÀM BẤM NHẠY 1 LẦN
 -- ==========================================
 if CoreGui:FindFirstChild("ThrowFoodAutoMenu") then
     CoreGui.ThrowFoodAutoMenu:Destroy()
@@ -91,6 +91,15 @@ local ScreenGui = Instance.new("ScreenGui")
 ScreenGui.Name = "ThrowFoodAutoMenu"
 ScreenGui.Parent = CoreGui
 ScreenGui.ResetOnSpawn = false
+
+-- Hàm chuyên dụng cho mobile: Bấm 1 cái ăn ngay lập tức không cần giữ
+local function onButtonClicked(btn, callback)
+    local connection
+    connection = btn.MouseButton1Click:Connect(callback)
+    if not connection then
+        btn.Activated:Connect(callback)
+    end
+end
 
 local ToggleIconBtn = Instance.new("TextButton")
 ToggleIconBtn.Name = "ToggleIconBtn"
@@ -122,12 +131,7 @@ MainFrame.Parent = ScreenGui
 Instance.new("UICorner", MainFrame).CornerRadius = UDim.new(0, 14)
 
 local isMenuVisible = true
-local function safeClick(btn, callback)
-    btn.MouseButton1Down:Connect(callback)
-    btn.TouchTap:Connect(callback)
-end
-
-safeClick(ToggleIconBtn, function()
+onButtonClicked(ToggleIconBtn, function()
     isMenuVisible = not isMenuVisible
     MainFrame.Visible = isMenuVisible
     TweenService:Create(ToggleIconBtn, TweenInfo.new(0.4, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
@@ -230,7 +234,7 @@ local function createFilterOption(name, val)
     optBtn.Parent = DropdownListFrame
     Instance.new("UICorner", optBtn).CornerRadius = UDim.new(0, 4)
 
-    safeClick(optBtn, function()
+    onButtonClicked(optBtn, function()
         CURRENT_MIN_MONEY = val
         FilterDropdownBtn.Text = "🔽 Lọc Tiền: " .. name
         isDropdownOpen = false
@@ -246,7 +250,7 @@ createFilterOption("Từ 1Qa+ /s", 1e15)
 createFilterOption("Từ 1spd+ /s", 1e54)
 
 local isDropdownOpen = false
-safeClick(FilterDropdownBtn, function()
+onButtonClicked(FilterDropdownBtn, function()
     isDropdownOpen = not isDropdownOpen
     DropdownListFrame.Visible = isDropdownOpen
     if isDropdownOpen then
@@ -341,7 +345,7 @@ local function makeHistoryModeButton(label, mode, y)
     b.ZIndex = 11
     b.Parent = HistoryFilterPopup
     Instance.new("UICorner", b).CornerRadius = UDim.new(0, 4)
-    safeClick(b, function()
+    onButtonClicked(b, function()
         historyFilterMode = mode
         HistoryFilterPopup.Visible = false
         HistoryFilterBtn.Text = (mode == "value" and "☷ Giá trị")
@@ -354,7 +358,7 @@ makeHistoryModeButton("Tất cả", "all", 4)
 makeHistoryModeButton("Lọc theo giá trị", "value", 30)
 makeHistoryModeButton("Lọc theo độ hiếm", "rarity", 56)
 
-safeClick(HistoryFilterBtn, function()
+onButtonClicked(HistoryFilterBtn, function()
     HistoryFilterPopup.Visible = not HistoryFilterPopup.Visible
 end)
 
@@ -432,7 +436,7 @@ HistorySearch:GetPropertyChangedSignal("Text"):Connect(function()
     refreshHistory()
 end)
 
-safeClick(Tab1Btn, function()
+onButtonClicked(Tab1Btn, function()
     Tab1Content.Visible = true
     Tab2Content.Visible = false
     HistorySearch.Visible = false
@@ -444,7 +448,7 @@ safeClick(Tab1Btn, function()
     Tab2Btn.TextColor3 = Color3.fromRGB(180, 180, 180)
 end)
 
-safeClick(Tab2Btn, function()
+onButtonClicked(Tab2Btn, function()
     Tab1Content.Visible = false
     Tab2Content.Visible = true
     HistorySearch.Visible = true
@@ -735,7 +739,7 @@ end
 -- ==========================================
 -- START/STOP BUTTON
 -- ==========================================
-safeClick(ToggleButton, function()
+onButtonClicked(ToggleButton, function()
     isRunning = not isRunning
     if isRunning then
         ToggleButton.Text = "STOP SCRIPT"
