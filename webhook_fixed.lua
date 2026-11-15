@@ -4,8 +4,7 @@
 local WebhookURL = "https://discord.com/api/webhooks/1570446166754201803/pPCEG-HczkXcUA2fWQd6pYo62wgLmeBxf1ri812j1AO2W87wWCz1LzoF-6s8tgem5yEo"
 local DiscordUserID = "1494250347731091497"
 
--- Biến lưu mức lọc tiền hiện tại (Mặc định là 0: Nhận tất cả)
-local CURRENT_MIN_MONEY = 0 
+local CURRENT_MIN_MONEY = 0
 
 -- ==========================================
 -- KHỞI TẠO DỊCH VỤ & BIẾN TRẠNG THÁI
@@ -24,10 +23,12 @@ if not httpRequest then
     return
 end
 
-local isRunning = false
-local startTime = 0
+-- isRunning CHỈ điều khiển việc gửi webhook, KHÔNG liên quan thời gian
+local isRunning = true
+-- startTime tính từ lúc nạp script, KHÔNG BAO GIỜ reset
+local startTime = tick()
 local petsCaughtCount = 0
-local processedItems = {} 
+local processedItems = {}
 
 local cachedGameName = "Throw Food For Animals"
 pcall(function()
@@ -38,9 +39,9 @@ end)
 -- BẢNG HẬU TỐ SỐ LỚN SIÊU MỞ RỘNG
 -- ==========================================
 local Suffixes = {
-    "", "K", "M", "B", "T", "Qa", "Qi", "Sx", "Sp", "Oc", "No", 
-    "Dc", "Ud", "Dd", "Td", "Qad", "Qid", "Sxd", "Spd", "Ocd", "Nod", 
-    "Vg", "Uvg", "Dvg", "Tvg", "Qavg", "Qivg", "Sxvg", "Spvg", "Ocvg", "Novg", 
+    "", "K", "M", "B", "T", "Qa", "Qi", "Sx", "Sp", "Oc", "No",
+    "Dc", "Ud", "Dd", "Td", "Qad", "Qid", "Sxd", "Spd", "Ocd", "Nod",
+    "Vg", "Uvg", "Dvg", "Tvg", "Qavg", "Qivg", "Sxvg", "Spvg", "Ocvg", "Novg",
     "Tg", "Utg", "Dtg", "Ttg", "Qatg", "Qitg", "Sxtg", "Sptg", "Octg", "Notg"
 }
 
@@ -93,7 +94,7 @@ local function formatBigNumber(val)
 end
 
 -- ==========================================
--- TẠO GIAO DIỆN (UI) & ICON TIA SÉT BẬT/TẮT
+-- TẠO GIAO DIỆN (UI)
 -- ==========================================
 if CoreGui:FindFirstChild("ThrowFoodAutoMenu") then
     CoreGui.ThrowFoodAutoMenu:Destroy()
@@ -104,7 +105,6 @@ ScreenGui.Name = "ThrowFoodAutoMenu"
 ScreenGui.Parent = CoreGui
 ScreenGui.ResetOnSpawn = false
 
--- --- ICON TIA SÉT (BẬT / TẮT MENU CHÍNH) ---
 local ToggleIconBtn = Instance.new("TextButton")
 ToggleIconBtn.Name = "ToggleIconBtn"
 ToggleIconBtn.Size = UDim2.new(0, 45, 0, 45)
@@ -115,39 +115,30 @@ ToggleIconBtn.TextSize = 22
 ToggleIconBtn.Font = Enum.Font.GothamBold
 ToggleIconBtn.Text = "⚡"
 ToggleIconBtn.Active = true
-ToggleIconBtn.Draggable = false -- Tránh Draggable giữ thao tác chạm trên điện thoại
+ToggleIconBtn.Draggable = false
 ToggleIconBtn.Parent = ScreenGui
 
-local IconCorner = Instance.new("UICorner")
-IconCorner.CornerRadius = UDim.new(1, 0) -- Hình tròn hoàn hảo
-IconCorner.Parent = ToggleIconBtn
-
+Instance.new("UICorner", ToggleIconBtn).CornerRadius = UDim.new(1, 0)
 local IconStroke = Instance.new("UIStroke")
 IconStroke.Color = Color3.fromRGB(224, 86, 36)
 IconStroke.Thickness = 2
 IconStroke.Parent = ToggleIconBtn
 
--- --- KHUNG GIAO DIỆN CHÍNH (MAIN MENU) ---
 local MainFrame = Instance.new("Frame")
 MainFrame.Name = "MainFrame"
-MainFrame.Size = UDim2.new(0, 310, 0, 310)
+MainFrame.Size = UDim2.new(0, 310, 0, 340)
 MainFrame.Position = UDim2.new(0.05, 0, 0.2, 0)
 MainFrame.BackgroundColor3 = Color3.fromRGB(25, 25, 30)
 MainFrame.BorderSizePixel = 0
 MainFrame.Active = true
 MainFrame.Draggable = true
 MainFrame.Parent = ScreenGui
+Instance.new("UICorner", MainFrame).CornerRadius = UDim.new(0, 14)
 
-local UICorner = Instance.new("UICorner")
-UICorner.CornerRadius = UDim.new(0, 14)
-UICorner.Parent = MainFrame
-
--- Hiệu ứng bấm vào icon tia sét: Xoay vòng & Ẩn/Hiện Menu
 local isMenuVisible = true
 ToggleIconBtn.Activated:Connect(function()
     isMenuVisible = not isMenuVisible
     MainFrame.Visible = isMenuVisible
-
     TweenService:Create(ToggleIconBtn, TweenInfo.new(0.4, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
         Rotation = ToggleIconBtn.Rotation + 360
     }):Play()
@@ -162,7 +153,6 @@ TitleLabel.TextSize = 13
 TitleLabel.Font = Enum.Font.GothamBold
 TitleLabel.Parent = MainFrame
 
--- --- THANH CHUYỂN TAB ---
 local TabContainer = Instance.new("Frame")
 TabContainer.Size = UDim2.new(1, -20, 0, 30)
 TabContainer.Position = UDim2.new(0, 10, 0, 32)
@@ -177,10 +167,7 @@ Tab1Btn.TextSize = 11
 Tab1Btn.Font = Enum.Font.GothamBold
 Tab1Btn.Text = "🚀 Gửi Webhook"
 Tab1Btn.Parent = TabContainer
-
-local Tab1Corner = Instance.new("UICorner")
-Tab1Corner.CornerRadius = UDim.new(0, 6)
-Tab1Corner.Parent = Tab1Btn
+Instance.new("UICorner", Tab1Btn).CornerRadius = UDim.new(0, 6)
 
 local Tab2Btn = Instance.new("TextButton")
 Tab2Btn.Size = UDim2.new(0.48, 0, 1, 0)
@@ -191,12 +178,9 @@ Tab2Btn.TextSize = 11
 Tab2Btn.Font = Enum.Font.GothamBold
 Tab2Btn.Text = "📜 Lịch sử Pet"
 Tab2Btn.Parent = TabContainer
+Instance.new("UICorner", Tab2Btn).CornerRadius = UDim.new(0, 6)
 
-local Tab2Corner = Instance.new("UICorner")
-Tab2Corner.CornerRadius = UDim.new(0, 6)
-Tab2Corner.Parent = Tab2Btn
-
--- --- TAB 1: GỬI WEBHOOK & ĐIỀU KHIỂN ---
+-- --- TAB 1 ---
 local Tab1Content = Instance.new("Frame")
 Tab1Content.Size = UDim2.new(1, 0, 1, -70)
 Tab1Content.Position = UDim2.new(0, 0, 0, 65)
@@ -215,10 +199,7 @@ StatusLabel.TextWrapped = true
 StatusLabel.TextXAlignment = Enum.TextXAlignment.Left
 StatusLabel.TextYAlignment = Enum.TextYAlignment.Top
 StatusLabel.Parent = Tab1Content
-
-local StatusCorner = Instance.new("UICorner")
-StatusCorner.CornerRadius = UDim.new(0, 8)
-StatusCorner.Parent = StatusLabel
+Instance.new("UICorner", StatusLabel).CornerRadius = UDim.new(0, 8)
 
 local FilterDropdownBtn = Instance.new("TextButton")
 FilterDropdownBtn.Size = UDim2.new(1, -20, 0, 28)
@@ -229,10 +210,7 @@ FilterDropdownBtn.TextSize = 11
 FilterDropdownBtn.Font = Enum.Font.GothamBold
 FilterDropdownBtn.Text = "🔽 Lọc Tiền: Tất cả (0)"
 FilterDropdownBtn.Parent = Tab1Content
-
-local FilterBtnCorner = Instance.new("UICorner")
-FilterBtnCorner.CornerRadius = UDim.new(0, 6)
-FilterBtnCorner.Parent = FilterDropdownBtn
+Instance.new("UICorner", FilterDropdownBtn).CornerRadius = UDim.new(0, 6)
 
 local DropdownListFrame = Instance.new("ScrollingFrame")
 DropdownListFrame.Size = UDim2.new(1, -20, 0, 90)
@@ -243,10 +221,7 @@ DropdownListFrame.Visible = false
 DropdownListFrame.CanvasSize = UDim2.new(0, 0, 0, 200)
 DropdownListFrame.ScrollBarThickness = 4
 DropdownListFrame.Parent = Tab1Content
-
-local DropdownCorner = Instance.new("UICorner")
-DropdownCorner.CornerRadius = UDim.new(0, 6)
-DropdownCorner.Parent = DropdownListFrame
+Instance.new("UICorner", DropdownListFrame).CornerRadius = UDim.new(0, 6)
 
 local UIListLayout = Instance.new("UIListLayout")
 UIListLayout.SortOrder = Enum.SortOrder.LayoutOrder
@@ -262,10 +237,7 @@ local function createFilterOption(name, val)
     optBtn.Font = Enum.Font.Gotham
     optBtn.Text = name
     optBtn.Parent = DropdownListFrame
-
-    local optCorner = Instance.new("UICorner")
-    optCorner.CornerRadius = UDim.new(0, 4)
-    optCorner.Parent = optBtn
+    Instance.new("UICorner", optBtn).CornerRadius = UDim.new(0, 4)
 
     optBtn.Activated:Connect(function()
         CURRENT_MIN_MONEY = val
@@ -296,24 +268,13 @@ end)
 local ToggleButton = Instance.new("TextButton")
 ToggleButton.Size = UDim2.new(1, -20, 0, 36)
 ToggleButton.Position = UDim2.new(0, 10, 0, 105)
-DropdownListFrame:GetPropertyChangedSignal("Visible"):Connect(function()
-    if DropdownListFrame.Visible then
-        ToggleButton.Position = UDim2.new(0, 10, 0, 198)
-    else
-        ToggleButton.Position = UDim2.new(0, 10, 0, 105)
-    end
-end)
-
-ToggleButton.BackgroundColor3 = Color3.fromRGB(224, 86, 36)
+ToggleButton.BackgroundColor3 = Color3.fromRGB(46, 204, 113)
 ToggleButton.TextColor3 = Color3.fromRGB(255, 255, 255)
 ToggleButton.TextSize = 13
 ToggleButton.Font = Enum.Font.GothamBold
-ToggleButton.Text = "START SCRIPT"
+ToggleButton.Text = "STOP SCRIPT"
 ToggleButton.Parent = Tab1Content
-
-local ButtonCorner = Instance.new("UICorner")
-ButtonCorner.CornerRadius = UDim.new(0, 8)
-ButtonCorner.Parent = ToggleButton
+Instance.new("UICorner", ToggleButton).CornerRadius = UDim.new(0, 8)
 
 local FooterLabel = Instance.new("TextLabel")
 FooterLabel.Size = UDim2.new(1, -20, 0, 30)
@@ -328,16 +289,89 @@ FooterLabel.Parent = Tab1Content
 
 DropdownListFrame:GetPropertyChangedSignal("Visible"):Connect(function()
     if DropdownListFrame.Visible then
+        ToggleButton.Position = UDim2.new(0, 10, 0, 198)
         FooterLabel.Position = UDim2.new(0, 10, 0, 238)
     else
+        ToggleButton.Position = UDim2.new(0, 10, 0, 105)
         FooterLabel.Position = UDim2.new(0, 10, 0, 195)
     end
 end)
 
--- --- TAB 2: LỊCH SỬ PET (TỰ ĐỘNG CUỘN XUỐNG DƯỚI CÙNG) ---
+-- --- TAB 2: LỊCH SỬ + TÌM KIẾM / LỌC ---
+local HistoryRecords = {}
+local historyFilterMode = "all" -- all | value | rarity
+local refreshHistory
+
+-- Thanh tìm kiếm: gõ gì hiện đúng theo TÊN PET
+local HistorySearch = Instance.new("TextBox")
+HistorySearch.Size = UDim2.new(1, -95, 0, 30)
+HistorySearch.Position = UDim2.new(0, 10, 0, 66)
+HistorySearch.BackgroundColor3 = Color3.fromRGB(38, 38, 46)
+HistorySearch.TextColor3 = Color3.fromRGB(245, 245, 245)
+HistorySearch.PlaceholderColor3 = Color3.fromRGB(155, 155, 165)
+HistorySearch.PlaceholderText = "🔎 Tìm tên pet..."
+HistorySearch.Text = ""
+HistorySearch.TextSize = 11
+HistorySearch.Font = Enum.Font.Gotham
+HistorySearch.ClearTextOnFocus = false
+HistorySearch.Parent = MainFrame
+HistorySearch.Visible = true
+Instance.new("UICorner", HistorySearch).CornerRadius = UDim.new(0, 6)
+
+-- Nút lọc
+local HistoryFilterBtn = Instance.new("TextButton")
+HistoryFilterBtn.Size = UDim2.new(0, 75, 0, 30)
+HistoryFilterBtn.Position = UDim2.new(1, -85, 0, 66)
+HistoryFilterBtn.BackgroundColor3 = Color3.fromRGB(45, 45, 55)
+HistoryFilterBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+HistoryFilterBtn.Text = "☷ Lọc"
+HistoryFilterBtn.TextSize = 11
+HistoryFilterBtn.Font = Enum.Font.GothamBold
+HistoryFilterBtn.Parent = MainFrame
+HistoryFilterBtn.Visible = true
+Instance.new("UICorner", HistoryFilterBtn).CornerRadius = UDim.new(0, 6)
+
+local HistoryFilterPopup = Instance.new("Frame")
+HistoryFilterPopup.Size = UDim2.new(0, 150, 0, 88)
+HistoryFilterPopup.Position = UDim2.new(1, -160, 0, 99)
+HistoryFilterPopup.BackgroundColor3 = Color3.fromRGB(35, 35, 42)
+HistoryFilterPopup.Visible = false
+HistoryFilterPopup.ZIndex = 10
+HistoryFilterPopup.Parent = MainFrame
+Instance.new("UICorner", HistoryFilterPopup).CornerRadius = UDim.new(0, 6)
+
+local function makeHistoryModeButton(label, mode, y)
+    local b = Instance.new("TextButton")
+    b.Size = UDim2.new(1, -8, 0, 24)
+    b.Position = UDim2.new(0, 4, 0, y)
+    b.BackgroundColor3 = Color3.fromRGB(52, 52, 64)
+    b.TextColor3 = Color3.fromRGB(245, 245, 245)
+    b.TextSize = 10
+    b.Font = Enum.Font.Gotham
+    b.Text = label
+    b.ZIndex = 11
+    b.Parent = HistoryFilterPopup
+    Instance.new("UICorner", b).CornerRadius = UDim.new(0, 4)
+    b.Activated:Connect(function()
+        historyFilterMode = mode
+        HistoryFilterPopup.Visible = false
+        HistoryFilterBtn.Text = (mode == "value" and "☷ Giá trị")
+            or (mode == "rarity" and "☷ Độ hiếm")
+            or "☷ Tất cả"
+        if refreshHistory then refreshHistory() end
+    end)
+end
+makeHistoryModeButton("Tất cả", "all", 4)
+makeHistoryModeButton("Lọc theo giá trị", "value", 30)
+makeHistoryModeButton("Lọc theo độ hiếm", "rarity", 56)
+
+HistoryFilterBtn.Activated:Connect(function()
+    HistoryFilterPopup.Visible = not HistoryFilterPopup.Visible
+end)
+
 local Tab2Content = Instance.new("ScrollingFrame")
-Tab2Content.Size = UDim2.new(1, -10, 1, -70)
-Tab2Content.Position = UDim2.new(0, 5, 0, 65)
+Tab2Content.Size = UDim2.new(1, -10, 1, -140)
+Tab2Content.Position = UDim2.new(0, 5, 0, 102)
 Tab2Content.BackgroundTransparency = 1
 Tab2Content.Visible = false
 Tab2Content.CanvasSize = UDim2.new(0, 0, 0, 0)
@@ -349,54 +383,95 @@ HistoryLayout.SortOrder = Enum.SortOrder.LayoutOrder
 HistoryLayout.Padding = UDim.new(0, 5)
 HistoryLayout.Parent = Tab2Content
 
+refreshHistory = function()
+    for _, child in ipairs(Tab2Content:GetChildren()) do
+        if child:IsA("Frame") then child:Destroy() end
+    end
+    local shown = 0
+    local q = string.lower(HistorySearch.Text or "")
+    for _, record in ipairs(HistoryRecords) do
+        local d = record.data
+        -- Tìm kiếm theo TÊN PET (gõ gì ra đúng cái đó)
+        local matchesName = (q == "" or string.find(string.lower(d.Name or ""), q, 1, true) ~= nil)
+
+        -- Bộ lọc độc lập: all | value | rarity
+        local matchesFilter = true
+        if historyFilterMode == "value" then
+            matchesFilter = (q == "" or string.find(string.lower(tostring(d.MoneyPerSec or "")), q, 1, true) ~= nil)
+        elseif historyFilterMode == "rarity" then
+            matchesFilter = (q == "" or string.find(string.lower(tostring(d.Rarity or "")), q, 1, true) ~= nil)
+        end
+
+        local matches
+        if historyFilterMode == "all" then
+            matches = matchesName
+        else
+            matches = matchesFilter
+        end
+
+        if matches then
+            shown = shown + 1
+            local itemFrame = Instance.new("Frame")
+            itemFrame.Size = UDim2.new(1, -5, 0, 96)
+            itemFrame.BackgroundColor3 = Color3.fromRGB(35, 35, 42)
+            itemFrame.BorderSizePixel = 0
+            itemFrame.LayoutOrder = shown
+            itemFrame.Parent = Tab2Content
+            Instance.new("UICorner", itemFrame).CornerRadius = UDim.new(0, 6)
+
+            local descLabel = Instance.new("TextLabel")
+            descLabel.Size = UDim2.new(1, -10, 1, 0)
+            descLabel.Position = UDim2.new(0, 5, 0, 0)
+            descLabel.BackgroundTransparency = 1
+            descLabel.TextColor3 = Color3.fromRGB(230, 230, 240)
+            descLabel.TextSize = 10
+            descLabel.Font = Enum.Font.Code
+            descLabel.TextXAlignment = Enum.TextXAlignment.Left
+            descLabel.TextYAlignment = Enum.TextYAlignment.Center
+            descLabel.TextWrapped = true
+            descLabel.Text = string.format(
+                "🐾 %s | ⚖️ %s\n✨ %s | 🧬 %s\n💸 %s\n⏰ %s",
+                d.Name or "Pet",
+                d.Weight or "Không rõ",
+                d.Rarity or "Không rõ",
+                d.Mutation or "Mặc định",
+                d.MoneyPerSec or "Không rõ",
+                record.time
+            )
+            descLabel.Parent = itemFrame
+        end
+    end
+    Tab2Content.CanvasSize = UDim2.new(0, 0, 0, shown * 101)
+end
+
+HistorySearch:GetPropertyChangedSignal("Text"):Connect(function()
+    refreshHistory()
+end)
+
+-- --- CHUYỂN TAB ---
 Tab1Btn.Activated:Connect(function()
     Tab1Content.Visible = true
     Tab2Content.Visible = false
+    HistorySearch.Visible = false
+    HistoryFilterBtn.Visible = false
+    HistoryFilterPopup.Visible = false
     Tab1Btn.BackgroundColor3 = Color3.fromRGB(46, 204, 113)
     Tab1Btn.TextColor3 = Color3.fromRGB(255, 255, 255)
     Tab2Btn.BackgroundColor3 = Color3.fromRGB(45, 45, 55)
     Tab2Btn.TextColor3 = Color3.fromRGB(180, 180, 180)
 end)
+
 Tab2Btn.Activated:Connect(function()
     Tab1Content.Visible = false
     Tab2Content.Visible = true
+    HistorySearch.Visible = true
+    HistoryFilterBtn.Visible = true
     Tab2Btn.BackgroundColor3 = Color3.fromRGB(46, 204, 113)
     Tab2Btn.TextColor3 = Color3.fromRGB(255, 255, 255)
     Tab1Btn.BackgroundColor3 = Color3.fromRGB(45, 45, 55)
     Tab1Btn.TextColor3 = Color3.fromRGB(180, 180, 180)
+    refreshHistory()
 end)
-
-local function addPetToHistoryUI(petData, timeStr)
-    local itemFrame = Instance.new("Frame")
-    itemFrame.Size = UDim2.new(1, -5, 0, 72)
-    itemFrame.BackgroundColor3 = Color3.fromRGB(35, 35, 42)
-    itemFrame.BorderSizePixel = 0
-    itemFrame.Parent = Tab2Content
-
-    local itemCorner = Instance.new("UICorner")
-    itemCorner.CornerRadius = UDim.new(0, 6)
-    itemCorner.Parent = itemFrame
-
-    local descLabel = Instance.new("TextLabel")
-    descLabel.Size = UDim2.new(1, -10, 1, 0)
-    descLabel.Position = UDim2.new(0, 5, 0, 0)
-    descLabel.BackgroundTransparency = 1
-    descLabel.TextColor3 = Color3.fromRGB(230, 230, 240)
-    descLabel.TextSize = 11
-    descLabel.Font = Enum.Font.Code
-    descLabel.TextXAlignment = Enum.TextXAlignment.Left
-    descLabel.TextYAlignment = Enum.TextYAlignment.Center
-    descLabel.TextWrapped = true
-    descLabel.Text = string.format("🐾 Tên: %s\n✨ Độ hiếm: %s\n🧬 Đột biến: %s\n💸 Tiền/s: %s\n⏰ Lúc: %s", petData.Name, petData.Rarity, petData.Mutation, petData.MoneyPerSec, timeStr)
-    descLabel.Parent = itemFrame
-
-    local totalItems = #Tab2Content:GetChildren() - 1
-    local totalHeight = totalItems * 77
-    Tab2Content.CanvasSize = UDim2.new(0, 0, 0, totalHeight)
-
-    -- Tự động cuộn xuống dưới cùng khi có pet mới
-    Tab2Content.CanvasPosition = Vector2.new(0, math.max(0, totalHeight - Tab2Content.AbsoluteWindowSize.Y))
-end
 
 -- ==========================================
 -- HÀM QUÉT MÀU SẮC & THÔNG TIN THÚ
@@ -408,7 +483,6 @@ local function getPetRealColor(item, rarityStr)
             return math.floor(val.R * 255) * 65536 + math.floor(val.G * 255) * 256 + math.floor(val.B * 255)
         end
     end
-
     for _, child in ipairs(item:GetDescendants()) do
         if child:IsA("BasePart") then
             local col = child.Color
@@ -418,7 +492,6 @@ local function getPetRealColor(item, rarityStr)
             return math.floor(col.R * 255) * 65536 + math.floor(col.G * 255) * 256 + math.floor(col.B * 255)
         end
     end
-
     local r = string.lower(tostring(rarityStr))
     if string.find(r, "sovereign") or string.find(r, "secret") then
         return 16711680
@@ -437,20 +510,24 @@ end
 
 local function extractPetInfo(item)
     task.wait(0.4)
-
     local info = {
         Name = item.Name,
         Rarity = "Thường (Common)",
         Mutation = "Mặc định (Normal)",
         RawMoney = nil,
-        NumericMoney = 0
+        NumericMoney = 0,
+        Weight = "Không rõ",
+        NumericWeight = nil
     }
 
     for key, val in pairs(item:GetAttributes()) do
         local k = string.lower(key)
         local vStr = tostring(val)
-
-        if string.find(k, "rarity") or string.find(k, "tier") or string.find(k, "grade") then
+        if string.find(k, "weight") or string.find(k, "kg") then
+            info.Weight = vStr
+            info.NumericWeight = tonumber(vStr:match("[%d%.]+"))
+            if not string.find(string.lower(vStr), "kg") then info.Weight = vStr .. " kg" end
+        elseif string.find(k, "rarity") or string.find(k, "tier") or string.find(k, "grade") then
             info.Rarity = vStr
         elseif string.find(k, "mut") or string.find(k, "variant") or string.find(k, "rainbow") or string.find(k, "ruby") or string.find(k, "emerald") or string.find(k, "diamond") or string.find(k, "gold") then
             info.Mutation = vStr
@@ -463,7 +540,10 @@ local function extractPetInfo(item)
         local k = string.lower(child.Name)
         if child:IsA("ValueBase") then
             local vStr = tostring(child.Value)
-            if (string.find(k, "rarity") or string.find(k, "tier")) and info.Rarity == "Thường (Common)" then
+            if (string.find(k, "weight") or string.find(k, "kg")) and info.Weight == "Không rõ" then
+                info.Weight = vStr .. (string.find(string.lower(vStr), "kg") and "" or " kg")
+                info.NumericWeight = tonumber(vStr:match("[%d%.]+"))
+            elseif (string.find(k, "rarity") or string.find(k, "tier")) and info.Rarity == "Thường (Common)" then
                 info.Rarity = vStr
             elseif (string.find(k, "mut") or string.find(k, "variant")) and info.Mutation == "Mặc định (Normal)" then
                 info.Mutation = vStr
@@ -472,6 +552,10 @@ local function extractPetInfo(item)
             end
         elseif child:IsA("TextLabel") and child.Text ~= "" then
             local txt = child.Text
+            if info.Weight == "Không rõ" and (string.find(string.lower(txt), "kg") or string.find(string.lower(txt), "weight")) then
+                info.Weight = txt
+                info.NumericWeight = tonumber(txt:match("[%d%.]+"))
+            end
             if string.find(txt, "/s") or string.find(txt, "%$") or string.find(txt, "spd") or string.find(txt, "nod") or string.find(txt, "vg") then
                 info.RawMoney = txt
             end
@@ -489,25 +573,28 @@ local function extractPetInfo(item)
             finalMoney = finalMoney .. "/s"
         end
     end
-
     info.MoneyPerSec = finalMoney
     info.EmbedColor = getPetRealColor(item, info.Rarity)
     return info
 end
 
+-- ==========================================
+-- GỬI WEBHOOK (chỉ gửi khi isRunning)
+-- Lịch sử LUÔN ghi nhận dù STOP
+-- ==========================================
 local function sendDiscordWebhook(petData)
-    if not isRunning then return end
-
-    if CURRENT_MIN_MONEY > 0 and petData.NumericMoney < CURRENT_MIN_MONEY then
-        return 
-    end
-
     petsCaughtCount = petsCaughtCount + 1
 
     local vnTimeTable = os.date("!*t", os.time() + 25200)
-    local vnTimeString = string.format("%02d:%02d:%02d - %02d/%02d/%d", vnTimeTable.hour, vnTimeTable.min, vnTimeTable.sec, vnTimeTable.day, vnTimeTable.month, vnTimeTable.year)
+    local vnTimeString = string.format("%02d:%02d:%02d - %02d/%02d/%d",
+        vnTimeTable.hour, vnTimeTable.min, vnTimeTable.sec,
+        vnTimeTable.day, vnTimeTable.month, vnTimeTable.year)
 
-    addPetToHistoryUI(petData, vnTimeString)
+    table.insert(HistoryRecords, {data = petData, time = vnTimeString})
+    if refreshHistory then refreshHistory() end
+
+    if not isRunning then return end
+    if CURRENT_MIN_MONEY > 0 and petData.NumericMoney < CURRENT_MIN_MONEY then return end
 
     local playerName = LocalPlayer.Name
     local displayName = LocalPlayer.DisplayName
@@ -525,6 +612,7 @@ local function sendDiscordWebhook(petData)
                 { ["name"] = "✨ Độ hiếm (Rarity)", ["value"] = "`" .. petData.Rarity .. "`", ["inline"] = true },
                 { ["name"] = "🧬 Đột biến (Mutation)", ["value"] = "`" .. petData.Mutation .. "`", ["inline"] = true },
                 { ["name"] = "💸 Tiền / Giây (Income)", ["value"] = "`" .. petData.MoneyPerSec .. "`", ["inline"] = true },
+                { ["name"] = "⚖️ Cân nặng", ["value"] = "`" .. (petData.Weight or "Không rõ") .. "`", ["inline"] = true },
                 { ["name"] = "👤 Nhân vật Roblox", ["value"] = string.format("[%s (@%s)](%s)\n**ID:** `%s`", displayName, playerName, profileLink, userId), ["inline"] = false }
             },
             ["footer"] = { ["text"] = "Throw Food For Animals • Bắt lúc: " .. vnTimeString },
@@ -543,16 +631,15 @@ local function sendDiscordWebhook(petData)
 end
 
 -- ==========================================
--- BỘ LỌC CHỐNG TRÙNG LẶP TUYỆT ĐỐI
+-- BỘ LỌC CHỐNG TRÙNG LẶP
 -- ==========================================
 local function handleNewItem(newItem)
-    if not isRunning then return end
+    if not newItem or not newItem.Parent then return end
 
     local itemUID = newItem:GetAttribute("UUID") or newItem:GetAttribute("Id") or newItem:GetAttribute("ID") or newItem:GetDebugId()
     if not itemUID then
         itemUID = newItem.Name .. tostring(os.clock())
     end
-
     if processedItems[itemUID] then return end
     processedItems[itemUID] = true
 
@@ -578,12 +665,11 @@ LocalPlayer.CharacterAdded:Connect(function()
 end)
 
 -- ==========================================
--- XỬ LÝ SỰ KIỆN NÚT BẤM START/STOP
+-- START/STOP: chỉ bật/tắt gửi webhook, KHÔNG đụng startTime
 -- ==========================================
 local function toggleScriptState()
     isRunning = not isRunning
     if isRunning then
-        startTime = tick()
         ToggleButton.Text = "STOP SCRIPT"
         ToggleButton.BackgroundColor3 = Color3.fromRGB(46, 204, 113)
     else
@@ -591,7 +677,6 @@ local function toggleScriptState()
         ToggleButton.BackgroundColor3 = Color3.fromRGB(224, 86, 36)
     end
 end
-
 ToggleButton.Activated:Connect(toggleScriptState)
 
 -- ==========================================
@@ -617,23 +702,21 @@ RunService.RenderStepped:Connect(function()
         ping = math.floor(LocalPlayer:GetNetworkPing() * 1000)
     end)
 
-    if isRunning then
-        local elapsedSeconds = math.floor(tick() - startTime)
-        local h = math.floor(elapsedSeconds / 3600)
-        local m = math.floor((elapsedSeconds % 3600) / 60)
-        local s = elapsedSeconds % 60
-        local runTimeStr = string.format("%02d:%02d:%02d", h, m, s)
+    -- Thời gian chạy luôn tính từ lúc nạp script, KHÔNG reset khi STOP
+    local elapsedSeconds = math.floor(tick() - startTime)
+    local h = math.floor(elapsedSeconds / 3600)
+    local m = math.floor((elapsedSeconds % 3600) / 60)
+    local s = elapsedSeconds % 60
+    local runTimeStr = string.format("%02d:%02d:%02d", h, m, s)
 
-        StatusLabel.Text = string.format(
-            " ⏱️ Đã chạy: %s | 🇻🇳 %s\n 🎮 Game: %s\n ⚡ FPS: %d | 📶 Ping: %dms",
-            runTimeStr, vnClockStr, cachedGameName, currentFps, ping
-        )
-        FooterLabel.Text = string.format("Đã gửi: %d thú | Trạng thái: 🟢 Đang chạy", petsCaughtCount)
+    StatusLabel.Text = string.format(
+        " ⏱️ Đã chạy: %s | 🇻🇳 %s\n 🎮 Game: %s\n ⚡ FPS: %d | 📶 Ping: %dms",
+        runTimeStr, vnClockStr, cachedGameName, currentFps, ping
+    )
+
+    if isRunning then
+        FooterLabel.Text = string.format("Đã ghi nhận: %d thú | Trạng thái: 🟢 Đang gửi webhook", petsCaughtCount)
     else
-        StatusLabel.Text = string.format(
-            " ⏱️ Đã chạy: 00:00:00 | 🇻🇳 %s\n 🎮 Game: %s\n ⚡ FPS: %d | 📶 Ping: %dms",
-            vnClockStr, cachedGameName, currentFps, ping
-        )
-        FooterLabel.Text = string.format("Đã gửi: %d thú | Trạng thái: 🔴 Đang dừng", petsCaughtCount)
+        FooterLabel.Text = string.format("Đã ghi nhận: %d thú | Trạng thái: 🔴 Dừng gửi webhook (vẫn ghi lịch sử)", petsCaughtCount)
     end
 end)
