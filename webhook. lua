@@ -103,11 +103,26 @@ ScreenGui.Name = "ThrowFoodAutoMenu"
 ScreenGui.Parent = CoreGui
 ScreenGui.ResetOnSpawn = false
 
--- --- HÀM HỖ TRỢ CLICK SIÊU NHẠY (CHỐNG DÍNH KÉO THẢ) ---
+-- --- HÀM HỖ TRỢ CLICK SIÊU NHẠY ---
 local function makeSuperClickable(btn, callback)
     btn.MouseButton1Down:Connect(callback)
     btn.TouchTap:Connect(callback)
 end
+
+-- --- KHUNG GIAO DIỆN CHÍNH ---
+local MainFrame = Instance.new("Frame")
+MainFrame.Name = "MainFrame"
+MainFrame.Size = UDim2.new(0, 310, 0, 310)
+MainFrame.Position = UDim2.new(0.05, 0, 0.2, 0)
+MainFrame.BackgroundColor3 = Color3.fromRGB(25, 25, 30)
+MainFrame.BorderSizePixel = 0
+MainFrame.Active = true
+MainFrame.Draggable = true
+MainFrame.Parent = ScreenGui
+
+local UICorner = Instance.new("UICorner")
+UICorner.CornerRadius = UDim.new(0, 14)
+UICorner.Parent = MainFrame
 
 -- --- ICON TIA SÉT ---
 local ToggleIconBtn = Instance.new("TextButton")
@@ -132,21 +147,7 @@ IconStroke.Color = Color3.fromRGB(224, 86, 36)
 IconStroke.Thickness = 2
 IconStroke.Parent = ToggleIconBtn
 
--- --- KHUNG GIAO DIỆN CHÍNH ---
-local MainFrame = Instance.new("Frame")
-MainFrame.Name = "MainFrame"
-MainFrame.Size = UDim2.new(0, 310, 0, 310)
-MainFrame.Position = UDim2.new(0.05, 0, 0.2, 0)
-MainFrame.BackgroundColor3 = Color3.fromRGB(25, 25, 30)
-MainFrame.BorderSizePixel = 0
-MainFrame.Active = true
-MainFrame.Draggable = true
-MainFrame.Parent = ScreenGui
-
-local UICorner = Instance.new("UICorner")
-UICorner.CornerRadius = UDim.new(0, 14)
-UICorner.Parent = MainFrame
-
+-- Điều khiển ẩn hiện menu hoàn toàn độc lập, không bị vòng lặp ghi đè
 local isMenuVisible = true
 makeSuperClickable(ToggleIconBtn, function()
     isMenuVisible = not isMenuVisible
@@ -526,8 +527,8 @@ local function sendDiscordWebhook(petData)
                 { ["name"] = "✨ Độ hiếm (Rarity)", ["value"] = "`" .. petData.Rarity .. "`", ["inline"] = true },
                 { ["name"] = "🧬 Đột biến (Mutation)", ["value"] = "`" .. petData.Mutation .. "`", ["inline"] = true },
                 { ["name"] = "💸 Tiền / Giây (Income)", ["value"] = "`" .. petData.MoneyPerSec .. "`", ["inline"] = true },
-                { ["name"] = "👤 Nhân vật Roblox", ["value"] = string.format("[%s (@%s)](%s)\n**ID:** `%s`", displayName, playerName, profileLink, userId), ["inline"] = false }
-           },
+                 { ["name"] = "👤 Nhân vật Roblox", ["value"] = string.format("[%s (@%s)](%s)\n**ID:** `%s`", displayName, playerName, profileLink, userId), ["inline"] = false }
+            },
             ["footer"] = { ["text"] = "Throw Food For Animals • Bắt lúc: " .. vnTimeString },
             ["timestamp"] = os.date("!%Y-%m-%dT%H:%M:%SZ")
         }}
@@ -596,7 +597,7 @@ end
 makeSuperClickable(ToggleButton, toggleScriptState)
 
 -- ==========================================
--- VÒNG LẶP CẬP NHẬT TRẠNG THÁI (HIỂN THỊ SẴN)
+-- VÒNG LẶP CẬP NHẬT TRẠNG THÁI (KHÔNG GHI ĐÈ MENU VISIBLE)
 -- ==========================================
 local frameCount = 0
 local lastFpsUpdate = tick()
