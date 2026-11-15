@@ -92,7 +92,7 @@ local function formatBigNumber(val)
 end
 
 -- ==========================================
--- TẠO GIAO DIỆN (UI) & HỖ TRỢ CLICK NHẠY 100%
+-- TẠO GIAO DIỆN (UI) & GẮN SỰ KIỆN NHẠY 100%
 -- ==========================================
 if CoreGui:FindFirstChild("ThrowFoodAutoMenu") then
     CoreGui.ThrowFoodAutoMenu:Destroy()
@@ -141,7 +141,6 @@ local UICorner = Instance.new("UICorner")
 UICorner.CornerRadius = UDim.new(0, 14)
 UICorner.Parent = MainFrame
 
--- Xử lý ẩn/hiện menu qua icon tia sét siêu nhạy
 local isMenuVisible = true
 local function toggleMenuVisibility()
     isMenuVisible = not isMenuVisible
@@ -151,8 +150,7 @@ local function toggleMenuVisibility()
     }):Play()
 end
 
-ToggleIconBtn.MouseButton1Click:Connect(toggleMenuVisibility)
-ToggleIconBtn.TouchTap:Connect(toggleMenuVisibility)
+ToggleIconBtn.Activated:Connect(toggleMenuVisibility)
 
 local TitleLabel = Instance.new("TextLabel")
 TitleLabel.Size = UDim2.new(1, 0, 0, 32)
@@ -268,13 +266,11 @@ local function createFilterOption(name, val)
     optCorner.CornerRadius = UDim.new(0, 4)
     optCorner.Parent = optBtn
 
-    local function selectOption()
+    optBtn.Activated:Connect(function()
         CURRENT_MIN_MONEY = val
         FilterDropdownBtn.Text = "🔽 Lọc Tiền: " .. name
         DropdownListFrame.Visible = false
-    end
-    optBtn.MouseButton1Click:Connect(selectOption)
-    optBtn.TouchTap:Connect(selectOption)
+    end)
 end
 
 createFilterOption("Tất cả (Nhận hết)", 0)
@@ -285,7 +281,7 @@ createFilterOption("Từ 1Qa+ /s", 1e15)
 createFilterOption("Từ 1spd+ /s", 1e54)
 
 local isDropdownOpen = false
-local function toggleDropdown()
+FilterDropdownBtn.Activated:Connect(function()
     isDropdownOpen = not isDropdownOpen
     DropdownListFrame.Visible = isDropdownOpen
     if isDropdownOpen then
@@ -293,9 +289,7 @@ local function toggleDropdown()
     else
         FilterDropdownBtn.Text = "🔽 Lọc Tiền: " .. (CURRENT_MIN_MONEY == 0 and "Tất cả" or formatBigNumber(CURRENT_MIN_MONEY) .. "+")
     end
-end
-FilterDropdownBtn.MouseButton1Click:Connect(toggleDropdown)
-FilterDropdownBtn.TouchTap:Connect(toggleDropdown)
+end)
 
 local ToggleButton = Instance.new("TextButton")
 ToggleButton.Size = UDim2.new(1, -20, 0, 36)
@@ -353,15 +347,7 @@ HistoryLayout.SortOrder = Enum.SortOrder.LayoutOrder
 HistoryLayout.Padding = UDim.new(0, 5)
 HistoryLayout.Parent = Tab2Content
 
-Tab1Btn.MouseButton1Click:Connect(function()
-    Tab1Content.Visible = true
-    Tab2Content.Visible = false
-    Tab1Btn.BackgroundColor3 = Color3.fromRGB(46, 204, 113)
-    Tab1Btn.TextColor3 = Color3.fromRGB(255, 255, 255)
-    Tab2Btn.BackgroundColor3 = Color3.fromRGB(45, 45, 55)
-    Tab2Btn.TextColor3 = Color3.fromRGB(180, 180, 180)
-end)
-Tab1Btn.TouchTap:Connect(function()
+Tab1Btn.Activated:Connect(function()
     Tab1Content.Visible = true
     Tab2Content.Visible = false
     Tab1Btn.BackgroundColor3 = Color3.fromRGB(46, 204, 113)
@@ -370,15 +356,7 @@ Tab1Btn.TouchTap:Connect(function()
     Tab2Btn.TextColor3 = Color3.fromRGB(180, 180, 180)
 end)
 
-Tab2Btn.MouseButton1Click:Connect(function()
-    Tab1Content.Visible = false
-    Tab2Content.Visible = true
-    Tab2Btn.BackgroundColor3 = Color3.fromRGB(46, 204, 113)
-    Tab2Btn.TextColor3 = Color3.fromRGB(255, 255, 255)
-    Tab1Btn.BackgroundColor3 = Color3.fromRGB(45, 45, 55)
-    Tab1Btn.TextColor3 = Color3.fromRGB(180, 180, 180)
-end)
-Tab2Btn.TouchTap:Connect(function()
+Tab2Btn.Activated:Connect(function()
     Tab1Content.Visible = false
     Tab2Content.Visible = true
     Tab2Btn.BackgroundColor3 = Color3.fromRGB(46, 204, 113)
@@ -547,7 +525,7 @@ local function sendDiscordWebhook(petData)
                 { ["name"] = "👤 Nhân vật Roblox", ["value"] = string.format("[%s (@%s)](%s)\n**ID:** `%s`", displayName, playerName, profileLink, userId), ["inline"] = false }
             },
             ["footer"] = { ["text"] = "Throw Food For Animals • Bắt lúc: " .. vnTimeString },
-            ["timestamp"] = os.date("!%Y-%m-%dT%H:%M:%SZ")
+             ["timestamp"] = os.date("!%Y-%m-%dT%H:%M:%SZ")
         }}
     }
 
@@ -611,11 +589,10 @@ local function toggleScriptState()
     end
 end
 
-ToggleButton.MouseButton1Click:Connect(toggleScriptState)
-ToggleButton.TouchTap:Connect(toggleScriptState)
+ToggleButton.Activated:Connect(toggleScriptState)
 
 -- ==========================================
--- VÒNG LẶP CẬP NHẬT TRẠNG THÁI & THỜI GIAN
+-- VÒNG LẶP CẬP NHẬT TRẠNG THÁI (HIỂN THỊ SẴN NGAY KHI MỞ UI)
 -- ==========================================
 local frameCount = 0
 local lastFpsUpdate = tick()
@@ -650,9 +627,10 @@ RunService.RenderStepped:Connect(function()
         )
         FooterLabel.Text = string.format("Đã gửi: %d thú | Trạng thái: 🟢 Đang chạy", petsCaughtCount)
     else
+        -- Hiển thị sẵn thời gian, giờ VN, FPS, Ping ngay cả khi chưa bấm Start
         StatusLabel.Text = string.format(
             " ⏱️ Đã chạy: 00:00:00 | 🇻🇳 %s\n 🎮 Game: %s\n ⚡ FPS: %d | 📶 Ping: %dms",
-            vnClockStr, cachedGameName, cachedGameName, currentFps, ping
+            vnClockStr, cachedGameName, currentFps, ping
         )
         FooterLabel.Text = string.format("Đã gửi: %d thú | Trạng thái: 🔴 Đang dừng", petsCaughtCount)
     end
