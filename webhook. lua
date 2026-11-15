@@ -394,7 +394,7 @@ local function addPetToHistoryUI(petData, timeStr)
 end
 
 -- ==========================================
--- HÀM QUÉT MÀU SẮC & THÔNG TIN THÚ
+-- HÀM QUÉT MÀU SẮC & THÔNG TIN THÚ CHUẨN
 -- ==========================================
 local function getPetRealColor(item, rarityStr)
     for key, val in pairs(item:GetAttributes()) do
@@ -506,7 +506,7 @@ local function sendDiscordWebhook(petData)
     local displayName = LocalPlayer.DisplayName
     local userId = tostring(LocalPlayer.UserId)
     local profileLink = "https://www.roblox.com/users/" .. userId .. "/profile"
-    local avatarThumb = "https://www.roblox.com/headshot-thumbnail/image?userId=" userId .. "&width=420&height=420&format=png"
+    local avatarThumb = "https://www.roblox.com/headshot-thumbnail/image?userId=" .. userId .. "&width=420&height=420&format=png"
 
     local payload = {
         ["content"] = "<@" .. DiscordUserID .. "> 🎉 Bạn vừa bắt được một sinh vật mới!",
@@ -536,66 +536,84 @@ local function sendDiscordWebhook(petData)
 end
 
 -- ==========================================
--- BỘ LỌC CHÍNH XÁC: CHỈ BẮT SỰ KIỆN KHI THÚ ĐƯỢC THÊM VÀO KHO LƯU TRỮ CHÍNH
+-- BỘ LỌC ĐỘC QUYỀN CHỐNG BÁO ẢO KHI CẦM ĐỒ
 -- ==========================================
-local trackedItems = {}
+local trackedPets = {}
 
-local function isValidPet(item)
+local function isValidStoragePet(item)
+    if not item or not item.Parent then return false end
+    
     local name = string.lower(item.Name)
-    -- Loại bỏ các vật phẩm không phải thú hoặc đồ ăn/mồi câu
-    if string.find(name, "food") or string.find(name, "bait") or string.find(name, "apple") or string.find(name, "meat") or string.find(name, "tool") or string.find(name, "coin") then
+    -- Chặn toàn bộ mồi, đồ ăn, vật phẩm cầm tay hoặc tiền xu chung chung
+    if string.find(name, "food") or string.find(name, "bait") or string.find(name, "apple") or string.find(name, "meat") or string.find(name, "tool") or string.find(name, "coin") or string.find(name, "bucket") then
         return false
     end
-    -- Phải có chỉ số tiền hoặc thuộc tính độ hiếm của thú
-    if item:GetAttribute("Rarity") or item:GetAttribute("Income") or item:GetAttribute("CPS") or item:GetAttribute("Money") then
+
+    -- Bắt buộc vật phẩm phải nằm trong kho lưu trữ dữ liệu của tài khoản (Data Folder hoặc Storage chính thức) 
+    -- Tuyệt đối loại bỏ nếu nó nằm trong Character (đang cầm trên tay) hoặc Backpack (túi đồ cá nhân đang thao tác)
+    if item:IsDescendantOf(LocalPlayer.Character) or item:IsDescendantOf(LocalPlayer:FindFirstChild("Backpack")) then
+        return false
+    end
+
+    -- Kiểm tra xem vật phẩm này có chứa thông số đặc trưng của thú (Rarity hoặc chỉ số sinh tiền) không
+    local hasRarity = item:GetAttribute("Rarity") ~= nil
+    local hasIncome = item:GetAttribute("Income") ~= nil or item:GetAttribute("CPS") ~= nil or item:GetAttribute("Money") ~= nil
+    
+    if hasRarity or hasIncome then
         return true
     end
+
     return false
 end
 
-local function onNewPetAcquired(item)
+local function handlePetAdded(item)
     if not isRunning then return end
-    if not isValidPet(item) then return end
-
-    -- Kiểm tra xem item đã được ghi nhận trước đó chưa để tránh lặp
-    local uid = item:GetAttribute("UUID") or item:GetAttribute("Id") or item:GetDebugId()
-    if trackedItems[uid] then return end
-    trackedItems[uid] = true
-
-    -- Đợi một nhịp ngắn để game load đầy đủ thông tin thuộc tính của thú vừa bắt
-    task.wait(0.5)
     
+    -- Chờ 0.6 giây để game nạp hoàn tất thuộc tính của item
+    task.wait(0.6)
+    
+    if not isValidStoragePet(item) then return end
+
+    -- Tạo mã định danh độc nhất cho thú
+    local uid = item:GetAttribute("UUID") or item:GetAttribute("Id") or item:GetDebugId()
+    if not uid then
+        uid = item.Name .. tostring(item:GetFullName())
+    end
+
+    if trackedPets[uid] then return end
+    trackedPets[uid] = true
+
     local petInfo = extractPetInfo(item)
     sendDiscordWebhook(petInfo)
 end
 
--- Lắng nghe sự kiện khi có pet mới xuất hiện trong thư mục dữ liệu kho của game
-local function hookStorage()
+-- Lắng nghe độc quyền từ các thư mục lưu trữ hệ thống ngầm của game (tránh xa Backpack)
+local function hookGameStorage()
     pcall(function()
-        -- Theo dõi giỏ lưu trữ chính thức của người chơi
-        local inventoryFolder = LocalPlayer:FindFirstChild("PlayerGui")
-        if inventoryFolder then
-            for _, gui in ipairs(inventoryFolder:GetChildren()) do
-                if string.find(string.lower(gui.Name), "inventory") or string.find(string.lower(gui.Name), "pet") or string.find(string.lower(gui.Name), "storage") or string.find(string.lower(gui.Name), "collection") then
-                    gui.DescendantAdded:Connect(onNewPetAcquired)
+        -- Quét các thư mục lưu dữ liệu thú ngầm nếu có trong PlayerGui / ReplicatedStorage
+        local ReplicatedStorage = game:GetService("ReplicatedStorage")
+        for _, descendant in ipairs(ReplicatedStorage:GetDescendants()) do
+            if descendant:IsA("Folder") or descendant:IsA("Model") then
+                local dName = string.lower(descendant.Name)
+                if string.find(dName, "pet") or string.find(dName, "storage") or string.find(dName, "collection") or string.find(dName, "inventory") then
+                    descendant.ChildAdded:Connect(handlePetAdded)
                 end
             end
         end
 
-        -- Lắng nghe khi game thông báo nhận thưởng thú mới trên màn hình
-        if LocalPlayer:FindFirstChild("PlayerScripts") then
-            -- Bổ sung cơ chế quét ngầm ReplicatedStorage nếu game lưu dữ liệu pet ở đây
-            local ReplicatedStorage = game:GetService("ReplicatedStorage")
-            for _, v in ipairs(ReplicatedStorage:GetDescendants()) do
-                if v:IsA("Folder") and (string.find(string.lower(v.Name), "pet") or string.find(string.lower(v.Name), "reward")) then
-                    v.ChildAdded:Connect(onNewPetAcquired)
+        -- Theo dõi toàn bộ kho lưu trữ giao diện chính thức nếu game đẩy dữ liệu hiển thị về đây
+        if LocalPlayer:FindFirstChild("PlayerGui") then
+            for _, gui in ipairs(LocalPlayer.PlayerGui:GetChildren()) do
+                local gName = string.lower(gui.Name)
+                if string.find(gName, "inventory") or string.find(gName, "storage") or string.find(gName, "pet") then
+                    gui.DescendantAdded:Connect(handlePetAdded)
                 end
             end
         end
     end)
 end
 
-hookStorage()
+hookGameStorage()
 
 -- ==========================================
 -- XỬ LÝ SỰ KIỆN NÚT BẤM START/STOP
@@ -652,7 +670,7 @@ RunService.RenderStepped:Connect(function()
     else
         StatusLabel.Text = string.format(
             " ⏱️ Đã chạy: 00:00:00 | 🇻🇳 %s\n 🎮 Game: %s\n ⚡ FPS: %d | 📶 Ping: %dms",
-            vnClockStr, cachedGameName, currentFps, ping
+            vnClockStr, cachedGameName, cachedGameName and currentFps or 60, ping
         )
         FooterLabel.Text = string.format("Đã gửi: %d thú | Trạng thái: 🔴 Đang dừng", petsCaughtCount)
     end
