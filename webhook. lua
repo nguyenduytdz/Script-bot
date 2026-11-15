@@ -15,6 +15,7 @@ local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local MarketplaceService = game:GetService("MarketplaceService")
 local CoreGui = game:GetService("CoreGui")
+local TweenService = game:GetService("TweenService")
 local LocalPlayer = Players.LocalPlayer
 
 local httpRequest = (syn and syn.request) or (http and http.request) or http_request or (fluxus and fluxus.request) or request
@@ -92,7 +93,7 @@ local function formatBigNumber(val)
 end
 
 -- ==========================================
--- TẠO GIAO DIỆN (UI) MENU 2 TAB TRỰC QUAN
+-- TẠO GIAO DIỆN (UI) & ICON TIA SÉT BẬT/TẮT
 -- ==========================================
 if CoreGui:FindFirstChild("ThrowFoodAutoMenu") then
     CoreGui.ThrowFoodAutoMenu:Destroy()
@@ -103,6 +104,30 @@ ScreenGui.Name = "ThrowFoodAutoMenu"
 ScreenGui.Parent = CoreGui
 ScreenGui.ResetOnSpawn = false
 
+-- --- ICON TIA SÉT (BẬT / TẮT MENU CHÍNH) ---
+local ToggleIconBtn = Instance.new("TextButton")
+ToggleIconBtn.Name = "ToggleIconBtn"
+ToggleIconBtn.Size = UDim2.new(0, 45, 0, 45)
+ToggleIconBtn.Position = UDim2.new(0.05, 0, 0.12, 0)
+ToggleIconBtn.BackgroundColor3 = Color3.fromRGB(35, 35, 42)
+ToggleIconBtn.TextColor3 = Color3.fromRGB(255, 220, 50)
+ToggleIconBtn.TextSize = 22
+ToggleIconBtn.Font = Enum.Font.GothamBold
+ToggleIconBtn.Text = "⚡"
+ToggleIconBtn.Active = true
+ToggleIconBtn.Draggable = true
+ToggleIconBtn.Parent = ScreenGui
+
+local IconCorner = Instance.new("UICorner")
+IconCorner.CornerRadius = UDim.new(1, 0) -- Hình tròn hoàn hảo
+IconCorner.Parent = ToggleIconBtn
+
+local IconStroke = Instance.new("UIStroke")
+IconStroke.Color = Color3.fromRGB(224, 86, 36)
+IconStroke.Thickness = 2
+IconStroke.Parent = ToggleIconBtn
+
+-- --- KHUNG GIAO DIỆN CHÍNH (MAIN MENU) ---
 local MainFrame = Instance.new("Frame")
 MainFrame.Name = "MainFrame"
 MainFrame.Size = UDim2.new(0, 310, 0, 310)
@@ -116,6 +141,26 @@ MainFrame.Parent = ScreenGui
 local UICorner = Instance.new("UICorner")
 UICorner.CornerRadius = UDim.new(0, 14)
 UICorner.Parent = MainFrame
+
+-- Hiệu ứng bấm vào icon tia sét: Xoay vòng & Ẩn/Hiện Menu
+local isMenuVisible = true
+ToggleIconBtn.MouseButton1Click:Connect(function()
+    isMenuVisible = not isMenuVisible
+    MainFrame.Visible = isMenuVisible
+
+    -- Hiệu ứng xoay tròn icon 360 độ mượt mà
+    TweenService:Create(ToggleIconBtn, TweenInfo.new(0.4, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+        Rotation = ToggleIconBtn.Rotation + 360
+    }):Play()
+end)
+ToggleIconBtn.TouchTap:Connect(function()
+    isMenuVisible = not isMenuVisible
+    MainFrame.Visible = isMenuVisible
+
+    TweenService:Create(ToggleIconBtn, TweenInfo.new(0.4, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+        Rotation = ToggleIconBtn.Rotation + 360
+    }):Play()
+end)
 
 local TitleLabel = Instance.new("TextLabel")
 TitleLabel.Size = UDim2.new(1, 0, 0, 32)
@@ -311,7 +356,7 @@ DropdownListFrame:GetPropertyChangedSignal("Visible"):Connect(function()
     end
 end)
 
--- --- TAB 2: LỊCH SỬ PET (TÁCH BIỆT RÕ RÀNG TÊN, ĐỘ HIẾM, ĐỘT BIẾN, TIỀN, GIỜ) ---
+-- --- TAB 2: LỊCH SỬ PET (TỰ ĐỘNG CUỘN XUỐNG DƯỚI CÙNG) ---
 local Tab2Content = Instance.new("ScrollingFrame")
 Tab2Content.Size = UDim2.new(1, -10, 1, -70)
 Tab2Content.Position = UDim2.new(0, 5, 0, 65)
@@ -364,12 +409,15 @@ local function addPetToHistoryUI(petData, timeStr)
     descLabel.TextXAlignment = Enum.TextXAlignment.Left
     descLabel.TextYAlignment = Enum.TextYAlignment.Center
     descLabel.TextWrapped = true
-    -- Tách biệt rõ ràng từng dòng thông tin y hệt yêu cầu của bạn
     descLabel.Text = string.format("🐾 Tên: %s\n✨ Độ hiếm: %s\n🧬 Đột biến: %s\n💸 Tiền/s: %s\n⏰ Lúc: %s", petData.Name, petData.Rarity, petData.Mutation, petData.MoneyPerSec, timeStr)
     descLabel.Parent = itemFrame
 
     local totalItems = #Tab2Content:GetChildren() - 1
-    Tab2Content.CanvasSize = UDim2.new(0, 0, 0, totalItems * 77)
+    local totalHeight = totalItems * 77
+    Tab2Content.CanvasSize = UDim2.new(0, 0, 0, totalHeight)
+
+    -- Tự động cuộn xuống dưới cùng khi có pet mới
+    Tab2Content.CanvasPosition = Vector2.new(0, math.max(0, totalHeight - Tab2Content.AbsoluteWindowSize.Y))
 end
 
 -- ==========================================
