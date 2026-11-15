@@ -23,10 +23,10 @@ if not httpRequest then
     return
 end
 
-local isRunning = true -- Chỉ dùng để bật/tắt gửi Discord
-local startTime = tick() -- Tính thời gian chạy liên tục từ lúc nạp script
+local isRunning = true
+local startTime = tick()
 local petsCaughtCount = 0
-local processedItems = {} -- Bộ nhớ đệm chống ghi trùng pet cũ
+local processedItems = {} 
 
 local cachedGameName = "Throw Food For Animals"
 pcall(function()
@@ -122,7 +122,12 @@ MainFrame.Parent = ScreenGui
 Instance.new("UICorner", MainFrame).CornerRadius = UDim.new(0, 14)
 
 local isMenuVisible = true
-ToggleIconBtn.Activated:Connect(function()
+local function safeClick(btn, callback)
+    btn.MouseButton1Down:Connect(callback)
+    btn.TouchTap:Connect(callback)
+end
+
+safeClick(ToggleIconBtn, function()
     isMenuVisible = not isMenuVisible
     MainFrame.Visible = isMenuVisible
     TweenService:Create(ToggleIconBtn, TweenInfo.new(0.4, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
@@ -225,7 +230,7 @@ local function createFilterOption(name, val)
     optBtn.Parent = DropdownListFrame
     Instance.new("UICorner", optBtn).CornerRadius = UDim.new(0, 4)
 
-    optBtn.Activated:Connect(function()
+    safeClick(optBtn, function()
         CURRENT_MIN_MONEY = val
         FilterDropdownBtn.Text = "🔽 Lọc Tiền: " .. name
         isDropdownOpen = false
@@ -241,7 +246,7 @@ createFilterOption("Từ 1Qa+ /s", 1e15)
 createFilterOption("Từ 1spd+ /s", 1e54)
 
 local isDropdownOpen = false
-FilterDropdownBtn.Activated:Connect(function()
+safeClick(FilterDropdownBtn, function()
     isDropdownOpen = not isDropdownOpen
     DropdownListFrame.Visible = isDropdownOpen
     if isDropdownOpen then
@@ -300,7 +305,7 @@ HistorySearch.TextSize = 11
 HistorySearch.Font = Enum.Font.Gotham
 HistorySearch.ClearTextOnFocus = false
 HistorySearch.Parent = MainFrame
-HistorySearch.Visible = true
+HistorySearch.Visible = false
 Instance.new("UICorner", HistorySearch).CornerRadius = UDim.new(0, 6)
 
 local HistoryFilterBtn = Instance.new("TextButton")
@@ -312,7 +317,7 @@ HistoryFilterBtn.Text = "☷ Lọc"
 HistoryFilterBtn.TextSize = 11
 HistoryFilterBtn.Font = Enum.Font.GothamBold
 HistoryFilterBtn.Parent = MainFrame
-HistoryFilterBtn.Visible = true
+HistoryFilterBtn.Visible = false
 Instance.new("UICorner", HistoryFilterBtn).CornerRadius = UDim.new(0, 6)
 
 local HistoryFilterPopup = Instance.new("Frame")
@@ -336,7 +341,7 @@ local function makeHistoryModeButton(label, mode, y)
     b.ZIndex = 11
     b.Parent = HistoryFilterPopup
     Instance.new("UICorner", b).CornerRadius = UDim.new(0, 4)
-    b.Activated:Connect(function()
+    safeClick(b, function()
         historyFilterMode = mode
         HistoryFilterPopup.Visible = false
         HistoryFilterBtn.Text = (mode == "value" and "☷ Giá trị")
@@ -349,7 +354,7 @@ makeHistoryModeButton("Tất cả", "all", 4)
 makeHistoryModeButton("Lọc theo giá trị", "value", 30)
 makeHistoryModeButton("Lọc theo độ hiếm", "rarity", 56)
 
-HistoryFilterBtn.Activated:Connect(function()
+safeClick(HistoryFilterBtn, function()
     HistoryFilterPopup.Visible = not HistoryFilterPopup.Visible
 end)
 
@@ -384,12 +389,7 @@ refreshHistory = function()
             matchesFilter = (q == "" or string.find(string.lower(tostring(d.Rarity or "")), q, 1, true) ~= nil)
         end
 
-        local matches
-        if historyFilterMode == "all" then
-            matches = matchesName
-        else
-            matches = matchesFilter
-        end
+        local matches = (historyFilterMode == "all") and matchesName or (matchesName and matchesFilter)
 
         if matches then
             shown = shown + 1
@@ -432,7 +432,7 @@ HistorySearch:GetPropertyChangedSignal("Text"):Connect(function()
     refreshHistory()
 end)
 
-Tab1Btn.Activated:Connect(function()
+safeClick(Tab1Btn, function()
     Tab1Content.Visible = true
     Tab2Content.Visible = false
     HistorySearch.Visible = false
@@ -444,7 +444,7 @@ Tab1Btn.Activated:Connect(function()
     Tab2Btn.TextColor3 = Color3.fromRGB(180, 180, 180)
 end)
 
-Tab2Btn.Activated:Connect(function()
+safeClick(Tab2Btn, function()
     Tab1Content.Visible = false
     Tab2Content.Visible = true
     HistorySearch.Visible = true
@@ -503,7 +503,6 @@ local function extractPetInfo(item)
         NumericWeight = nil
     }
 
-    -- Hàm phụ trợ bóc số kg chính xác
     local function parseWeightString(str)
         if type(str) ~= "string" and type(str) ~= "number" then return nil end
         local s = tostring(str)
@@ -522,7 +521,7 @@ local function extractPetInfo(item)
         end
         return nil, nil
     end
-        -- 1. Quét Attributes
+
     for key, val in pairs(item:GetAttributes()) do
         local k = string.lower(key)
         local vStr = tostring(val)
@@ -541,7 +540,6 @@ local function extractPetInfo(item)
         end
     end
 
-    -- 2. Quét Descendants
     for _, child in ipairs(item:GetDescendants()) do
         local k = string.lower(child.Name)
         if child:IsA("ValueBase") then
@@ -593,8 +591,7 @@ end
 -- ==========================================
 local function isRealPet(item)
     if not item or not item.Parent then return false end
-    if not item:IsDescendantOf(LocalPlayer:FindFirstChild("Backpack")) then return false end
-
+    
     local nameLower = string.lower(item.Name)
     if string.find(nameLower, "food") or string.find(nameLower, "bait") or 
        string.find(nameLower, "apple") or string.find(nameLower, "meat") or 
@@ -632,7 +629,7 @@ local function isRealPet(item)
 end
 
 -- ==========================================
--- GỬI WEBHOOK & GHI LỊCH SỬ (TỰ ĐỘNG 100%)
+-- GỬI WEBHOOK & GHI LỊCH SỬ
 -- ==========================================
 local function sendDiscordWebhook(petData)
     petsCaughtCount = petsCaughtCount + 1
@@ -642,15 +639,12 @@ local function sendDiscordWebhook(petData)
         vnTimeTable.hour, vnTimeTable.min, vnTimeTable.sec,
         vnTimeTable.day, vnTimeTable.month, vnTimeTable.year)
 
-    -- 1. LUÔN LUÔN GHI LỊCH SỬ (Dù đang START hay STOP)
     table.insert(HistoryRecords, {data = petData, time = vnTimeString})
     if refreshHistory then refreshHistory() end
 
-    -- 2. NẾU ĐANG STOP THÌ KHÔNG GỬI DISCORD
     if not isRunning then return end
     if CURRENT_MIN_MONEY > 0 and petData.NumericMoney < CURRENT_MIN_MONEY then return end
 
-    -- 3. GỬI WEBHOOK
     local playerName = LocalPlayer.Name
     local displayName = LocalPlayer.DisplayName
     local userId = tostring(LocalPlayer.UserId)
@@ -686,7 +680,7 @@ local function sendDiscordWebhook(petData)
 end
 
 -- ==========================================
--- BỘ NHỚ ĐỆM (SNAPSHOT)
+-- BỘ NHỚ ĐỆM & THEO DÕI TÚI ĐỒ / NHÂN VẬT
 -- ==========================================
 local function getItemUID(item)
     return item:GetAttribute("UUID") or item:GetAttribute("Id") or item:GetAttribute("ID") or item:GetDebugId() or (item.Name .. tostring(os.clock()))
@@ -699,10 +693,8 @@ local function handleNewItem(newItem)
     if processedItems[itemUID] then return end
     processedItems[itemUID] = true 
 
-    -- Đợi game load xong thông số
     task.wait(1.5)
     if not newItem.Parent then return end
-
     if not isRealPet(newItem) then return end
 
     local petInfo = extractPetInfo(newItem)
@@ -719,25 +711,31 @@ local function monitorContainer(container)
     container.ChildAdded:Connect(handleNewItem)
 end
 
-if LocalPlayer:FindFirstChild("Backpack") then
-    monitorContainer(LocalPlayer.Backpack)
-else
-    LocalPlayer:WaitForChild("Backpack", 10)
-    if LocalPlayer:FindFirstChild("Backpack") then
-        monitorContainer(LocalPlayer.Backpack)
-    end
+local function setupListeners()
+    local bp = LocalPlayer:FindFirstChild("Backpack")
+    if bp then monitorContainer(bp) end
+    
+    local char = LocalPlayer.Character
+    if char then monitorContainer(char) end
 end
 
-LocalPlayer.CharacterAdded:Connect(function()
+setupListeners()
+
+LocalPlayer.CharacterAdded:Connect(function(char)
     task.wait(1)
+    monitorContainer(char)
     local bp = LocalPlayer:FindFirstChild("Backpack")
     if bp then monitorContainer(bp) end
 end)
 
+if LocalPlayer:FindFirstChild("Backpack") then
+    LocalPlayer.Backpack.ChildAdded:Connect(handleNewItem)
+end
+
 -- ==========================================
--- START/STOP
+-- START/STOP BUTTON
 -- ==========================================
-local function toggleScriptState()
+safeClick(ToggleButton, function()
     isRunning = not isRunning
     if isRunning then
         ToggleButton.Text = "STOP SCRIPT"
@@ -746,11 +744,10 @@ local function toggleScriptState()
         ToggleButton.Text = "START SCRIPT"
         ToggleButton.BackgroundColor3 = Color3.fromRGB(224, 86, 36)
     end
-end
-ToggleButton.Activated:Connect(toggleScriptState)
+end)
 
 -- ==========================================
--- VÒNG LẶP CẬP NHẬT TRẠNG THÁI & THỜI GIAN
+-- VÒNG LẶP CẬP NHẬT TRẠNG THÁI
 -- ==========================================
 local frameCount = 0
 local lastFpsUpdate = tick()
