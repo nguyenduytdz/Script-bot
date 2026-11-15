@@ -81,7 +81,7 @@ local function formatBigNumber(val)
 end
 
 -- ==========================================
--- TẠO GIAO DIỆN (UI) - SỬA LẠI HÀM BẤM NHẠY 1 LẦN
+-- TẠO GIAO DIỆN (UI)
 -- ==========================================
 if CoreGui:FindFirstChild("ThrowFoodAutoMenu") then
     CoreGui.ThrowFoodAutoMenu:Destroy()
@@ -92,7 +92,6 @@ ScreenGui.Name = "ThrowFoodAutoMenu"
 ScreenGui.Parent = CoreGui
 ScreenGui.ResetOnSpawn = false
 
--- Hàm chuyên dụng cho mobile: Bấm 1 cái ăn ngay lập tức không cần giữ
 local function onButtonClicked(btn, callback)
     local connection
     connection = btn.MouseButton1Click:Connect(callback)
@@ -279,7 +278,7 @@ FooterLabel.TextColor3 = Color3.fromRGB(160, 160, 170)
 FooterLabel.TextSize = 11
 FooterLabel.Font = Enum.Font.Gotham
 FooterLabel.TextWrapped = true
-FooterLabel.Text = "Đã gửi: 0 thú | Trạng thái: 🔴 Đang dừng"
+FooterLabel.Text = "Đã gửi: 0 thú | Trạng thái: 🟢 Đang chạy"
 FooterLabel.Parent = Tab1Content
 
 DropdownListFrame:GetPropertyChangedSignal("Visible"):Connect(function()
@@ -292,13 +291,13 @@ DropdownListFrame:GetPropertyChangedSignal("Visible"):Connect(function()
     end
 end)
 
--- --- TAB 2: LỊCH SỬ + TÌM KIẾM / LỌC ---
+-- --- TAB 2: LỊCH SỬ + TÌM KIẾM / LỌC / ĐẾM SỐ LƯỢNG PET ---
 local HistoryRecords = {}
 local historyFilterMode = "all"
 local refreshHistory
 
 local HistorySearch = Instance.new("TextBox")
-HistorySearch.Size = UDim2.new(1, -95, 0, 30)
+HistorySearch.Size = UDim2.new(1, -125, 0, 30)
 HistorySearch.Position = UDim2.new(0, 10, 0, 66)
 HistorySearch.BackgroundColor3 = Color3.fromRGB(38, 38, 46)
 HistorySearch.TextColor3 = Color3.fromRGB(245, 245, 245)
@@ -312,21 +311,36 @@ HistorySearch.Parent = MainFrame
 HistorySearch.Visible = false
 Instance.new("UICorner", HistorySearch).CornerRadius = UDim.new(0, 6)
 
+-- Ô nút lọc thu nhỏ gọn gàng vừa vặn
 local HistoryFilterBtn = Instance.new("TextButton")
-HistoryFilterBtn.Size = UDim2.new(0, 75, 0, 30)
-HistoryFilterBtn.Position = UDim2.new(1, -85, 0, 66)
+HistoryFilterBtn.Size = UDim2.new(0, 50, 0, 30)
+HistoryFilterBtn.Position = UDim2.new(1, -115, 0, 66)
 HistoryFilterBtn.BackgroundColor3 = Color3.fromRGB(45, 45, 55)
 HistoryFilterBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
 HistoryFilterBtn.Text = "☷ Lọc"
-HistoryFilterBtn.TextSize = 11
+HistoryFilterBtn.TextSize = 10
 HistoryFilterBtn.Font = Enum.Font.GothamBold
 HistoryFilterBtn.Parent = MainFrame
 HistoryFilterBtn.Visible = false
 Instance.new("UICorner", HistoryFilterBtn).CornerRadius = UDim.new(0, 6)
 
+-- Thêm nhãn hiển thị số lượng pet bắt được nằm gọn ở góc phần lịch sử
+local HistoryCountLabel = Instance.new("TextLabel")
+HistoryCountLabel.Size = UDim2.new(0, 50, 0, 30)
+HistoryCountLabel.Position = UDim2.new(1, -60, 0, 66)
+HistoryCountLabel.BackgroundColor3 = Color3.fromRGB(38, 38, 46)
+HistoryCountLabel.TextColor3 = Color3.fromRGB(46, 204, 113)
+HistoryCountLabel.TextSize = 11
+HistoryCountLabel.Font = Enum.Font.GothamBold
+HistoryCountLabel.Text = "0"
+HistoryCountLabel.TextXAlignment = Enum.TextXAlignment.Center
+HistoryCountLabel.Parent = MainFrame
+HistoryCountLabel.Visible = false
+Instance.new("UICorner", HistoryCountLabel).CornerRadius = UDim.new(0, 6)
+
 local HistoryFilterPopup = Instance.new("Frame")
-HistoryFilterPopup.Size = UDim2.new(0, 150, 0, 88)
-HistoryFilterPopup.Position = UDim2.new(1, -160, 0, 99)
+HistoryFilterPopup.Size = UDim2.new(0, 130, 0, 88)
+HistoryFilterPopup.Position = UDim2.new(1, -140, 0, 99)
 HistoryFilterPopup.BackgroundColor3 = Color3.fromRGB(35, 35, 42)
 HistoryFilterPopup.Visible = false
 HistoryFilterPopup.ZIndex = 10
@@ -348,15 +362,12 @@ local function makeHistoryModeButton(label, mode, y)
     onButtonClicked(b, function()
         historyFilterMode = mode
         HistoryFilterPopup.Visible = false
-        HistoryFilterBtn.Text = (mode == "value" and "☷ Giá trị")
-            or (mode == "rarity" and "☷ Độ hiếm")
-            or "☷ Tất cả"
         if refreshHistory then refreshHistory() end
     end)
 end
 makeHistoryModeButton("Tất cả", "all", 4)
-makeHistoryModeButton("Lọc theo giá trị", "value", 30)
-makeHistoryModeButton("Lọc theo độ hiếm", "rarity", 56)
+makeHistoryModeButton("Lọc giá trị", "value", 30)
+makeHistoryModeButton("Lọc độ hiếm", "rarity", 56)
 
 onButtonClicked(HistoryFilterBtn, function()
     HistoryFilterPopup.Visible = not HistoryFilterPopup.Visible
@@ -428,6 +439,7 @@ refreshHistory = function()
         end
     end
     Tab2Content.CanvasSize = UDim2.new(0, 0, 0, shown * 77)
+    HistoryCountLabel.Text = tostring(#HistoryRecords)
     task.wait()
     Tab2Content.CanvasPosition = Vector2.new(0, Tab2Content.CanvasSize.Y.Offset)
 end
@@ -441,6 +453,7 @@ onButtonClicked(Tab1Btn, function()
     Tab2Content.Visible = false
     HistorySearch.Visible = false
     HistoryFilterBtn.Visible = false
+    HistoryCountLabel.Visible = false
     HistoryFilterPopup.Visible = false
     Tab1Btn.BackgroundColor3 = Color3.fromRGB(46, 204, 113)
     Tab1Btn.TextColor3 = Color3.fromRGB(255, 255, 255)
@@ -453,6 +466,7 @@ onButtonClicked(Tab2Btn, function()
     Tab2Content.Visible = true
     HistorySearch.Visible = true
     HistoryFilterBtn.Visible = true
+    HistoryCountLabel.Visible = true
     Tab2Btn.BackgroundColor3 = Color3.fromRGB(46, 204, 113)
     Tab2Btn.TextColor3 = Color3.fromRGB(255, 255, 255)
     Tab1Btn.BackgroundColor3 = Color3.fromRGB(45, 45, 55)
@@ -737,7 +751,7 @@ if LocalPlayer:FindFirstChild("Backpack") then
 end
 
 -- ==========================================
--- START/STOP BUTTON
+-- START/STOP BUTTON (ĐÃ FIX LỖI TỰ BẬT TRẠNG THÁI)
 -- ==========================================
 onButtonClicked(ToggleButton, function()
     isRunning = not isRunning
