@@ -23,8 +23,8 @@ if not httpRequest then
     return
 end
 
-local isRunning = true -- Mặc định bật gửi Discord
-local startTime = tick() -- Tính thời gian từ lúc nạp script
+local isRunning = true -- Chỉ dùng để bật/tắt gửi Discord
+local startTime = tick() -- Tính thời gian chạy liên tục từ lúc nạp script
 local petsCaughtCount = 0
 local processedItems = {} -- Bộ nhớ đệm chống ghi trùng pet cũ
 
@@ -503,7 +503,7 @@ local function extractPetInfo(item)
         NumericWeight = nil
     }
 
-    -- Hàm phụ trợ bóc số kg chính xác của TỪNG con
+    -- Hàm phụ trợ bóc số kg chính xác
     local function parseWeightString(str)
         if type(str) ~= "string" and type(str) ~= "number" then return nil end
         local s = tostring(str)
@@ -522,7 +522,7 @@ local function extractPetInfo(item)
         end
         return nil, nil
     end
-
+        -- 1. Quét Attributes
     for key, val in pairs(item:GetAttributes()) do
         local k = string.lower(key)
         local vStr = tostring(val)
@@ -541,6 +541,7 @@ local function extractPetInfo(item)
         end
     end
 
+    -- 2. Quét Descendants
     for _, child in ipairs(item:GetDescendants()) do
         local k = string.lower(child.Name)
         if child:IsA("ValueBase") then
@@ -588,7 +589,7 @@ local function extractPetInfo(item)
 end
 
 -- ==========================================
--- BỘ LỌC THÔNG MINH (CHỐNG BỎ SÓT PET MỚI)
+-- LỌC THÔNG MINH (CHỈ NHẬN PET)
 -- ==========================================
 local function isRealPet(item)
     if not item or not item.Parent then return false end
@@ -631,7 +632,7 @@ local function isRealPet(item)
 end
 
 -- ==========================================
--- GỬI WEBHOOK & GHI LỊCH SỬ
+-- GỬI WEBHOOK & GHI LỊCH SỬ (TỰ ĐỘNG 100%)
 -- ==========================================
 local function sendDiscordWebhook(petData)
     petsCaughtCount = petsCaughtCount + 1
@@ -641,17 +642,15 @@ local function sendDiscordWebhook(petData)
         vnTimeTable.hour, vnTimeTable.min, vnTimeTable.sec,
         vnTimeTable.day, vnTimeTable.month, vnTimeTable.year)
 
-    -- 1. LUÔN LUÔN GHI VÀO LỊCH SỬ (Không quan tâm đang START hay STOP)
+    -- 1. LUÔN LUÔN GHI LỊCH SỬ (Dù đang START hay STOP)
     table.insert(HistoryRecords, {data = petData, time = vnTimeString})
     if refreshHistory then refreshHistory() end
 
-    -- 2. NẾU ĐANG STOP THÌ DỪNG LẠI, KHÔNG GỬI DISCORD
+    -- 2. NẾU ĐANG STOP THÌ KHÔNG GỬI DISCORD
     if not isRunning then return end
-    
-    -- 3. LỌC TIỀN (Không đạt mức lọc thì không gửi Discord)
     if CURRENT_MIN_MONEY > 0 and petData.NumericMoney < CURRENT_MIN_MONEY then return end
 
-    -- 4. GỬI WEBHOOK LÊN DISCORD
+    -- 3. GỬI WEBHOOK
     local playerName = LocalPlayer.Name
     local displayName = LocalPlayer.DisplayName
     local userId = tostring(LocalPlayer.UserId)
@@ -687,7 +686,7 @@ local function sendDiscordWebhook(petData)
 end
 
 -- ==========================================
--- BỘ NHỚ ĐỆM (SNAPSHOT) & XỬ LÝ ITEM MỚI
+-- BỘ NHỚ ĐỆM (SNAPSHOT)
 -- ==========================================
 local function getItemUID(item)
     return item:GetAttribute("UUID") or item:GetAttribute("Id") or item:GetAttribute("ID") or item:GetDebugId() or (item.Name .. tostring(os.clock()))
@@ -698,11 +697,12 @@ local function handleNewItem(newItem)
 
     local itemUID = getItemUID(newItem)
     if processedItems[itemUID] then return end
-    processedItems[itemUID] = true
+    processedItems[itemUID] = true 
 
-    task.wait(1.5) -- Đợi game load xong thông số
-
+    -- Đợi game load xong thông số
+    task.wait(1.5)
     if not newItem.Parent then return end
+
     if not isRealPet(newItem) then return end
 
     local petInfo = extractPetInfo(newItem)
@@ -729,15 +729,13 @@ else
 end
 
 LocalPlayer.CharacterAdded:Connect(function()
-    task.wait(2)
+    task.wait(1)
     local bp = LocalPlayer:FindFirstChild("Backpack")
-    if bp then
-        monitorContainer(bp)
-    end
+    if bp then monitorContainer(bp) end
 end)
 
 -- ==========================================
--- START/STOP: Chỉ bật/tắt gửi webhook, không ảnh hưởng thời gian
+-- START/STOP
 -- ==========================================
 local function toggleScriptState()
     isRunning = not isRunning
@@ -788,6 +786,6 @@ RunService.RenderStepped:Connect(function()
     if isRunning then
         FooterLabel.Text = string.format("Đã ghi nhận: %d thú | Trạng thái: 🟢 Đang gửi webhook", petsCaughtCount)
     else
-        FooterLabel.Text = string.format("Đã ghi nhận: %d thú | Trạng thái: 🔴 Dừng gửi webhook (vẫn ghi lịch sử)", petsCaughtCount)
+        FooterLabel.Text = string.format("Đã ghi nhận: %d thú | Trạng thái: 🔴 Dừng gửi webhook (vẫn lưu lịch sử)", petsCaughtCount)
     end
 end)
