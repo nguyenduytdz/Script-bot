@@ -23,7 +23,7 @@ if not httpRequest then
     return
 end
 
-local isRunning = true
+local isRunning = true -- Mặc định bật gửi Discord
 local startTime = tick() -- Tính thời gian từ lúc nạp script
 local petsCaughtCount = 0
 local processedItems = {} -- Bộ nhớ đệm chống ghi trùng pet cũ
@@ -507,13 +507,11 @@ local function extractPetInfo(item)
     local function parseWeightString(str)
         if type(str) ~= "string" and type(str) ~= "number" then return nil end
         local s = tostring(str)
-        -- Tìm cụm số (có thể có dấu phẩy hoặc dấu chấm)
         local numMatch = s:match("([%d%.,]+)")
         if numMatch then
             local cleanNum = numMatch:gsub(",", "")
             local num = tonumber(cleanNum)
             if num then
-                -- Format lại cho đẹp (vd: 391036 -> 391,036)
                 local formatted = tostring(math.floor(num))
                 local k
                 repeat
@@ -525,7 +523,6 @@ local function extractPetInfo(item)
         return nil, nil
     end
 
-    -- 1. Quét Attributes của con pet đó
     for key, val in pairs(item:GetAttributes()) do
         local k = string.lower(key)
         local vStr = tostring(val)
@@ -544,7 +541,6 @@ local function extractPetInfo(item)
         end
     end
 
-    -- 2. Quét Descendants (ValueBase & TextLabel)
     for _, child in ipairs(item:GetDescendants()) do
         local k = string.lower(child.Name)
         if child:IsA("ValueBase") then
@@ -564,7 +560,6 @@ local function extractPetInfo(item)
             end
         elseif child:IsA("TextLabel") and child.Text ~= "" then
             local txt = child.Text
-            -- Chỉ lấy chữ có chứa "kg" thực sự
             if info.Weight == "Không rõ" and string.find(string.lower(txt), "kg") then
                 local formattedW, numW = parseWeightString(txt)
                 if numW then
@@ -578,7 +573,6 @@ local function extractPetInfo(item)
         end
     end
 
-    -- 3. Xử lý tiền tệ
     if info.RawMoney then
         info.NumericMoney = parseRawMoneyToNumber(info.RawMoney)
     end
@@ -594,42 +588,46 @@ local function extractPetInfo(item)
 end
 
 -- ==========================================
--- LỌC CHẶT: CHỈ NHẬN PET THẬT
+-- BỘ LỌC THÔNG MINH (CHỐNG BỎ SÓT PET MỚI)
 -- ==========================================
 local function isRealPet(item)
     if not item or not item.Parent then return false end
     if not item:IsDescendantOf(LocalPlayer:FindFirstChild("Backpack")) then return false end
 
-    local hasRarity = item:GetAttribute("Rarity") or item:GetAttribute("rarity") or item:GetAttribute("Tier") or item:GetAttribute("tier")
-    local hasRate = false
+    local nameLower = string.lower(item.Name)
+    if string.find(nameLower, "food") or string.find(nameLower, "bait") or 
+       string.find(nameLower, "apple") or string.find(nameLower, "meat") or 
+       string.find(nameLower, "seed") or string.find(nameLower, "treat") or
+       string.find(nameLower, "potion") or string.find(nameLower, "egg") or
+       string.find(nameLower, "hammer") or string.find(nameLower, "pickaxe") or
+       string.find(nameLower, "rod") or string.find(nameLower, "bats") then
+        return false
+    end
+
+    local hasPetStat = false
     for key, _ in pairs(item:GetAttributes()) do
         local k = string.lower(key)
-        if string.find(k, "rate") or string.find(k, "income") or string.find(k, "cps") or string.find(k, "money") then
-            hasRate = true
+        if string.find(k, "rate") or string.find(k, "income") or 
+           string.find(k, "rarity") or string.find(k, "weight") then
+            hasPetStat = true
             break
         end
     end
 
-    if not hasRarity or not hasRate then
+    if not hasPetStat then
         for _, child in ipairs(item:GetDescendants()) do
-            local k = string.lower(child.Name)
-            if (string.find(k, "rarity") or string.find(k, "tier")) and child:IsA("ValueBase") then
-                hasRarity = true
-            end
-            if (string.find(k, "rate") or string.find(k, "income") or string.find(k, "cps")) and child:IsA("ValueBase") then
-                hasRate = true
+            if child:IsA("ValueBase") then
+                local k = string.lower(child.Name)
+                if string.find(k, "rate") or string.find(k, "income") or 
+                   string.find(k, "rarity") or string.find(k, "weight") then
+                    hasPetStat = true
+                    break
+                end
             end
         end
     end
 
-    local nameLower = string.lower(item.Name)
-    if string.find(nameLower, "food") or string.find(nameLower, "bait") or string.find(nameLower, "apple") or 
-       string.find(nameLower, "meat") or string.find(nameLower, "seed") or string.find(nameLower, "treat") or
-       string.find(nameLower, "potion") or string.find(nameLower, "egg") then
-        if not hasRarity then return false end
-    end
-
-    return (hasRarity or hasRate)
+    return hasPetStat
 end
 
 -- ==========================================
@@ -643,12 +641,17 @@ local function sendDiscordWebhook(petData)
         vnTimeTable.hour, vnTimeTable.min, vnTimeTable.sec,
         vnTimeTable.day, vnTimeTable.month, vnTimeTable.year)
 
+    -- 1. LUÔN LUÔN GHI VÀO LỊCH SỬ (Không quan tâm đang START hay STOP)
     table.insert(HistoryRecords, {data = petData, time = vnTimeString})
     if refreshHistory then refreshHistory() end
 
+    -- 2. NẾU ĐANG STOP THÌ DỪNG LẠI, KHÔNG GỬI DISCORD
     if not isRunning then return end
+    
+    -- 3. LỌC TIỀN (Không đạt mức lọc thì không gửi Discord)
     if CURRENT_MIN_MONEY > 0 and petData.NumericMoney < CURRENT_MIN_MONEY then return end
 
+    -- 4. GỬI WEBHOOK LÊN DISCORD
     local playerName = LocalPlayer.Name
     local displayName = LocalPlayer.DisplayName
     local userId = tostring(LocalPlayer.UserId)
@@ -684,30 +687,22 @@ local function sendDiscordWebhook(petData)
 end
 
 -- ==========================================
--- BỘ NHỚ ĐỆM (SNAPSHOT) - CHỐNG GHI TRÙNG PET CŨ
+-- BỘ NHỚ ĐỆM (SNAPSHOT) & XỬ LÝ ITEM MỚI
 -- ==========================================
 local function getItemUID(item)
     return item:GetAttribute("UUID") or item:GetAttribute("Id") or item:GetAttribute("ID") or item:GetDebugId() or (item.Name .. tostring(os.clock()))
 end
 
-local function snapshotBackpack(container)
-    if not container then return end
-    for _, item in ipairs(container:GetChildren()) do
-        if item:IsA("Tool") then
-            local uid = getItemUID(item)
-            processedItems[uid] = true
-        end
-    end
-end
-
 local function handleNewItem(newItem)
-    if not newItem or not newItem.Parent then return end
-    if not newItem:IsA("Tool") then return end
+    if not newItem or not newItem:IsA("Tool") then return end
 
     local itemUID = getItemUID(newItem)
     if processedItems[itemUID] then return end
     processedItems[itemUID] = true
 
+    task.wait(1.5) -- Đợi game load xong thông số
+
+    if not newItem.Parent then return end
     if not isRealPet(newItem) then return end
 
     local petInfo = extractPetInfo(newItem)
@@ -716,7 +711,11 @@ end
 
 local function monitorContainer(container)
     if not container then return end
-    snapshotBackpack(container)
+    for _, item in ipairs(container:GetChildren()) do
+        if item:IsA("Tool") then
+            processedItems[getItemUID(item)] = true
+        end
+    end
     container.ChildAdded:Connect(handleNewItem)
 end
 
@@ -730,7 +729,7 @@ else
 end
 
 LocalPlayer.CharacterAdded:Connect(function()
-    task.wait(1)
+    task.wait(2)
     local bp = LocalPlayer:FindFirstChild("Backpack")
     if bp then
         monitorContainer(bp)
@@ -738,7 +737,7 @@ LocalPlayer.CharacterAdded:Connect(function()
 end)
 
 -- ==========================================
--- START/STOP
+-- START/STOP: Chỉ bật/tắt gửi webhook, không ảnh hưởng thời gian
 -- ==========================================
 local function toggleScriptState()
     isRunning = not isRunning
