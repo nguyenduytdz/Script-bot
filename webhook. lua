@@ -4,7 +4,6 @@
 local WebhookURL = "https://discord.com/api/webhooks/1570446166754201803/pPCEG-HczkXcUA2fWQd6pYo62wgLmeBxf1ri812j1AO2W87wWCz1LzoF-6s8tgem5yEo"
 local DiscordUserID = "1494250347731091497"
 
--- Biến lưu mức lọc tiền hiện tại (Mặc định là 0: Nhận tất cả)
 local CURRENT_MIN_MONEY = 0 
 
 -- ==========================================
@@ -93,7 +92,7 @@ local function formatBigNumber(val)
 end
 
 -- ==========================================
--- TẠO GIAO DIỆN (UI) & ICON TIA SÉT BẬT/TẮT
+-- TẠO GIAO DIỆN (UI) & HỖ TRỢ CLICK NHẠY 100%
 -- ==========================================
 if CoreGui:FindFirstChild("ThrowFoodAutoMenu") then
     CoreGui.ThrowFoodAutoMenu:Destroy()
@@ -104,7 +103,7 @@ ScreenGui.Name = "ThrowFoodAutoMenu"
 ScreenGui.Parent = CoreGui
 ScreenGui.ResetOnSpawn = false
 
--- --- ICON TIA SÉT (BẬT / TẮT MENU CHÍNH) ---
+-- --- ICON TIA SÉT ---
 local ToggleIconBtn = Instance.new("TextButton")
 ToggleIconBtn.Name = "ToggleIconBtn"
 ToggleIconBtn.Size = UDim2.new(0, 45, 0, 45)
@@ -119,7 +118,7 @@ ToggleIconBtn.Draggable = true
 ToggleIconBtn.Parent = ScreenGui
 
 local IconCorner = Instance.new("UICorner")
-IconCorner.CornerRadius = UDim.new(1, 0) -- Hình tròn hoàn hảo
+IconCorner.CornerRadius = UDim.new(1, 0)
 IconCorner.Parent = ToggleIconBtn
 
 local IconStroke = Instance.new("UIStroke")
@@ -127,7 +126,7 @@ IconStroke.Color = Color3.fromRGB(224, 86, 36)
 IconStroke.Thickness = 2
 IconStroke.Parent = ToggleIconBtn
 
--- --- KHUNG GIAO DIỆN CHÍNH (MAIN MENU) ---
+-- --- KHUNG GIAO DIỆN CHÍNH ---
 local MainFrame = Instance.new("Frame")
 MainFrame.Name = "MainFrame"
 MainFrame.Size = UDim2.new(0, 310, 0, 310)
@@ -142,25 +141,18 @@ local UICorner = Instance.new("UICorner")
 UICorner.CornerRadius = UDim.new(0, 14)
 UICorner.Parent = MainFrame
 
--- Hiệu ứng bấm vào icon tia sét: Xoay vòng & Ẩn/Hiện Menu
+-- Xử lý ẩn/hiện menu qua icon tia sét siêu nhạy
 local isMenuVisible = true
-ToggleIconBtn.MouseButton1Click:Connect(function()
+local function toggleMenuVisibility()
     isMenuVisible = not isMenuVisible
     MainFrame.Visible = isMenuVisible
-
-    -- Hiệu ứng xoay tròn icon 360 độ mượt mà
-    TweenService:Create(ToggleIconBtn, TweenInfo.new(0.4, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+    TweenService:Create(ToggleIconBtn, TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
         Rotation = ToggleIconBtn.Rotation + 360
     }):Play()
-end)
-ToggleIconBtn.TouchTap:Connect(function()
-    isMenuVisible = not isMenuVisible
-    MainFrame.Visible = isMenuVisible
+end
 
-    TweenService:Create(ToggleIconBtn, TweenInfo.new(0.4, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
-        Rotation = ToggleIconBtn.Rotation + 360
-    }):Play()
-end)
+ToggleIconBtn.MouseButton1Click:Connect(toggleMenuVisibility)
+ToggleIconBtn.TouchTap:Connect(toggleMenuVisibility)
 
 local TitleLabel = Instance.new("TextLabel")
 TitleLabel.Size = UDim2.new(1, 0, 0, 32)
@@ -276,16 +268,13 @@ local function createFilterOption(name, val)
     optCorner.CornerRadius = UDim.new(0, 4)
     optCorner.Parent = optBtn
 
-    optBtn.MouseButton1Click:Connect(function()
+    local function selectOption()
         CURRENT_MIN_MONEY = val
         FilterDropdownBtn.Text = "🔽 Lọc Tiền: " .. name
         DropdownListFrame.Visible = false
-    end)
-    optBtn.TouchTap:Connect(function()
-        CURRENT_MIN_MONEY = val
-        FilterDropdownBtn.Text = "🔽 Lọc Tiền: " .. name
-        DropdownListFrame.Visible = false
-    end)
+    end
+    optBtn.MouseButton1Click:Connect(selectOption)
+    optBtn.TouchTap:Connect(selectOption)
 end
 
 createFilterOption("Tất cả (Nhận hết)", 0)
@@ -296,7 +285,7 @@ createFilterOption("Từ 1Qa+ /s", 1e15)
 createFilterOption("Từ 1spd+ /s", 1e54)
 
 local isDropdownOpen = false
-FilterDropdownBtn.MouseButton1Click:Connect(function()
+local function toggleDropdown()
     isDropdownOpen = not isDropdownOpen
     DropdownListFrame.Visible = isDropdownOpen
     if isDropdownOpen then
@@ -304,16 +293,9 @@ FilterDropdownBtn.MouseButton1Click:Connect(function()
     else
         FilterDropdownBtn.Text = "🔽 Lọc Tiền: " .. (CURRENT_MIN_MONEY == 0 and "Tất cả" or formatBigNumber(CURRENT_MIN_MONEY) .. "+")
     end
-end)
-FilterDropdownBtn.TouchTap:Connect(function()
-    isDropdownOpen = not isDropdownOpen
-    DropdownListFrame.Visible = isDropdownOpen
-    if isDropdownOpen then
-        FilterDropdownBtn.Text = "🔼 Đóng bảng lọc tiền"
-    else
-        FilterDropdownBtn.Text = "🔽 Lọc Tiền: " .. (CURRENT_MIN_MONEY == 0 and "Tất cả" or formatBigNumber(CURRENT_MIN_MONEY) .. "+")
-    end
-end)
+end
+FilterDropdownBtn.MouseButton1Click:Connect(toggleDropdown)
+FilterDropdownBtn.TouchTap:Connect(toggleDropdown)
 
 local ToggleButton = Instance.new("TextButton")
 ToggleButton.Size = UDim2.new(1, -20, 0, 36)
@@ -356,7 +338,7 @@ DropdownListFrame:GetPropertyChangedSignal("Visible"):Connect(function()
     end
 end)
 
--- --- TAB 2: LỊCH SỬ PET (TỰ ĐỘNG CUỘN XUỐNG DƯỚI CÙNG) ---
+-- --- TAB 2: LỊCH SỬ PET ---
 local Tab2Content = Instance.new("ScrollingFrame")
 Tab2Content.Size = UDim2.new(1, -10, 1, -70)
 Tab2Content.Position = UDim2.new(0, 5, 0, 65)
@@ -379,7 +361,24 @@ Tab1Btn.MouseButton1Click:Connect(function()
     Tab2Btn.BackgroundColor3 = Color3.fromRGB(45, 45, 55)
     Tab2Btn.TextColor3 = Color3.fromRGB(180, 180, 180)
 end)
+Tab1Btn.TouchTap:Connect(function()
+    Tab1Content.Visible = true
+    Tab2Content.Visible = false
+    Tab1Btn.BackgroundColor3 = Color3.fromRGB(46, 204, 113)
+    Tab1Btn.TextColor3 = Color3.fromRGB(255, 255, 255)
+    Tab2Btn.BackgroundColor3 = Color3.fromRGB(45, 45, 55)
+    Tab2Btn.TextColor3 = Color3.fromRGB(180, 180, 180)
+end)
+
 Tab2Btn.MouseButton1Click:Connect(function()
+    Tab1Content.Visible = false
+    Tab2Content.Visible = true
+    Tab2Btn.BackgroundColor3 = Color3.fromRGB(46, 204, 113)
+    Tab2Btn.TextColor3 = Color3.fromRGB(255, 255, 255)
+    Tab1Btn.BackgroundColor3 = Color3.fromRGB(45, 45, 55)
+    Tab1Btn.TextColor3 = Color3.fromRGB(180, 180, 180)
+end)
+Tab2Btn.TouchTap:Connect(function()
     Tab1Content.Visible = false
     Tab2Content.Visible = true
     Tab2Btn.BackgroundColor3 = Color3.fromRGB(46, 204, 113)
@@ -415,8 +414,6 @@ local function addPetToHistoryUI(petData, timeStr)
     local totalItems = #Tab2Content:GetChildren() - 1
     local totalHeight = totalItems * 77
     Tab2Content.CanvasSize = UDim2.new(0, 0, 0, totalHeight)
-
-    -- Tự động cuộn xuống dưới cùng khi có pet mới
     Tab2Content.CanvasPosition = Vector2.new(0, math.max(0, totalHeight - Tab2Content.AbsoluteWindowSize.Y))
 end
 
@@ -655,7 +652,7 @@ RunService.RenderStepped:Connect(function()
     else
         StatusLabel.Text = string.format(
             " ⏱️ Đã chạy: 00:00:00 | 🇻🇳 %s\n 🎮 Game: %s\n ⚡ FPS: %d | 📶 Ping: %dms",
-            vnClockStr, cachedGameName, currentFps, ping
+            vnClockStr, cachedGameName, cachedGameName, currentFps, ping
         )
         FooterLabel.Text = string.format("Đã gửi: %d thú | Trạng thái: 🔴 Đang dừng", petsCaughtCount)
     end
