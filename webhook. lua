@@ -92,7 +92,7 @@ local function formatBigNumber(val)
 end
 
 -- ==========================================
--- TẠO GIAO DIỆN (UI) & GẮN SỰ KIỆN NHẠY 100%
+-- TẠO GIAO DIỆN (UI) SIÊU NHẠY CHẠM LÀ ĂN NGAY
 -- ==========================================
 if CoreGui:FindFirstChild("ThrowFoodAutoMenu") then
     CoreGui.ThrowFoodAutoMenu:Destroy()
@@ -102,6 +102,12 @@ local ScreenGui = Instance.new("ScreenGui")
 ScreenGui.Name = "ThrowFoodAutoMenu"
 ScreenGui.Parent = CoreGui
 ScreenGui.ResetOnSpawn = false
+
+-- --- HÀM HỖ TRỢ CLICK SIÊU NHẠY (CHỐNG DÍNH KÉO THẢ) ---
+local function makeSuperClickable(btn, callback)
+    btn.MouseButton1Down:Connect(callback)
+    btn.TouchTap:Connect(callback)
+end
 
 -- --- ICON TIA SÉT ---
 local ToggleIconBtn = Instance.new("TextButton")
@@ -142,15 +148,13 @@ UICorner.CornerRadius = UDim.new(0, 14)
 UICorner.Parent = MainFrame
 
 local isMenuVisible = true
-local function toggleMenuVisibility()
+makeSuperClickable(ToggleIconBtn, function()
     isMenuVisible = not isMenuVisible
     MainFrame.Visible = isMenuVisible
     TweenService:Create(ToggleIconBtn, TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
         Rotation = ToggleIconBtn.Rotation + 360
     }):Play()
-end
-
-ToggleIconBtn.Activated:Connect(toggleMenuVisibility)
+end)
 
 local TitleLabel = Instance.new("TextLabel")
 TitleLabel.Size = UDim2.new(1, 0, 0, 32)
@@ -266,7 +270,7 @@ local function createFilterOption(name, val)
     optCorner.CornerRadius = UDim.new(0, 4)
     optCorner.Parent = optBtn
 
-    optBtn.Activated:Connect(function()
+    makeSuperClickable(optBtn, function()
         CURRENT_MIN_MONEY = val
         FilterDropdownBtn.Text = "🔽 Lọc Tiền: " .. name
         DropdownListFrame.Visible = false
@@ -281,7 +285,7 @@ createFilterOption("Từ 1Qa+ /s", 1e15)
 createFilterOption("Từ 1spd+ /s", 1e54)
 
 local isDropdownOpen = false
-FilterDropdownBtn.Activated:Connect(function()
+makeSuperClickable(FilterDropdownBtn, function()
     isDropdownOpen = not isDropdownOpen
     DropdownListFrame.Visible = isDropdownOpen
     if isDropdownOpen then
@@ -347,7 +351,7 @@ HistoryLayout.SortOrder = Enum.SortOrder.LayoutOrder
 HistoryLayout.Padding = UDim.new(0, 5)
 HistoryLayout.Parent = Tab2Content
 
-Tab1Btn.Activated:Connect(function()
+makeSuperClickable(Tab1Btn, function()
     Tab1Content.Visible = true
     Tab2Content.Visible = false
     Tab1Btn.BackgroundColor3 = Color3.fromRGB(46, 204, 113)
@@ -356,7 +360,7 @@ Tab1Btn.Activated:Connect(function()
     Tab2Btn.TextColor3 = Color3.fromRGB(180, 180, 180)
 end)
 
-Tab2Btn.Activated:Connect(function()
+makeSuperClickable(Tab2Btn, function()
     Tab1Content.Visible = false
     Tab2Content.Visible = true
     Tab2Btn.BackgroundColor3 = Color3.fromRGB(46, 204, 113)
@@ -523,9 +527,9 @@ local function sendDiscordWebhook(petData)
                 { ["name"] = "🧬 Đột biến (Mutation)", ["value"] = "`" .. petData.Mutation .. "`", ["inline"] = true },
                 { ["name"] = "💸 Tiền / Giây (Income)", ["value"] = "`" .. petData.MoneyPerSec .. "`", ["inline"] = true },
                 { ["name"] = "👤 Nhân vật Roblox", ["value"] = string.format("[%s (@%s)](%s)\n**ID:** `%s`", displayName, playerName, profileLink, userId), ["inline"] = false }
-            },
+           },
             ["footer"] = { ["text"] = "Throw Food For Animals • Bắt lúc: " .. vnTimeString },
-             ["timestamp"] = os.date("!%Y-%m-%dT%H:%M:%SZ")
+            ["timestamp"] = os.date("!%Y-%m-%dT%H:%M:%SZ")
         }}
     }
 
@@ -589,10 +593,10 @@ local function toggleScriptState()
     end
 end
 
-ToggleButton.Activated:Connect(toggleScriptState)
+makeSuperClickable(ToggleButton, toggleScriptState)
 
 -- ==========================================
--- VÒNG LẶP CẬP NHẬT TRẠNG THÁI (HIỂN THỊ SẴN NGAY KHI MỞ UI)
+-- VÒNG LẶP CẬP NHẬT TRẠNG THÁI (HIỂN THỊ SẴN)
 -- ==========================================
 local frameCount = 0
 local lastFpsUpdate = tick()
@@ -627,7 +631,6 @@ RunService.RenderStepped:Connect(function()
         )
         FooterLabel.Text = string.format("Đã gửi: %d thú | Trạng thái: 🟢 Đang chạy", petsCaughtCount)
     else
-        -- Hiển thị sẵn thời gian, giờ VN, FPS, Ping ngay cả khi chưa bấm Start
         StatusLabel.Text = string.format(
             " ⏱️ Đã chạy: 00:00:00 | 🇻🇳 %s\n 🎮 Game: %s\n ⚡ FPS: %d | 📶 Ping: %dms",
             vnClockStr, cachedGameName, currentFps, ping
