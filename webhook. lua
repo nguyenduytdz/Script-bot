@@ -13,14 +13,13 @@ local HttpService = game:GetService("HttpService")
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local MarketplaceService = game:GetService("MarketplaceService")
-local CoreGui = game:GetService("CoreGui")
 local TweenService = game:GetService("TweenService")
 local LocalPlayer = Players.LocalPlayer
+local PlayerGui = LocalPlayer:WaitForChild("PlayerGui")
 
 local httpRequest = (syn and syn.request) or (http and http.request) or http_request or (fluxus and fluxus.request) or request
 if not httpRequest then
     warn("❌ Executor của bạn không hỗ trợ hàm HTTP Request!")
-    return
 end
 
 local isRunning = false
@@ -92,15 +91,15 @@ local function formatBigNumber(val)
 end
 
 -- ==========================================
--- TẠO GIAO DIỆN (UI) SIÊU NHẠY CHẠM LÀ ĂN NGAY
+-- TẠO GIAO DIỆN (UI) TRÊN PLAYERGUI (CHỐNG LỖI HIỂN THỊ)
 -- ==========================================
-if CoreGui:FindFirstChild("ThrowFoodAutoMenu") then
-    CoreGui.ThrowFoodAutoMenu:Destroy()
+if PlayerGui:FindFirstChild("ThrowFoodAutoMenu") then
+    PlayerGui.ThrowFoodAutoMenu:Destroy()
 end
 
 local ScreenGui = Instance.new("ScreenGui")
 ScreenGui.Name = "ThrowFoodAutoMenu"
-ScreenGui.Parent = CoreGui
+ScreenGui.Parent = PlayerGui
 ScreenGui.ResetOnSpawn = false
 
 local function makeSuperClickable(btn, callback)
@@ -393,27 +392,15 @@ local function addPetToHistoryUI(petData, timeStr)
     Tab2Content.CanvasPosition = Vector2.new(0, math.max(0, totalHeight - Tab2Content.AbsoluteWindowSize.Y))
 end
 
--- ==========================================
--- HÀM QUÉT MÀU SẮC & THÔNG TIN THÚ CHUẨN
--- ==========================================
 local function getPetRealColor(item, rarityStr)
-    for key, val in pairs(item:GetAttributes()) do
-        local k = string.lower(key)
-        if (string.find(k, "color") or string.find(k, "colour") or string.find(k, "rgb")) and typeof(val) == "Color3" then
-            return math.floor(val.R * 255) * 65536 + math.floor(val.G * 255) * 256 + math.floor(val.B * 255)
+    pcall(function()
+        for key, val in pairs(item:GetAttributes()) do
+            local k = string.lower(key)
+            if (string.find(k, "color") or string.find(k, "colour") or string.find(k, "rgb")) and typeof(val) == "Color3" then
+                return math.floor(val.R * 255) * 65536 + math.floor(val.G * 255) * 256 + math.floor(val.B * 255)
+            end
         end
-    end
-
-    for _, child in ipairs(item:GetDescendants()) do
-        if child:IsA("BasePart") then
-            local col = child.Color
-            return math.floor(col.R * 255) * 65536 + math.floor(col.G * 255) * 256 + math.floor(col.B * 255)
-        elseif child:IsA("Highlight") and child.FillColor then
-            local col = child.FillColor
-            return math.floor(col.R * 255) * 65536 + math.floor(col.G * 255) * 256 + math.floor(col.B * 255)
-        end
-    end
-
+    end)
     local r = string.lower(tostring(rarityStr))
     if string.find(r, "sovereign") or string.find(r, "secret") then
         return 16711680
@@ -432,44 +419,27 @@ end
 
 local function extractPetInfo(item)
     local info = {
-        Name = item.Name,
+        Name = item.Name or "Unknown",
         Rarity = "Thường (Common)",
         Mutation = "Mặc định (Normal)",
         RawMoney = nil,
         NumericMoney = 0
     }
 
-    for key, val in pairs(item:GetAttributes()) do
-        local k = string.lower(key)
-        local vStr = tostring(val)
+    pcall(function()
+        for key, val in pairs(item:GetAttributes()) do
+            local k = string.lower(key)
+            local vStr = tostring(val)
 
-        if string.find(k, "rarity") or string.find(k, "tier") or string.find(k, "grade") then
-            info.Rarity = vStr
-        elseif string.find(k, "mut") or string.find(k, "variant") or string.find(k, "rainbow") or string.find(k, "ruby") or string.find(k, "emerald") or string.find(k, "diamond") or string.find(k, "gold") then
-            info.Mutation = vStr
-        elseif string.find(k, "rate") or string.find(k, "income") or string.find(k, "cps") or string.find(k, "mps") or string.find(k, "sec") or string.find(k, "money") or string.find(k, "cash") or string.find(k, "earn") or string.find(k, "value") or string.find(k, "dps") then
-            info.RawMoney = val
-        end
-    end
-
-    for _, child in ipairs(item:GetDescendants()) do
-        local k = string.lower(child.Name)
-        if child:IsA("ValueBase") then
-            local vStr = tostring(child.Value)
-            if (string.find(k, "rarity") or string.find(k, "tier")) and info.Rarity == "Thường (Common)" then
+            if string.find(k, "rarity") or string.find(k, "tier") or string.find(k, "grade") then
                 info.Rarity = vStr
-            elseif (string.find(k, "mut") or string.find(k, "variant")) and info.Mutation == "Mặc định (Normal)" then
+            elseif string.find(k, "mut") or string.find(k, "variant") or string.find(k, "rainbow") or string.find(k, "ruby") or string.find(k, "emerald") or string.find(k, "diamond") or string.find(k, "gold") then
                 info.Mutation = vStr
-            elseif (string.find(k, "rate") or string.find(k, "income") or string.find(k, "cps") or string.find(k, "sec") or string.find(k, "money") or string.find(k, "cash") or string.find(k, "earn")) and not info.RawMoney then
-                info.RawMoney = child.Value
-            end
-        elseif child:IsA("TextLabel") and child.Text ~= "" then
-            local txt = child.Text
-            if string.find(txt, "/s") or string.find(txt, "%$") or string.find(txt, "spd") or string.find(txt, "nod") or string.find(txt, "vg") then
-                info.RawMoney = txt
+            elseif string.find(k, "rate") or string.find(k, "income") or string.find(k, "cps") or string.find(k, "mps") or string.find(k, "sec") or string.find(k, "money") or string.find(k, "cash") or string.find(k, "earn") or string.find(k, "value") or string.find(k, "dps") then
+                info.RawMoney = val
             end
         end
-    end
+    end)
 
     if info.RawMoney then
         info.NumericMoney = parseRawMoneyToNumber(info.RawMoney)
@@ -526,60 +496,40 @@ local function sendDiscordWebhook(petData)
     }
 
     pcall(function()
-        httpRequest({
-            Url = WebhookURL,
-            Method = "POST",
-            Headers = { ["Content-Type"] = "application/json" },
-            Body = HttpService:JSONEncode(payload)
-        })
+        if httpRequest then
+            httpRequest({
+                Url = WebhookURL,
+                Method = "POST",
+                Headers = { ["Content-Type"] = "application/json" },
+                Body = HttpService:JSONEncode(payload)
+            })
+        end
     end)
 end
 
 -- ==========================================
--- BỘ LỌC ĐỘC QUYỀN CHỐNG BÁO ẢO KHI CẦM ĐỒ
+-- BỘ LỌC AN TOÀN CHỐNG LỖI CRASH
 -- ==========================================
 local trackedPets = {}
 
 local function isValidStoragePet(item)
     if not item or not item.Parent then return false end
-    
     local name = string.lower(item.Name)
-    -- Chặn toàn bộ mồi, đồ ăn, vật phẩm cầm tay hoặc tiền xu chung chung
     if string.find(name, "food") or string.find(name, "bait") or string.find(name, "apple") or string.find(name, "meat") or string.find(name, "tool") or string.find(name, "coin") or string.find(name, "bucket") then
         return false
     end
-
-    -- Bắt buộc vật phẩm phải nằm trong kho lưu trữ dữ liệu của tài khoản (Data Folder hoặc Storage chính thức) 
-    -- Tuyệt đối loại bỏ nếu nó nằm trong Character (đang cầm trên tay) hoặc Backpack (túi đồ cá nhân đang thao tác)
     if item:IsDescendantOf(LocalPlayer.Character) or item:IsDescendantOf(LocalPlayer:FindFirstChild("Backpack")) then
         return false
     end
-
-    -- Kiểm tra xem vật phẩm này có chứa thông số đặc trưng của thú (Rarity hoặc chỉ số sinh tiền) không
-    local hasRarity = item:GetAttribute("Rarity") ~= nil
-    local hasIncome = item:GetAttribute("Income") ~= nil or item:GetAttribute("CPS") ~= nil or item:GetAttribute("Money") ~= nil
-    
-    if hasRarity or hasIncome then
-        return true
-    end
-
-    return false
+    return true
 end
 
 local function handlePetAdded(item)
     if not isRunning then return end
-    
-    -- Chờ 0.6 giây để game nạp hoàn tất thuộc tính của item
-    task.wait(0.6)
-    
+    task.wait(0.5)
     if not isValidStoragePet(item) then return end
 
-    -- Tạo mã định danh độc nhất cho thú
-    local uid = item:GetAttribute("UUID") or item:GetAttribute("Id") or item:GetDebugId()
-    if not uid then
-        uid = item.Name .. tostring(item:GetFullName())
-    end
-
+    local uid = item:GetAttribute("UUID") or item:GetAttribute("Id") or item:GetDebugId() or (item.Name .. tostring(tick()))
     if trackedPets[uid] then return end
     trackedPets[uid] = true
 
@@ -587,37 +537,20 @@ local function handlePetAdded(item)
     sendDiscordWebhook(petInfo)
 end
 
--- Lắng nghe độc quyền từ các thư mục lưu trữ hệ thống ngầm của game (tránh xa Backpack)
-local function hookGameStorage()
-    pcall(function()
-        -- Quét các thư mục lưu dữ liệu thú ngầm nếu có trong PlayerGui / ReplicatedStorage
-        local ReplicatedStorage = game:GetService("ReplicatedStorage")
-        for _, descendant in ipairs(ReplicatedStorage:GetDescendants()) do
+pcall(function()
+    local ReplicatedStorage = game:GetService("ReplicatedStorage")
+    for _, descendant in ipairs(ReplicatedStorage:GetDescendants()) do
+        pcall(function()
             if descendant:IsA("Folder") or descendant:IsA("Model") then
                 local dName = string.lower(descendant.Name)
                 if string.find(dName, "pet") or string.find(dName, "storage") or string.find(dName, "collection") or string.find(dName, "inventory") then
                     descendant.ChildAdded:Connect(handlePetAdded)
                 end
             end
-        end
+        end)
+    end
+end)
 
-        -- Theo dõi toàn bộ kho lưu trữ giao diện chính thức nếu game đẩy dữ liệu hiển thị về đây
-        if LocalPlayer:FindFirstChild("PlayerGui") then
-            for _, gui in ipairs(LocalPlayer.PlayerGui:GetChildren()) do
-                local gName = string.lower(gui.Name)
-                if string.find(gName, "inventory") or string.find(gName, "storage") or string.find(gName, "pet") then
-                    gui.DescendantAdded:Connect(handlePetAdded)
-                end
-            end
-        end
-    end)
-end
-
-hookGameStorage()
-
--- ==========================================
--- XỬ LÝ SỰ KIỆN NÚT BẤM START/STOP
--- ==========================================
 local function toggleScriptState()
     isRunning = not isRunning
     if isRunning then
@@ -632,9 +565,6 @@ end
 
 makeSuperClickable(ToggleButton, toggleScriptState)
 
--- ==========================================
--- VÒNG LẶP CẬP NHẬT TRẠNG THÁI (HIỂN THỊ SẴN)
--- ==========================================
 local frameCount = 0
 local lastFpsUpdate = tick()
 local currentFps = 60
