@@ -1,278 +1,199 @@
--- hide.lat / lite / cd1c2cb10f0b
-local iL00oI0OLI=(getfenv and getfenv(1)) or _ENV or _G
-local I0oiOl11,iI0ILLiLj0=string.byte,string.char
-local function ILLjL1ooLLo0i(jil00iijO0i,jLj11o)
-local jljiIiL0=""
-local i1IOOLl=#jLj11o
-for i0LOioj0I1LO=1,#jil00iijO0i do jljiIiL0=jljiIiL0..iI0ILLiLj0((I0oiOl11(jil00iijO0i,i0LOioj0I1LO)-I0oiOl11(jLj11o,(i0LOioj0I1LO-1)%i1IOOLl+1))%256) end
-return jljiIiL0
+-- Services
+local Players = game:GetService("Players")
+local SocialService = game:GetService("SocialService")
+local TeleportService = game:GetService("TeleportService")
+local HttpService = game:GetService("HttpService")
+
+local LocalPlayer = Players.LocalPlayer
+
+-- Tạo ScreenGui chứa UI dạng rounded-square gọn nhẹ cho mobile
+local ScreenGui = Instance.new("ScreenGui")
+ScreenGui.Name = "FriendJoinerMenu"
+ScreenGui.ResetOnSpawn = false
+ScreenGui.Parent = LocalPlayer:WaitForChild("PlayerGui")
+
+-- Main Frame (Menu chính)
+local MainFrame = Instance.new("Frame")
+MainFrame.Name = "MainFrame"
+MainFrame.Size = UDim2.new(0, 320, 0, 400)
+MainFrame.Position = UDim2.new(0.5, -160, 0.5, -200)
+MainFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 35)
+MainFrame.BorderSizePixel = 0
+MainFrame.Visible = false
+MainFrame.Parent = ScreenGui
+
+-- Bo tròn góc UI
+local UICorner = Instance.new("UICorner")
+UICorner.CornerRadius = UDim.new(0, 12)
+UICorner.Parent = MainFrame
+
+-- Thanh tiêu đề (Header)
+local TitleLabel = Instance.new("TextLabel")
+TitleLabel.Size = UDim2.new(1, 0, 0, 40)
+TitleLabel.BackgroundColor3 = Color3.fromRGB(45, 45, 52)
+TitleLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+TitleLabel.TextSize = 16
+TitleLabel.Font = Enum.Font.SourceSansBold
+TitleLabel.Text = "Danh Sách Bạn Bè & Join"
+TitleLabel.Parent = MainFrame
+
+local TitleCorner = Instance.new("UICorner")
+TitleCorner.CornerRadius = UDim.new(0, 12)
+TitleCorner.Parent = TitleLabel
+
+-- Nút Đóng (Close)
+local CloseButton = Instance.new("TextButton")
+CloseButton.Size = UDim2.new(0, 30, 0, 30)
+CloseButton.Position = UDim2.new(1, -35, 0, 5)
+CloseButton.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
+CloseButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+CloseButton.Text = "X"
+CloseButton.TextSize = 14
+CloseButton.Font = Enum.Font.SourceSansBold
+CloseButton.Parent = TitleLabel
+
+local CloseCorner = Instance.new("UICorner")
+CloseCorner.CornerRadius = UDim.new(0, 8)
+CloseCorner.Parent = CloseButton
+
+CloseButton.MouseButton1Click:Connect(function()
+	MainFrame.Visible = false
+end)
+
+-- ScrollingFrame chứa danh sách bạn bè
+local ScrollingFrame = Instance.new("ScrollingFrame")
+ScrollingFrame.Size = UDim2.new(1, -10, 1, -50)
+ScrollingFrame.Position = UDim2.new(0, 5, 0, 45)
+ScrollingFrame.BackgroundTransparency = 1
+ScrollingFrame.CanvasSize = UDim2.new(0, 0, 0, 0)
+ScrollingFrame.ScrollBarThickness = 6
+ScrollingFrame.Parent = MainFrame
+
+local UIListLayout = Instance.new("UIListLayout")
+UIListLayout.SortOrder = Enum.SortOrder.LayoutOrder
+UIListLayout.Padding = UDim.new(0, 6)
+UIListLayout.Parent = ScrollingFrame
+
+-- Nút mở menu nổi trên màn hình (Floating Button)
+local ToggleButton = Instance.new("TextButton")
+ToggleButton.Name = "ToggleButton"
+ToggleButton.Size = UDim2.new(0, 50, 0, 50)
+ToggleButton.Position = UDim2.new(0, 20, 0.5, -25)
+ToggleButton.BackgroundColor3 = Color3.fromRGB(50, 150, 250)
+ToggleButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+ToggleButton.Text = "Friends"
+ToggleButton.TextSize = 12
+ToggleButton.Font = Enum.Font.SourceSansBold
+ToggleButton.Parent = ScreenGui
+
+local ToggleCorner = Instance.new("UICorner")
+ToggleCorner.CornerRadius = UDim.new(0, 25)
+ToggleButton.Parent = ToggleButton
+
+ToggleButton.MouseButton1Click:Connect(function()
+	MainFrame.Visible = not MainFrame.Visible
+end)
+
+-- Hàm tải và hiển thị danh sách bạn bè
+local function LoadFriends()
+	-- Xóa các item cũ trong danh sách
+	for _, child in ipairs(ScrollingFrame:GetChildren()) do
+		if child:IsA("Frame") then
+			child:Destroy()
+		end
+	end
+
+	pcall(function()
+		local pages = Players:GetFriendsAsync(LocalPlayer.UserId)
+		local count = 0
+
+		while true do
+			local items = pages:GetCurrentPage()
+			for _, friend in ipairs(items) do
+				count += 1
+				
+				-- Tạo khung cho từng người bạn
+				local FriendCard = Instance.new("Frame")
+				FriendCard.Size = UDim2.new(1, -10, 0, 50)
+				FriendCard.BackgroundColor3 = Color3.fromRGB(45, 45, 52)
+				FriendCard.BorderSizePixel = 0
+				FriendCard.Parent = ScrollingFrame
+
+				local CardCorner = Instance.new("UICorner")
+				CardCorner.CornerRadius = UDim.new(0, 8)
+				CardCorner.Parent = FriendCard
+
+				-- Tên hiển thị
+				local NameLabel = Instance.new("TextLabel")
+				NameLabel.Size = UDim2.new(0.6, 0, 0.5, 0)
+				NameLabel.Position = UDim2.new(0, 10, 0, 5)
+				NameLabel.BackgroundTransparency = 1
+				NameLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+				NameLabel.TextSize = 14
+				NameLabel.Font = Enum.Font.SourceSansBold
+				NameLabel.TextXAlignment = Enum.TextXAlignment.Left
+				NameLabel.Text = friend.Username
+				NameLabel.Parent = FriendCard
+
+				-- Trạng thái (Game đang chơi hoặc Off)
+				local StatusLabel = Instance.new("TextLabel")
+				StatusLabel.Size = UDim2.new(0.6, 0, 0.5, 0)
+				StatusLabel.Position = UDim2.new(0, 10, 0.5, 0)
+				StatusLabel.BackgroundTransparency = 1
+				StatusLabel.TextColor3 = Color3.fromRGB(170, 170, 170)
+				StatusLabel.TextSize = 12
+				StatusLabel.Font = Enum.Font.SourceSans
+				StatusLabel.TextXAlignment = Enum.TextXAlignment.Left
+				
+				local isOnline = friend.IsOnline
+				local placeId = friend.PlaceId
+				local gameId = friend.GameId
+
+				if not isOnline then
+					StatusLabel.Text = "Offline"
+					StatusLabel.TextColor3 = Color3.fromRGB(120, 120, 120)
+				else
+					StatusLabel.Text = "Đang Online (Khác/Cùng Game)"
+					StatusLabel.TextColor3 = Color3.fromRGB(50, 205, 50)
+				end
+				StatusLabel.Parent = FriendCard
+
+				-- Nút Join Server
+				local JoinBtn = Instance.new("TextButton")
+				JoinBtn.Size = UDim2.new(0, 80, 0, 30)
+				JoinBtn.Position = UDim2.new(1, -90, 0.5, -15)
+				JoinBtn.BackgroundColor3 = Color3.fromRGB(0, 180, 90)
+				JoinBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+				JoinBtn.Text = "Join"
+				JoinBtn.TextSize = 13
+				JoinBtn.Font = Enum.Font.SourceSansBold
+				JoinBtn.Parent = FriendCard
+
+				local JoinCorner = Instance.new("UICorner")
+				JoinCorner.CornerRadius = UDim.new(0, 6)
+				JoinCorner.Parent = JoinBtn
+
+				-- Sự kiện khi bấm Join
+				if isOnline and placeId and placeId ~= 0 then
+					JoinBtn.MouseButton1Click:Connect(function()
+						TeleportService:TeleportToPlaceInstance(placeId, gameId, LocalPlayer)
+					end)
+				else
+					JoinBtn.BackgroundColor3 = Color3.fromRGB(80, 80, 80)
+					JoinBtn.Text = "N/A"
+				end
+			end
+
+			if pages.IsFinished then
+				break
+			else
+				pages:AdvanceToNextPageAsync()
+			end
+		end
+
+		ScrollingFrame.CanvasSize = UDim2.new(0, 0, 0, count * 56)
+	end)
 end
-local LoLjOO0oLijl=iL00oI0OLI[ILLjL1ooLLo0i("\001\127\0221\254\002","\142\026\170\204\155")]
-local ILjjjL1l=iL00oI0OLI[ILLjL1ooLLo0i("\169\143z\159\137o","6\027\008")][ILLjL1ooLLo0i("\241\138#","~\021\193i")]
-local lIjlLOlL0I0=iL00oI0OLI[ILLjL1ooLLo0i("\025\223\190\223\230","\165~\\s\129\188Z")][ILLjL1ooLLo0i("\200@\172\192\160\137","e\209>]?\021I")]
-local I11O1LI=iL00oI0OLI[ILLjL1ooLLo0i("w\214-r","\nu\185")][ILLjL1ooLLo0i("\182=\167>\135","P\2098\207\021\228\192")]
-local Lli0Oil=iL00oI0OLI[ILLjL1ooLLo0i("\248\227\132\186\015\230\217\136","\132t\022E\162")]
-local ijloOIliIio1=iL00oI0OLI[ILLjL1ooLLo0i("\151\007\193\180\164","2\149OE")]
-local Ijj1OoL0oOIOjI=I0oiOl11("3")+LoLjOO0oLijl("#",0,0,0,0)*5+(iI0ILLiLj0(82,88)=="RX" and 4259 or 96)+Lli0Oil("1238")*7
-local ii0ljl0Oi10j1=iL00oI0OLI[ILLjL1ooLLo0i("_/\158S.","\235\206<\231\201")][ILLjL1ooLLo0i("\175\235i\184","?\138\006M\185")] or function(...) return {n=LoLjOO0oLijl("#",...),...} end
-local iooiololo1LOl=iL00oI0OLI[ILLjL1ooLLo0i("_\210o\133\212","\235q\r\025o\226")][ILLjL1ooLLo0i("\217 (\242\199\029","d\178\184\145")] or iL00oI0OLI[ILLjL1ooLLo0i("\192\235B\162'\182","K}\210A\196")]
-local jL1iojOlL="ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/"
-local function jIi1l0lljIOOL(jlj110)
-local ii1LjOo01l0o0I={}
-for jLLo0iO=1,64 do ii1LjOo01l0o0I[I0oiOl11(jL1iojOlL,jLLo0iO)]=jLLo0iO-1 end
-local L0lo1OOL1,jiLol010O11,Iji1Lj,lLoL1jL1OjIIOj={},0,0,0
-for jLLo0iO=1,#jlj110 do
-local lIliIIOLLjo0=ii1LjOo01l0o0I[I0oiOl11(jlj110,jLLo0iO)]
-if lIliIIOLLjo0 then
-jiLol010O11=jiLol010O11*64+lIliIIOLLjo0
-Iji1Lj=Iji1Lj+6
-if Iji1Lj>=8 then Iji1Lj=Iji1Lj-8 lLoL1jL1OjIIOj=lLoL1jL1OjIIOj+1 L0lo1OOL1[lLoL1jL1OjIIOj]=iI0ILLiLj0(I11O1LI(jiLol010O11/(2^Iji1Lj))%256) jiLol010O11=jiLol010O11%(2^Iji1Lj) end
-end
-end
-return lIjlLOlL0I0(L0lo1OOL1)
-end
-local i0L0jo11o1oI="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"
-local function lIOijjlL(IL0olIL0Io)
-local IilL100L0l1=(1211277364)+Ijj1OoL0oOIOjI
-local io10Io=149
-local j01jLli1j={}
-for L10iL1i1i=1,#IL0olIL0Io do
-IilL100L0l1=(IilL100L0l1*58561+4067777979)%4294967296
-local LijjjjIIjoO1=I0oiOl11(IL0olIL0Io,L10iL1i1i)
-local iiOl100Io1=(I11O1LI(IilL100L0l1/65536)+io10Io+(L10iL1i1i-1)*160)%256
-j01jLli1j[L10iL1i1i]=iI0ILLiLj0((LijjjjIIjoO1-iiOl100Io1)%256)
-io10Io=(io10Io*61+LijjjjIIjoO1+1)%251
-end
-return lIjlLOlL0I0(j01jLli1j)
-end
-local iLLOIO=lIOijjlL(jIi1l0lljIOOL(i0L0jo11o1oI))
-local LijjjjIIjoO1=1
-local function I1oLl10OLlIil()
-local L10iL1i1i=I0oiOl11(iLLOIO,LijjjjIIjoO1)
-LijjjjIIjoO1=LijjjjIIjoO1+1
-return L10iL1i1i
-end
-local function IOIj0j111o1OOj()
-local L10iL1i1i,ILLoOOo0LllO=I0oiOl11(iLLOIO,LijjjjIIjoO1,LijjjjIIjoO1+1)
-LijjjjIIjoO1=LijjjjIIjoO1+2
-return L10iL1i1i+ILLoOOo0LllO*256
-end
-local function j1oO1O()
-local L10iL1i1i,ILLoOOo0LllO,IL0olIL0Io,j01jLli1j=I0oiOl11(iLLOIO,LijjjjIIjoO1,LijjjjIIjoO1+3)
-LijjjjIIjoO1=LijjjjIIjoO1+4
-return L10iL1i1i+ILLoOOo0LllO*256+IL0olIL0Io*65536+j01jLli1j*16777216
-end
-local function lij0j10iIjj()
-local L10iL1i1i=j1oO1O()
-local ILLoOOo0LllO=ILjjjL1l(iLLOIO,LijjjjIIjoO1,LijjjjIIjoO1+L10iL1i1i-1)
-LijjjjIIjoO1=LijjjjIIjoO1+L10iL1i1i
-return ILLoOOo0LllO
-end
-local function LoIllILiI1ol()
-local L10iL1i1i=I1oLl10OLlIil()
-local ILLoOOo0LllO=lij0j10iIjj()
-if L10iL1i1i==0 then return Lli0Oil(ILLoOOo0LllO)
-elseif L10iL1i1i==1 then return ILLoOOo0LllO
-elseif L10iL1i1i==2 then return 1/0
-elseif L10iL1i1i==3 then return -1/0
-else return 0/0 end
-end
-local function jOOijl1Oil()
-local iloi1lIlILILO=I1oLl10OLlIil()
-local L10iL1i1i=I1oLl10OLlIil()
-local ILLoOOo0LllO=IOIj0j111o1OOj()
-local iLo1Ioo1lLj={}
-for IL0olIL0Io=1,ILLoOOo0LllO do local jolj0liiL1oOl=IOIj0j111o1OOj() iLo1Ioo1lLj[IL0olIL0Io]={jolj0liiL1oOl,lij0j10iIjj()} end
-local j01jLli1j=j1oO1O()
-local jLO0lOj={}
-for IL0olIL0Io=1,j01jLli1j do
-jLO0lOj[IL0olIL0Io]={IOIj0j111o1OOj(),IOIj0j111o1OOj(),j1oO1O(),j1oO1O()}
-end
-local LijjjjIIjoO1=IOIj0j111o1OOj()
-local Ljj1O1lL={}
-for IL0olIL0Io=1,LijjjjIIjoO1 do Ljj1O1lL[IL0olIL0Io]=jOOijl1Oil() end
-local i1Ol0OjoL=IOIj0j111o1OOj()
-local l1oLO10lIjIli={}
-for IL0olIL0Io=1,i1Ol0OjoL do l1oLO10lIjIli[IL0olIL0Io]={I1oLl10OLlIil(),IOIj0j111o1OOj()} end
-return {iloi1lIlILILO,L10iL1i1i,jLO0lOj,iLo1Ioo1lLj,Ljj1O1lL,l1oLO10lIjIli,{}}
-end
-local function liiliIl1jj(lo0io1LL,jjo1LLL,jolj0liiL1oOl)
-if jjo1LLL[jolj0liiL1oOl]~=nil then return jjo1LLL[jolj0liiL1oOl] end
-local jlj110=lo0io1LL[jolj0liiL1oOl]
-local ii1LjOo01l0o0I=jlj110[1]
-local jLLo0iO=jlj110[2]
-local L0lo1OOL1=(65177+ii1LjOo01l0o0I*251+1)%65536
-local jiLol010O11={}
-for Iji1Lj=1,#jLLo0iO do
-L0lo1OOL1=(L0lo1OOL1*40503+12345)%65536
-jiLol010O11[Iji1Lj]=iI0ILLiLj0((I0oiOl11(jLLo0iO,Iji1Lj)-I11O1LI(L0lo1OOL1/256)%256-Iji1Lj*(65177%256))%256)
-end
-local lLoL1jL1OjIIOj=lIjlLOlL0I0(jiLol010O11)
-local lIliIIOLLjo0=I0oiOl11(lLoL1jL1OjIIOj,1)
-local Ijl0oLoIi=I0oiOl11(lLoL1jL1OjIIOj,2)+I0oiOl11(lLoL1jL1OjIIOj,3)*256+I0oiOl11(lLoL1jL1OjIIOj,4)*65536+I0oiOl11(lLoL1jL1OjIIOj,5)*16777216
-local ioiOO1iljI=ILjjjL1l(lLoL1jL1OjIIOj,6,5+Ijl0oLoIi)
-local loiojLjl
-if lIliIIOLLjo0==0 then loiojLjl=Lli0Oil(ioiOO1iljI) elseif lIliIIOLLjo0==1 then loiojLjl=ioiOO1iljI elseif lIliIIOLLjo0==2 then loiojLjl=1/0 elseif lIliIIOLLjo0==3 then loiojLjl=-1/0 else loiojLjl=0/0 end
-jjo1LLL[jolj0liiL1oOl]=loiojLjl
-return loiojLjl
-end
-local ill1Oi0={}
-local jiLiIjiI1o0joj=IOIj0j111o1OOj()
-for jl0oijI1L=1,jiLiIjiI1o0joj do local L10iL1i1i=IOIj0j111o1OOj() local ILLoOOo0LllO=IOIj0j111o1OOj() ill1Oi0[L10iL1i1i]=ILLoOOo0LllO end
-local jIIi1jIijl1Oj=jOOijl1Oil()
-local iLijOL
-local function jloioOiliLO1(jIIi1jIijl1Oj,l1oLO10lIjIli)
-return function(...) return iLijOL(jIIi1jIijl1Oj,l1oLO10lIjIli,ii0ljl0Oi10j1(...)) end
-end
-iLijOL=function(jIIi1jIijl1Oj,l1oLO10lIjIli,ljiL0OLL1OOi)
-local I11loLIo={}
-local IljLIIlO=0
-local iloi1lIlILILO=jIIi1jIijl1Oj[1]
-local jOl1i001j1LLo=ljiL0OLL1OOi.n
-for L10iL1i1i=1,iloi1lIlILILO do I11loLIo[L10iL1i1i-1]=ljiL0OLL1OOi[L10iL1i1i] end
-local iLOOIII1ilLO,j0ol11={},0
-if jIIi1jIijl1Oj[2]==1 then j0ol11=jOl1i001j1LLo-iloi1lIlILILO; if j0ol11<0 then j0ol11=0 end; for L10iL1i1i=1,j0ol11 do iLOOIII1ilLO[L10iL1i1i]=ljiL0OLL1OOi[iloi1lIlILILO+L10iL1i1i] end end
-local jLO0lOj,iLo1Ioo1lLj,Ljj1O1lL=jIIi1jIijl1Oj[3],jIIi1jIijl1Oj[4],jIIi1jIijl1Oj[5]
-local lI000I0iO1L=jIIi1jIijl1Oj[7]
-local IlojlLIjI0O=1
-local i1Ol0OjoL=0
-while true do
-local LjLLlII10iI0L1=jLO0lOj[IlojlLIjI0O]
-IlojlLIjI0O=IlojlLIjI0O+1
-local jLj1il0lIO,L10iL1i1i,ILLoOOo0LllO,IL0olIL0Io=LjLLlII10iI0L1[1],LjLLlII10iI0L1[2],LjLLlII10iI0L1[3],LjLLlII10iI0L1[4]
-local j01jLli1j=ill1Oi0[jLj1il0lIO]
-if (IlojlLIjI0O*IlojlLIjI0O*IlojlLIjI0O-IlojlLIjI0O)%6~=0 then IljLIIlO=IljLIIlO+4 end
-if (j01jLli1j*j01jLli1j+j01jLli1j)%2==1 then IljLIIlO=IljLIIlO-4 end
-if j01jLli1j==12 then
-I11loLIo[L10iL1i1i]=I11loLIo[ILLoOOo0LllO]
-elseif j01jLli1j==18 then
-I11loLIo[L10iL1i1i][I11loLIo[ILLoOOo0LllO]]=I11loLIo[IL0olIL0Io]
-elseif j01jLli1j==33 then
-for jlj110=L10iL1i1i,L10iL1i1i+ILLoOOo0LllO do I11loLIo[jlj110]=nil end
-elseif j01jLli1j==14 then
-I11loLIo[L10iL1i1i]=I11loLIo[ILLoOOo0LllO][1]
-elseif j01jLli1j==26 then
-I11loLIo[L10iL1i1i]=liiliIl1jj(iLo1Ioo1lLj,lI000I0iO1L,ILLoOOo0LllO+1)
-elseif j01jLli1j==42 then
-I11loLIo[L10iL1i1i]=(I11loLIo[ILLoOOo0LllO]>I11loLIo[IL0olIL0Io])
-elseif j01jLli1j==32 then
-I11loLIo[L10iL1i1i]=(I11loLIo[ILLoOOo0LllO]==I11loLIo[IL0olIL0Io])
-elseif j01jLli1j==13 then
-I11loLIo[L10iL1i1i]=I11loLIo[ILLoOOo0LllO][I11loLIo[IL0olIL0Io]]
-elseif j01jLli1j==3 then
-I11loLIo[L10iL1i1i+1]=I11loLIo[ILLoOOo0LllO]; I11loLIo[L10iL1i1i]=I11loLIo[ILLoOOo0LllO][I11loLIo[IL0olIL0Io]]
-elseif j01jLli1j==17 then
-I11loLIo[L10iL1i1i]=I11loLIo[ILLoOOo0LllO]%I11loLIo[IL0olIL0Io]
-elseif j01jLli1j==41 then
-local jLLo0iO
-if ILLoOOo0LllO==0 then jLLo0iO=i1Ol0OjoL-L10iL1i1i-1 else jLLo0iO=ILLoOOo0LllO end
-local ii1LjOo01l0o0I=I11loLIo[L10iL1i1i]
-for jlj110=1,jLLo0iO do ii1LjOo01l0o0I[IL0olIL0Io+jlj110]=I11loLIo[L10iL1i1i+jlj110] end
-elseif j01jLli1j==15 then
-I11loLIo[L10iL1i1i]=I11loLIo[L10iL1i1i]+I11loLIo[L10iL1i1i+2]
-local ii1LjOo01l0o0I=I11loLIo[L10iL1i1i+2]
-if (ii1LjOo01l0o0I>0 and I11loLIo[L10iL1i1i]<=I11loLIo[L10iL1i1i+1]) or (ii1LjOo01l0o0I<=0 and I11loLIo[L10iL1i1i]>=I11loLIo[L10iL1i1i+1]) then I11loLIo[L10iL1i1i+3]=I11loLIo[L10iL1i1i]; IlojlLIjI0O=ILLoOOo0LllO+1 end
-elseif j01jLli1j==36 then
-I11loLIo[L10iL1i1i]=#I11loLIo[ILLoOOo0LllO]
-elseif j01jLli1j==11 then
-I11loLIo[L10iL1i1i]=I11loLIo[ILLoOOo0LllO]-I11loLIo[IL0olIL0Io]
-elseif j01jLli1j==40 then
-I11loLIo[L10iL1i1i]=(ILLoOOo0LllO~=0)
-elseif j01jLli1j==20 then
-local ii1LjOo01l0o0I=I11loLIo[L10iL1i1i]
-local jLLo0iO
-if ILLoOOo0LllO==0 then jLLo0iO=i1Ol0OjoL-L10iL1i1i-1 else jLLo0iO=ILLoOOo0LllO-1 end
-local L0lo1OOL1={}
-for jlj110=1,jLLo0iO do L0lo1OOL1[jlj110]=I11loLIo[L10iL1i1i+jlj110] end
-local jiLol010O11=ii0ljl0Oi10j1(ii1LjOo01l0o0I(iooiololo1LOl(L0lo1OOL1,1,jLLo0iO)))
-if IL0olIL0Io==0 then
-local Iji1Lj=jiLol010O11.n
-for jlj110=1,Iji1Lj do I11loLIo[L10iL1i1i+jlj110-1]=jiLol010O11[jlj110] end
-i1Ol0OjoL=L10iL1i1i+Iji1Lj
-else
-for jlj110=1,IL0olIL0Io-1 do I11loLIo[L10iL1i1i+jlj110-1]=jiLol010O11[jlj110] end
-end
-elseif j01jLli1j==28 then
-I11loLIo[L10iL1i1i]=I11loLIo[ILLoOOo0LllO]*I11loLIo[IL0olIL0Io]
-elseif j01jLli1j==8 then
-I11loLIo[L10iL1i1i]=-I11loLIo[ILLoOOo0LllO]
-elseif j01jLli1j==4 then
-I11loLIo[L10iL1i1i]=((I11loLIo[L10iL1i1i] or 0)+ILLoOOo0LllO)%(IL0olIL0Io+1)
-elseif j01jLli1j==5 then
-I11loLIo[L10iL1i1i]=I11loLIo[L10iL1i1i]-I11loLIo[L10iL1i1i+2]; IlojlLIjI0O=ILLoOOo0LllO+1
-elseif j01jLli1j==43 then
-I11loLIo[L10iL1i1i]=I11loLIo[ILLoOOo0LllO]..I11loLIo[IL0olIL0Io]
-elseif j01jLli1j==35 then
-I11loLIo[L10iL1i1i]=l1oLO10lIjIli[ILLoOOo0LllO+1][1]
-elseif j01jLli1j==31 then
-iL00oI0OLI[liiliIl1jj(iLo1Ioo1lLj,lI000I0iO1L,ILLoOOo0LllO+1)]=I11loLIo[L10iL1i1i]
-elseif j01jLli1j==25 then
-if (not not I11loLIo[L10iL1i1i])==(ILLoOOo0LllO~=0) then IlojlLIjI0O=IL0olIL0Io+1 end
-elseif j01jLli1j==39 then
-I11loLIo[L10iL1i1i]=I11loLIo[ILLoOOo0LllO]+I11loLIo[IL0olIL0Io]
-elseif j01jLli1j==37 then
-I11loLIo[L10iL1i1i]={}
-elseif j01jLli1j==27 then
-local ii1LjOo01l0o0I=I11loLIo[L10iL1i1i]
-local lLoL1jL1OjIIOj=I11loLIo[L10iL1i1i+1]
-local lIliIIOLLjo0=I11loLIo[L10iL1i1i+2]
-local jiLol010O11=ii0ljl0Oi10j1(ii1LjOo01l0o0I(lLoL1jL1OjIIOj,lIliIIOLLjo0))
-local Iji1Lj=jiLol010O11[1]
-if Iji1Lj~=nil then
-I11loLIo[L10iL1i1i+2]=Iji1Lj
-for jlj110=1,ILLoOOo0LllO do I11loLIo[L10iL1i1i+3+jlj110-1]=jiLol010O11[jlj110] end
-IlojlLIjI0O=IL0olIL0Io+1
-end
-elseif j01jLli1j==30 then
-I11loLIo[L10iL1i1i]=I11loLIo[ILLoOOo0LllO]/I11loLIo[IL0olIL0Io]
-elseif j01jLli1j==23 then
-I11loLIo[L10iL1i1i]=(I11loLIo[ILLoOOo0LllO]<I11loLIo[IL0olIL0Io])
-elseif j01jLli1j==7 then
-I11loLIo[L10iL1i1i]=(I11loLIo[ILLoOOo0LllO]~=I11loLIo[IL0olIL0Io])
-elseif j01jLli1j==38 then
-I11loLIo[L10iL1i1i]=not I11loLIo[ILLoOOo0LllO]
-elseif j01jLli1j==34 then
-local jLLo0iO
-if ILLoOOo0LllO==0 then jLLo0iO=i1Ol0OjoL-L10iL1i1i else jLLo0iO=ILLoOOo0LllO-1 end
-local L0lo1OOL1={}
-for jlj110=1,jLLo0iO do L0lo1OOL1[jlj110]=I11loLIo[L10iL1i1i+jlj110-1] end
-return iooiololo1LOl(L0lo1OOL1,1,jLLo0iO)
-elseif j01jLli1j==2 then
-I11loLIo[L10iL1i1i]=iL00oI0OLI[liiliIl1jj(iLo1Ioo1lLj,lI000I0iO1L,ILLoOOo0LllO+1)]
-elseif j01jLli1j==9 then
-I11loLIo[L10iL1i1i]=(I11loLIo[ILLoOOo0LllO]>=I11loLIo[IL0olIL0Io])
-elseif j01jLli1j==22 then
-IlojlLIjI0O=ILLoOOo0LllO+1
-elseif j01jLli1j==21 then
-I11loLIo[L10iL1i1i]=I11loLIo[ILLoOOo0LllO]^I11loLIo[IL0olIL0Io]
-elseif j01jLli1j==16 then
-I11loLIo[L10iL1i1i]=(I11loLIo[ILLoOOo0LllO]-I11loLIo[ILLoOOo0LllO]%I11loLIo[IL0olIL0Io])/I11loLIo[IL0olIL0Io]
-elseif j01jLli1j==29 then
-l1oLO10lIjIli[ILLoOOo0LllO+1][1]=I11loLIo[L10iL1i1i]
-elseif j01jLli1j==24 then
-I11loLIo[L10iL1i1i]={I11loLIo[ILLoOOo0LllO]}
-elseif j01jLli1j==19 then
-I11loLIo[ILLoOOo0LllO][1]=I11loLIo[L10iL1i1i]
-elseif j01jLli1j==1 then
-if ILLoOOo0LllO==0 then
-for jlj110=1,j0ol11 do I11loLIo[L10iL1i1i+jlj110-1]=iLOOIII1ilLO[jlj110] end
-i1Ol0OjoL=L10iL1i1i+j0ol11
-else
-for jlj110=1,ILLoOOo0LllO-1 do I11loLIo[L10iL1i1i+jlj110-1]=iLOOIII1ilLO[jlj110] end
-end
-elseif j01jLli1j==6 then
-local ii1LjOo01l0o0I=Ljj1O1lL[ILLoOOo0LllO+1]
-local L0lo1OOL1={}
-local jiLol010O11=ii1LjOo01l0o0I[6]
-for jlj110=1,#jiLol010O11 do
-local Iji1Lj=jiLol010O11[jlj110]
-if Iji1Lj[1]==1 then L0lo1OOL1[jlj110]=I11loLIo[Iji1Lj[2]] else L0lo1OOL1[jlj110]=l1oLO10lIjIli[Iji1Lj[2]+1] end
-end
-I11loLIo[L10iL1i1i]=jloioOiliLO1(ii1LjOo01l0o0I,L0lo1OOL1)
-elseif j01jLli1j==10 then
-I11loLIo[L10iL1i1i]=(I11loLIo[ILLoOOo0LllO]<=I11loLIo[IL0olIL0Io])
-else ijloOIliIio1() end
-end
-return IljLIIlO
-end
-return iLijOL(jIIi1jIijl1Oj,{},ii0ljl0Oi10j1(...))
+
+-- Tải danh sách bạn bè khi khởi chạy script
+LoadFriends()
