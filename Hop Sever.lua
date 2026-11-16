@@ -1,19 +1,18 @@
 -- Services
 local Players = game:GetService("Players")
 local TeleportService = game:GetService("TeleportService")
-local HttpService = game:GetService("HttpService")
 
 local LocalPlayer = Players.LocalPlayer
 local PlayerGui = LocalPlayer:WaitForChild("PlayerGui")
 
 -- Xóa GUI cũ nếu đã chạy trước đó để tránh trùng lặp
-if PlayerGui:FindFirstChild("AnyUserJoinerMenu") then
-	PlayerGui.AnyUserJoinerMenu:Destroy()
+if PlayerGui:FindFirstChild("SafeUserJoinerMenu") then
+	PlayerGui.SafeUserJoinerMenu:Destroy()
 end
 
 -- Tạo ScreenGui
 local ScreenGui = Instance.new("ScreenGui")
-ScreenGui.Name = "AnyUserJoinerMenu"
+ScreenGui.Name = "SafeUserJoinerMenu"
 ScreenGui.ResetOnSpawn = false
 ScreenGui.Parent = PlayerGui
 
@@ -43,7 +42,7 @@ MainFrame.AnchorPoint = Vector2.new(0.5, 0.5)
 MainFrame.Position = UDim2.new(0.5, 0, 0.5, 0)
 MainFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 35)
 MainFrame.BorderSizePixel = 0
-MainFrame.Visible = false
+MainFrame.Visible = false -- Bật sẵn để test, bấm nút MENU để ẩn/hiện
 MainFrame.Active = true
 MainFrame.Draggable = true
 MainFrame.Parent = ScreenGui
@@ -59,7 +58,7 @@ TitleLabel.BackgroundColor3 = Color3.fromRGB(45, 45, 52)
 TitleLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
 TitleLabel.TextSize = 15
 TitleLabel.Font = Enum.Font.SourceSansBold
-TitleLabel.Text = "Tìm & Join Bất Kỳ Người Chơi"
+TitleLabel.Text = "Menu Quét & Tìm Kiếm Người Chơi"
 TitleLabel.Parent = MainFrame
 
 local TitleCorner = Instance.new("UICorner")
@@ -85,14 +84,14 @@ CloseButton.MouseButton1Click:Connect(function()
 	MainFrame.Visible = false
 end)
 
--- Ô nhập Tên người chơi cần tìm
+-- Ô nhập Tên người chơi cần tìm trong Server
 local SearchBox = Instance.new("TextBox")
 SearchBox.Size = UDim2.new(1, -95, 0, 35)
 SearchBox.Position = UDim2.new(0, 10, 0, 48)
 SearchBox.BackgroundColor3 = Color3.fromRGB(45, 45, 52)
 SearchBox.TextColor3 = Color3.fromRGB(255, 255, 255)
 SearchBox.PlaceholderColor3 = Color3.fromRGB(150, 150, 150)
-SearchBox.PlaceholderText = "Nhập @username..."
+SearchBox.PlaceholderText = "Lọc tên trong server..."
 SearchBox.Text = ""
 SearchBox.TextSize = 14
 SearchBox.Font = Enum.Font.SourceSans
@@ -103,22 +102,22 @@ local SearchCorner = Instance.new("UICorner")
 SearchCorner.CornerRadius = UDim.new(0, 8)
 SearchCorner.Parent = SearchBox
 
--- Nút Tìm Kiếm (Search Button)
-local SearchBtn = Instance.new("TextButton")
-SearchBtn.Size = UDim2.new(0, 75, 0, 35)
-SearchBtn.Position = UDim2.new(1, -85, 0, 48)
-SearchBtn.BackgroundColor3 = Color3.fromRGB(50, 150, 250)
-SearchBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-SearchBtn.Text = "Check"
-SearchBtn.TextSize = 13
-SearchBtn.Font = Enum.Font.SourceSansBold
-SearchBtn.Parent = MainFrame
+-- Nút Làm mới (Refresh Button)
+local RefreshBtn = Instance.new("TextButton")
+RefreshBtn.Size = UDim2.new(0, 75, 0, 35)
+RefreshBtn.Position = UDim2.new(1, -85, 0, 48)
+RefreshBtn.BackgroundColor3 = Color3.fromRGB(50, 150, 250)
+RefreshBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+RefreshBtn.Text = "Reload"
+RefreshBtn.TextSize = 13
+RefreshBtn.Font = Enum.Font.SourceSansBold
+RefreshBtn.Parent = MainFrame
 
-local SearchBtnCorner = Instance.new("UICorner")
-SearchBtnCorner.CornerRadius = UDim.new(0, 8)
-SearchBtnCorner.Parent = SearchBtn
+local RefreshBtnCorner = Instance.new("UICorner")
+RefreshBtnCorner.CornerRadius = UDim.new(0, 8)
+RefreshBtnCorner.Parent = RefreshBtn
 
--- ScrollingFrame hiển thị kết quả
+-- ScrollingFrame hiển thị danh sách
 local ScrollingFrame = Instance.new("ScrollingFrame")
 ScrollingFrame.Size = UDim2.new(1, -10, 1, -95)
 ScrollingFrame.Position = UDim2.new(0, 5, 0, 90)
@@ -137,122 +136,88 @@ ToggleButton.MouseButton1Click:Connect(function()
 	MainFrame.Visible = not MainFrame.Visible
 end)
 
--- Hàm hiển thị kết quả
-local function DisplayResult(username, isOnline, statusText, placeId, gameId)
+-- Hàm hiển thị danh sách người chơi trong server kèm trạng thái
+local function LoadPlayerList(filter)
 	for _, child in ipairs(ScrollingFrame:GetChildren()) do
 		if child:IsA("Frame") then
 			child:Destroy()
 		end
 	end
 
-	local ResultCard = Instance.new("Frame")
-	ResultCard.Size = UDim2.new(1, -10, 0, 60)
-	ResultCard.BackgroundColor3 = Color3.fromRGB(45, 45, 52)
-	ResultCard.BorderSizePixel = 0
-	ResultCard.Parent = ScrollingFrame
-
-	local CardCorner = Instance.new("UICorner")
-	CardCorner.CornerRadius = UDim.new(0, 8)
-	CardCorner.Parent = ResultCard
-
-	local NameLabel = Instance.new("TextLabel")
-	NameLabel.Size = UDim2.new(0.6, 0, 0.5, 0)
-	NameLabel.Position = UDim2.new(0, 10, 0, 5)
-	NameLabel.BackgroundTransparency = 1
-	NameLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
-	NameLabel.TextSize = 14
-	NameLabel.Font = Enum.Font.SourceSansBold
-	NameLabel.TextXAlignment = Enum.TextXAlignment.Left
-	NameLabel.Text = "@" .. username
-	NameLabel.Parent = ResultCard
-
-	local StatusLabel = Instance.new("TextLabel")
-	StatusLabel.Size = UDim2.new(0.6, 0, 0.5, 0)
-	StatusLabel.Position = UDim2.new(0, 10, 0.5, 0)
-	StatusLabel.BackgroundTransparency = 1
-	StatusLabel.TextColor3 = isOnline and Color3.fromRGB(50, 205, 50) or Color3.fromRGB(200, 80, 80)
-	StatusLabel.TextSize = 12
-	StatusLabel.Font = Enum.Font.SourceSans
-	StatusLabel.TextXAlignment = Enum.TextXAlignment.Left
-	StatusLabel.Text = statusText
-	StatusLabel.Parent = ResultCard
-
-	local JoinBtn = Instance.new("TextButton")
-	JoinBtn.Size = UDim2.new(0, 80, 0, 30)
-	JoinBtn.Position = UDim2.new(1, -90, 0.5, -15)
-	JoinBtn.TextSize = 13
-	JoinBtn.Font = Enum.Font.SourceSansBold
-	JoinBtn.Parent = ResultCard
-
-	local JoinCorner = Instance.new("UICorner")
-	JoinCorner.CornerRadius = UDim.new(0, 6)
-	JoinCorner.Parent = JoinBtn
-
-	if isOnline and placeId and placeId ~= 0 then
-		JoinBtn.BackgroundColor3 = Color3.fromRGB(0, 180, 90)
-		JoinBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-		JoinBtn.Text = "Join"
-		JoinBtn.MouseButton1Click:Connect(function()
-			TeleportService:TeleportToPlaceInstance(placeId, gameId, LocalPlayer)
-		end)
-	else
-		JoinBtn.BackgroundColor3 = Color3.fromRGB(70, 70, 70)
-		JoinBtn.TextColor3 = Color3.fromRGB(150, 150, 150)
-		JoinBtn.Text = "N/A"
+	filter = string.lower(filter or "")
+	if string.sub(filter, 1, 1) == "@" then
+		filter = string.sub(filter, 2)
 	end
 
-	ScrollingFrame.CanvasSize = UDim2.new(0, 0, 0, 66)
-end
+	local count = 0
+	for _, player in ipairs(Players:GetPlayers()) do
+		if player ~= LocalPlayer then
+			local name = string.lower(player.Name)
+			local displayName = string.lower(player.DisplayName)
 
--- Hàm tìm kiếm người chơi
-local function SearchUser()
-	local query = SearchBox.Text
-	if query == "" then return end
+			if filter == "" or string.find(name, filter, 1, true) or string.find(displayName, filter, 1, true) then
+				count += 1
 
-	if string.sub(query, 1, 1) == "@" then
-		query = string.sub(query, 2)
-	end
+				local ResultCard = Instance.new("Frame")
+				ResultCard.Size = UDim2.new(1, -10, 0, 60)
+				ResultCard.BackgroundColor3 = Color3.fromRGB(45, 45, 52)
+				ResultCard.BorderSizePixel = 0
+				ResultCard.Parent = ScrollingFrame
 
-	DisplayResult(query, false, "Đang tìm kiếm...", nil, nil)
+				local CardCorner = Instance.new("UICorner")
+				CardCorner.CornerRadius = UDim.new(0, 8)
+				CardCorner.Parent = ResultCard
 
-	task.spawn(function()
-		local success, targetUserId = pcall(function()
-			return Players:GetUserIdFromNameAsync(query)
-		end)
+				local NameLabel = Instance.new("TextLabel")
+				NameLabel.Size = UDim2.new(0.6, 0, 0.5, 0)
+				NameLabel.Position = UDim2.new(0, 10, 0, 5)
+				NameLabel.BackgroundTransparency = 1
+				NameLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+				NameLabel.TextSize = 14
+				NameLabel.Font = Enum.Font.SourceSansBold
+				NameLabel.TextXAlignment = Enum.TextXAlignment.Left
+				NameLabel.Text = "@" .. player.Name
+				NameLabel.Parent = ResultCard
 
-		if not success or not targetUserId then
-			DisplayResult(query, false, "Không tìm thấy người chơi!", nil, nil)
-			return
-		end
+				local StatusLabel = Instance.new("TextLabel")
+				StatusLabel.Size = UDim2.new(0.6, 0, 0.5, 0)
+				StatusLabel.Position = UDim2.new(0, 10, 0.5, 0)
+				StatusLabel.BackgroundTransparency = 1
+				StatusLabel.TextColor3 = Color3.fromRGB(50, 205, 50)
+				StatusLabel.TextSize = 12
+				StatusLabel.Font = Enum.Font.SourceSans
+				StatusLabel.TextXAlignment = Enum.TextXAlignment.Left
+				StatusLabel.Text = "Đang trong cùng Server"
+				StatusLabel.Parent = ResultCard
 
-		local presenceSuccess, placeId, gameId = pcall(function()
-			local url = "https://presence.roblox.com/v1/presence/users"
-			local data = HttpService:JSONEncode({ userIds = { targetUserId } })
-			local response = HttpService:PostAsync(url, data)
-			local decoded = HttpService:JSONDecode(response)
-			
-			if decoded and decoded.presenceStates and decoded.presenceStates[1] then
-				local state = decoded.presenceStates[1]
-				if state.userPresenceType == 2 then
-					return state.rootPlaceId, state.gameId
-				end
+				local InspectBtn = Instance.new("TextButton")
+				InspectBtn.Size = UDim2.new(0, 80, 0, 30)
+				InspectBtn.Position = UDim2.new(1, -90, 0.5, -15)
+				InspectBtn.BackgroundColor3 = Color3.fromRGB(0, 180, 90)
+				InspectBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+				InspectBtn.Text = "Info"
+				InspectBtn.TextSize = 13
+				InspectBtn.Font = Enum.Font.SourceSansBold
+				InspectBtn.Parent = ResultCard
+
+				local BtnCorner = Instance.new("UICorner")
+				BtnCorner.CornerRadius = UDim.new(0, 6)
+				BtnCorner.Parent = InspectBtn
 			end
-			return nil, nil
-		end)
-
-		if presenceSuccess and placeId and placeId ~= 0 then
-			DisplayResult(query, true, "Đang Online (Có thể Join)", placeId, gameId)
-		else
-			DisplayResult(query, false, "Offline hoặc Riêng tư", nil, nil)
 		end
-	end)
+	end
+
+	ScrollingFrame.CanvasSize = UDim2.new(0, 0, 0, count * 66)
 end
 
-SearchBtn.MouseButton1Click:Connect(SearchUser)
-SearchBox.FocusLost:Connect(function(enterPressed)
-	if enterPressed then
-		SearchUser()
-	end
+SearchBox:GetPropertyChangedSignal("Text"):Connect(function()
+	LoadPlayerList(SearchBox.Text)
 end)
 
-print("Script Menu Loaded Successfully!")
+RefreshBtn.MouseButton1Click:Connect(function()
+	LoadPlayerList(SearchBox.Text)
+end)
+
+-- Tải lần đầu
+LoadPlayerList("")
+print("Safe Menu Loaded Successfully!")
