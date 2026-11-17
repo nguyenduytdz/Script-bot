@@ -297,41 +297,41 @@ local historyFilterMode = "all"
 local refreshHistory
 
 local HistorySearch = Instance.new("TextBox")
-HistorySearch.Size = UDim2.new(1, -155, 0, 30)
+HistorySearch.Size = UDim2.new(1, -145, 0, 30)
 HistorySearch.Position = UDim2.new(0, 10, 0, 66)
 HistorySearch.BackgroundColor3 = Color3.fromRGB(38, 38, 46)
 HistorySearch.TextColor3 = Color3.fromRGB(245, 245, 245)
 HistorySearch.PlaceholderColor3 = Color3.fromRGB(155, 155, 165)
 HistorySearch.PlaceholderText = "🔎 Tìm tên..."
 HistorySearch.Text = ""
-HistorySearch.TextSize = 11
+HistorySearch.TextSize = 10
 HistorySearch.Font = Enum.Font.Gotham
 HistorySearch.ClearTextOnFocus = false
 HistorySearch.Parent = MainFrame
 HistorySearch.Visible = false
 Instance.new("UICorner", HistorySearch).CornerRadius = UDim.new(0, 6)
 
--- Nút Lọc siêu nhỏ gọn
+-- Nút Lọc thu nhỏ siêu gọn
 local HistoryFilterBtn = Instance.new("TextButton")
-HistoryFilterBtn.Size = UDim2.new(0, 38, 0, 30)
-HistoryFilterBtn.Position = UDim2.new(1, -145, 0, 66)
+HistoryFilterBtn.Size = UDim2.new(0, 30, 0, 30)
+HistoryFilterBtn.Position = UDim2.new(1, -132, 0, 66)
 HistoryFilterBtn.BackgroundColor3 = Color3.fromRGB(45, 45, 55)
 HistoryFilterBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
 HistoryFilterBtn.Text = "☷"
-HistoryFilterBtn.TextSize = 12
+HistoryFilterBtn.TextSize = 11
 HistoryFilterBtn.Font = Enum.Font.GothamBold
 HistoryFilterBtn.Parent = MainFrame
 HistoryFilterBtn.Visible = false
 Instance.new("UICorner", HistoryFilterBtn).CornerRadius = UDim.new(0, 6)
 
--- Nút Xóa lịch sử
+-- Nút Xóa lịch sử (Icon thùng rác hiện rõ ràng)
 local HistoryClearBtn = Instance.new("TextButton")
-HistoryClearBtn.Size = UDim2.new(0, 38, 0, 30)
-HistoryClearBtn.Position = UDim2.new(1, -103, 0, 66)
+HistoryClearBtn.Size = UDim2.new(0, 30, 0, 30)
+HistoryClearBtn.Position = UDim2.new(1, -98, 0, 66)
 HistoryClearBtn.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
 HistoryClearBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
 HistoryClearBtn.Text = "🗑️"
-HistoryClearBtn.TextSize = 12
+HistoryClearBtn.TextSize = 11
 HistoryClearBtn.Font = Enum.Font.GothamBold
 HistoryClearBtn.Parent = MainFrame
 HistoryClearBtn.Visible = false
@@ -339,8 +339,8 @@ Instance.new("UICorner", HistoryClearBtn).CornerRadius = UDim.new(0, 6)
 
 -- Ô hiển thị số lượng pet
 local HistoryCountLabel = Instance.new("TextLabel")
-HistoryCountLabel.Size = UDim2.new(0, 50, 0, 30)
-HistoryCountLabel.Position = UDim2.new(1, -60, 0, 66)
+HistoryCountLabel.Size = UDim2.new(0, 54, 0, 30)
+HistoryCountLabel.Position = UDim2.new(1, -64, 0, 66)
 HistoryCountLabel.BackgroundColor3 = Color3.fromRGB(38, 38, 46)
 HistoryCountLabel.TextColor3 = Color3.fromRGB(46, 204, 113)
 HistoryCountLabel.TextSize = 11
@@ -385,6 +385,7 @@ makeHistoryModeButton("Lọc độ hiếm", "rarity", 56)
 
 onButtonClicked(HistoryFilterBtn, function()
     HistoryFilterPopup.Visible = not HistoryFilterPopup.Visible
+    HistoryClearPopup.Visible = false
 end)
 
 -- Menu popup Xóa lịch sử
@@ -429,6 +430,7 @@ end, 32)
 
 onButtonClicked(HistoryClearBtn, function()
     HistoryClearPopup.Visible = not HistoryClearPopup.Visible
+    HistoryFilterPopup.Visible = false
 end)
 
 local Tab2Content = Instance.new("ScrollingFrame")
@@ -511,21 +513,6 @@ onButtonClicked(Tab1Btn, function()
     Tab2Content.Visible = false
     HistorySearch.Visible = false
     HistoryFilterBtn.Visible = false
-    HistoryClearBtn.Visible = false
-    HistoryCountLabel.Visible = false
-    HistoryFilterPopup.Visible = false
-    HistoryClearPopup.Visible = false
-    Tab1Btn.BackgroundColor3 = Color3.fromRGB(46, 204, 113)
-    Tab1Btn.TextColor3 = Color3.fromRGB(255, 255, 255)
-    Tab2Btn.BackgroundColor3 = Color3.fromRGB(45, 45, 55)
-    Tab2Btn.TextColor3 = Color3.fromRGB(180, 180, 180)
-end)
-
-onButtonClicked(Tab2Btn, function()
-    Tab1Content.Visible = false
-    Tab2Content.Visible = true
-    HistorySearch.Visible = true
-    HistoryFilterBtn.Visible = true
     HistoryClearBtn.Visible = false
     HistoryCountLabel.Visible = false
     HistoryFilterPopup.Visible = false
