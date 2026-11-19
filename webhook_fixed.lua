@@ -291,9 +291,11 @@ DropdownListFrame:GetPropertyChangedSignal("Visible"):Connect(function()
     end
 end)
 
--- --- TAB 2: LỊCH SỬ (ĐÃ TỐI ƯU KÍCH THƯỚC CÁC NÚT CHO KHỎE NHÌN) ---
+-- --- TAB 2: LỊCH SỬ + CHỌN NHIỀU MỤC ĐỂ XÓA ---
 local HistoryRecords = {}
 local historyFilterMode = "all"
+local isSelectMode = false
+local selectedIndices = {}
 local refreshHistory
 
 local HistorySearch = Instance.new("TextBox")
@@ -311,7 +313,7 @@ HistorySearch.Parent = MainFrame
 HistorySearch.Visible = false
 Instance.new("UICorner", HistorySearch).CornerRadius = UDim.new(0, 6)
 
--- Nút Lọc (Gọn gàng)
+-- Nút Lọc
 local HistoryFilterBtn = Instance.new("TextButton")
 HistoryFilterBtn.Size = UDim2.new(0, 32, 0, 30)
 HistoryFilterBtn.Position = UDim2.new(0, 145, 0, 66)
@@ -324,18 +326,18 @@ HistoryFilterBtn.Parent = MainFrame
 HistoryFilterBtn.Visible = false
 Instance.new("UICorner", HistoryFilterBtn).CornerRadius = UDim.new(0, 6)
 
--- Nút Xóa lịch sử (Hình thùng rác 🗑️ hiện rõ ràng)
-local HistoryClearBtn = Instance.new("TextButton")
-HistoryClearBtn.Size = UDim2.new(0, 32, 0, 30)
-HistoryClearBtn.Position = UDim2.new(0, 182, 0, 66)
-HistoryClearBtn.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
-HistoryClearBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-HistoryClearBtn.Text = "🗑️"
-HistoryClearBtn.TextSize = 11
-HistoryClearBtn.Font = Enum.Font.GothamBold
-HistoryClearBtn.Parent = MainFrame
-HistoryClearBtn.Visible = false
-Instance.new("UICorner", HistoryClearBtn).CornerRadius = UDim.new(0, 6)
+-- Nút bật/tắt Chế độ chọn nhiều mục để xóa
+local HistorySelectBtn = Instance.new("TextButton")
+HistorySelectBtn.Size = UDim2.new(0, 32, 0, 30)
+HistorySelectBtn.Position = UDim2.new(0, 182, 0, 66)
+HistorySelectBtn.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
+HistorySelectBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+HistorySelectBtn.Text = "🗑️"
+HistorySelectBtn.TextSize = 11
+HistorySelectBtn.Font = Enum.Font.GothamBold
+HistorySelectBtn.Parent = MainFrame
+HistorySelectBtn.Visible = false
+Instance.new("UICorner", HistorySelectBtn).CornerRadius = UDim.new(0, 6)
 
 -- Ô hiển thị số lượng pet
 local HistoryCountLabel = Instance.new("TextLabel")
@@ -350,6 +352,37 @@ HistoryCountLabel.TextXAlignment = Enum.TextXAlignment.Center
 HistoryCountLabel.Parent = MainFrame
 HistoryCountLabel.Visible = false
 Instance.new("UICorner", HistoryCountLabel).CornerRadius = UDim.new(0, 6)
+
+-- Thanh hành động xóa (Hiện khi bật chế độ chọn)
+local DeleteActionBar = Instance.new("Frame")
+DeleteActionBar.Size = UDim2.new(1, -20, 0, 30)
+DeleteActionBar.Position = UDim2.new(0, 10, 1, -38)
+DeleteActionBar.BackgroundColor3 = Color3.fromRGB(35, 35, 42)
+DeleteActionBar.Visible = false
+DeleteActionBar.Parent = MainFrame
+Instance.new("UICorner", DeleteActionBar).CornerRadius = UDim.new(0, 6)
+
+local DeleteSelectedBtn = Instance.new("TextButton")
+DeleteSelectedBtn.Size = UDim2.new(0.48, 0, 1, -4)
+DeleteSelectedBtn.Position = UDim2.new(0, 2, 0, 2)
+DeleteSelectedBtn.BackgroundColor3 = Color3.fromRGB(220, 53, 69)
+DeleteSelectedBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+DeleteSelectedBtn.TextSize = 10
+DeleteSelectedBtn.Font = Enum.Font.GothamBold
+DeleteSelectedBtn.Text = "Xóa đã chọn (0)"
+DeleteSelectedBtn.Parent = DeleteActionBar
+Instance.new("UICorner", DeleteSelectedBtn).CornerRadius = UDim.new(0, 4)
+
+local DeleteAllBtn = Instance.new("TextButton")
+DeleteAllBtn.Size = UDim2.new(0.48, 0, 1, -4)
+DeleteAllBtn.Position = UDim2.new(0.52, -2, 0, 2)
+DeleteAllBtn.BackgroundColor3 = Color3.fromRGB(100, 40, 40)
+DeleteAllBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+DeleteAllBtn.TextSize = 10
+DeleteAllBtn.Font = Enum.Font.GothamBold
+DeleteAllBtn.Text = "Xóa tất cả"
+DeleteAllBtn.Parent = DeleteActionBar
+Instance.new("UICorner", DeleteAllBtn).CornerRadius = UDim.new(0, 4)
 
 -- Menu popup Lọc
 local HistoryFilterPopup = Instance.new("Frame")
@@ -385,56 +418,10 @@ makeHistoryModeButton("Lọc độ hiếm", "rarity", 56)
 
 onButtonClicked(HistoryFilterBtn, function()
     HistoryFilterPopup.Visible = not HistoryFilterPopup.Visible
-    HistoryClearPopup.Visible = false
-end)
-
--- Menu popup Xóa lịch sử
-local HistoryClearPopup = Instance.new("Frame")
-HistoryClearPopup.Size = UDim2.new(0, 130, 0, 60)
-HistoryClearPopup.Position = UDim2.new(0, 150, 0, 99)
-HistoryClearPopup.BackgroundColor3 = Color3.fromRGB(35, 35, 42)
-HistoryClearPopup.Visible = false
-HistoryClearPopup.ZIndex = 10
-HistoryClearPopup.Parent = MainFrame
-Instance.new("UICorner", HistoryClearPopup).CornerRadius = UDim.new(0, 6)
-
-local function makeClearOption(label, callback, y)
-    local b = Instance.new("TextButton")
-    b.Size = UDim2.new(1, -8, 0, 24)
-    b.Position = UDim2.new(0, 4, 0, y)
-    b.BackgroundColor3 = Color3.fromRGB(180, 40, 40)
-    b.TextColor3 = Color3.fromRGB(255, 255, 255)
-    b.TextSize = 10
-    b.Font = Enum.Font.GothamBold
-    b.Text = label
-    b.ZIndex = 11
-    b.Parent = HistoryClearPopup
-    Instance.new("UICorner", b).CornerRadius = UDim.new(0, 4)
-    onButtonClicked(b, function()
-        HistoryClearPopup.Visible = false
-        callback()
-    end)
-end
-
-makeClearOption("Xoá toàn bộ", function()
-    HistoryRecords = {}
-    if refreshHistory then refreshHistory() end
-end, 4)
-
-makeClearOption("Xoá mục cũ nhất", function()
-    if #HistoryRecords > 0 then
-        table.remove(HistoryRecords, 1)
-        if refreshHistory then refreshHistory() end
-    end
-end, 32)
-
-onButtonClicked(HistoryClearBtn, function()
-    HistoryClearPopup.Visible = not HistoryClearPopup.Visible
-    HistoryFilterPopup.Visible = false
 end)
 
 local Tab2Content = Instance.new("ScrollingFrame")
-Tab2Content.Size = UDim2.new(1, -10, 1, -140)
+Tab2Content.Size = UDim2.new(1, -10, 1, -145)
 Tab2Content.Position = UDim2.new(0, 5, 0, 102)
 Tab2Content.BackgroundTransparency = 1
 Tab2Content.Visible = false
@@ -447,13 +434,21 @@ HistoryLayout.SortOrder = Enum.SortOrder.LayoutOrder
 HistoryLayout.Padding = UDim.new(0, 5)
 HistoryLayout.Parent = Tab2Content
 
+local function updateSelectedCountText()
+    local count = 0
+    for _, v in pairs(selectedIndices) do
+        if v then count = count + 1 end
+    end
+    DeleteSelectedBtn.Text = string.format("Xóa đã chọn (%d)", count)
+end
+
 refreshHistory = function()
     for _, child in ipairs(Tab2Content:GetChildren()) do
         if child:IsA("Frame") then child:Destroy() end
     end
     local shown = 0
     local q = string.lower(HistorySearch.Text or "")
-    for _, record in ipairs(HistoryRecords) do
+    for idx, record in ipairs(HistoryRecords) do
         local d = record.data
         local matchesName = (q == "" or string.find(string.lower(d.Name or ""), q, 1, true) ~= nil)
 
@@ -470,18 +465,43 @@ refreshHistory = function()
             shown = shown + 1
             local itemFrame = Instance.new("Frame")
             itemFrame.Size = UDim2.new(1, -5, 0, 72)
-            itemFrame.BackgroundColor3 = Color3.fromRGB(35, 35, 42)
+            itemFrame.BackgroundColor3 = selectedIndices[idx] and Color3.fromRGB(60, 40, 45) or Color3.fromRGB(35, 35, 42)
             itemFrame.BorderSizePixel = 0
             itemFrame.LayoutOrder = shown
             itemFrame.Parent = Tab2Content
             Instance.new("UICorner", itemFrame).CornerRadius = UDim.new(0, 6)
 
+            local textLeftOffset = 5
+
+            -- Nếu bật chế độ chọn, hiện checkbox tích chọn
+            if isSelectMode then
+                textLeftOffset = 32
+                local checkBtn = Instance.new("TextButton")
+                checkBtn.Size = UDim2.new(0, 22, 0, 22)
+                checkBtn.Position = UDim2.new(0, 5, 0.5, -11)
+                checkBtn.BackgroundColor3 = selectedIndices[idx] and Color3.fromRGB(46, 204, 113) or Color3.fromRGB(55, 55, 65)
+                checkBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+                checkBtn.TextSize = 12
+                checkBtn.Font = Enum.Font.GothamBold
+                checkBtn.Text = selectedIndices[idx] and "✓" or ""
+                checkBtn.Parent = itemFrame
+                Instance.new("UICorner", checkBtn).CornerRadius = UDim.new(0, 4)
+
+                onButtonClicked(checkBtn, function()
+                    selectedIndices[idx] = not selectedIndices[idx]
+                    itemFrame.BackgroundColor3 = selectedIndices[idx] and Color3.fromRGB(60, 40, 45) or Color3.fromRGB(35, 35, 42)
+                    checkBtn.BackgroundColor3 = selectedIndices[idx] and Color3.fromRGB(46, 204, 113) or Color3.fromRGB(55, 55, 65)
+                    checkBtn.Text = selectedIndices[idx] and "✓" or ""
+                    updateSelectedCountText()
+                end)
+            end
+
             local descLabel = Instance.new("TextLabel")
-            descLabel.Size = UDim2.new(1, -10, 1, 0)
-            descLabel.Position = UDim2.new(0, 5, 0, 0)
+            descLabel.Size = UDim2.new(1, -textLeftOffset - 5, 1, 0)
+            descLabel.Position = UDim2.new(0, textLeftOffset, 0, 0)
             descLabel.BackgroundTransparency = 1
             descLabel.TextColor3 = Color3.fromRGB(230, 230, 240)
-            descLabel.TextSize = 12
+            descLabel.TextSize = 11
             descLabel.Font = Enum.Font.Code
             descLabel.TextXAlignment = Enum.TextXAlignment.Left
             descLabel.TextYAlignment = Enum.TextYAlignment.Center
@@ -500,9 +520,39 @@ refreshHistory = function()
     end
     Tab2Content.CanvasSize = UDim2.new(0, 0, 0, shown * 77)
     HistoryCountLabel.Text = tostring(#HistoryRecords)
-    task.wait()
-    Tab2Content.CanvasPosition = Vector2.new(0, Tab2Content.CanvasSize.Y.Offset)
+    updateSelectedCountText()
 end
+
+-- Bấm nút thùng rác để bật/tắt chế độ chọn nhiều mục
+onButtonClicked(HistorySelectBtn, function()
+    isSelectMode = not isSelectMode
+    selectedIndices = {}
+    DeleteActionBar.Visible = isSelectMode
+    HistorySelectBtn.BackgroundColor3 = isSelectMode and Color3.fromRGB(241, 196, 15) or Color3.fromRGB(200, 50, 50)
+    HistorySelectBtn.Text = isSelectMode and "✖" or "🗑️"
+    Tab2Content.Size = isSelectMode and UDim2.new(1, -10, 1, -148) or UDim2.new(1, -10, 1, -110)
+    refreshHistory()
+end)
+
+-- Xóa các mục đã chọn
+onButtonClicked(DeleteSelectedBtn, function()
+    local newRecords = {}
+    for idx, record in ipairs(HistoryRecords) do
+        if not selectedIndices[idx] then
+            table.insert(newRecords, record)
+        end
+    end
+    HistoryRecords = newRecords
+    selectedIndices = {}
+    refreshHistory()
+end)
+
+-- Xóa toàn bộ
+onButtonClicked(DeleteAllBtn, function()
+    HistoryRecords = {}
+    selectedIndices = {}
+    refreshHistory()
+end)
 
 HistorySearch:GetPropertyChangedSignal("Text"):Connect(function()
     refreshHistory()
@@ -513,10 +563,10 @@ onButtonClicked(Tab1Btn, function()
     Tab2Content.Visible = false
     HistorySearch.Visible = false
     HistoryFilterBtn.Visible = false
-    HistoryClearBtn.Visible = false
+    HistorySelectBtn.Visible = false
     HistoryCountLabel.Visible = false
     HistoryFilterPopup.Visible = false
-    HistoryClearPopup.Visible = false
+    DeleteActionBar.Visible = false
     Tab1Btn.BackgroundColor3 = Color3.fromRGB(46, 204, 113)
     Tab1Btn.TextColor3 = Color3.fromRGB(255, 255, 255)
     Tab2Btn.BackgroundColor3 = Color3.fromRGB(45, 45, 55)
@@ -528,8 +578,9 @@ onButtonClicked(Tab2Btn, function()
     Tab2Content.Visible = true
     HistorySearch.Visible = true
     HistoryFilterBtn.Visible = true
-    HistoryClearBtn.Visible = true
+    HistorySelectBtn.Visible = true
     HistoryCountLabel.Visible = true
+    DeleteActionBar.Visible = isSelectMode
     Tab2Btn.BackgroundColor3 = Color3.fromRGB(46, 204, 113)
     Tab2Btn.TextColor3 = Color3.fromRGB(255, 255, 255)
     Tab1Btn.BackgroundColor3 = Color3.fromRGB(45, 45, 55)
