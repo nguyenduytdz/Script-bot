@@ -93,23 +93,51 @@ TextStroke.Parent = DisplayLabel
 AttachDrag(DisplayContainer, DisplayLabel)
 
 -- ==========================================
--- 2. NÚT BẬT / TẮT MENU
+-- 2. NÚT BẬT / TẮT MENU (ICON UI RÕ NÉT)
 -- ==========================================
 local ToggleBtn = Instance.new("TextButton")
 ToggleBtn.Name = "ToggleMenuBtn"
-ToggleBtn.Size = UDim2.new(0, 40, 0, 40)
+ToggleBtn.Size = UDim2.new(0, 44, 0, 44)
 ToggleBtn.Position = UDim2.new(0.04, 0, 0.25, 0)
-ToggleBtn.BackgroundColor3 = Color3.fromRGB(24, 24, 34)
-ToggleBtn.Text = "☰"
-ToggleBtn.TextColor3 = Color3.fromRGB(0, 185, 255)
-ToggleBtn.Font = Enum.Font.GothamBold
-ToggleBtn.TextSize = 18
+ToggleBtn.BackgroundColor3 = Color3.fromRGB(22, 22, 32)
+ToggleBtn.Text = ""
+ToggleBtn.AutoButtonColor = false
 ToggleBtn.Parent = ScreenGui
 
 Instance.new("UICorner", ToggleBtn).CornerRadius = UDim.new(1, 0)
 local ToggleStroke = Instance.new("UIStroke", ToggleBtn)
-ToggleStroke.Color = Color3.fromRGB(0, 170, 255)
-ToggleStroke.Thickness = 1.8
+ToggleStroke.Color = Color3.fromRGB(0, 180, 255)
+ToggleStroke.Thickness = 2
+
+-- Icon trang ghi chú nhỏ bên trong nút bật/tắt
+local NoteIconOuter = Instance.new("Frame")
+NoteIconOuter.Size = UDim2.new(0, 18, 0, 22)
+NoteIconOuter.Position = UDim2.new(0.5, -9, 0.5, -11)
+NoteIconOuter.BackgroundColor3 = Color3.fromRGB(0, 185, 255)
+NoteIconOuter.BorderSizePixel = 0
+NoteIconOuter.Parent = ToggleBtn
+Instance.new("UICorner", NoteIconOuter).CornerRadius = UDim.new(0, 4)
+
+local Line1 = Instance.new("Frame")
+Line1.Size = UDim2.new(0, 10, 0, 2)
+Line1.Position = UDim2.new(0, 4, 0, 6)
+Line1.BackgroundColor3 = Color3.fromRGB(20, 20, 30)
+Line1.BorderSizePixel = 0
+Line1.Parent = NoteIconOuter
+
+local Line2 = Instance.new("Frame")
+Line2.Size = UDim2.new(0, 10, 0, 2)
+Line2.Position = UDim2.new(0, 4, 0, 11)
+Line2.BackgroundColor3 = Color3.fromRGB(20, 20, 30)
+Line2.BorderSizePixel = 0
+Line2.Parent = NoteIconOuter
+
+local Line3 = Instance.new("Frame")
+Line3.Size = UDim2.new(0, 6, 0, 2)
+Line3.Position = UDim2.new(0, 4, 0, 16)
+Line3.BackgroundColor3 = Color3.fromRGB(20, 20, 30)
+Line3.BorderSizePixel = 0
+Line3.Parent = NoteIconOuter
 
 AttachDrag(ToggleBtn)
 
@@ -137,11 +165,20 @@ TopBar.BorderSizePixel = 0
 TopBar.Parent = MainFrame
 Instance.new("UICorner", TopBar).CornerRadius = UDim.new(0, 12)
 
+-- Chấm trạng thái màu ở tiêu đề thay cho emoji lỗi
+local TitleDot = Instance.new("Frame")
+TitleDot.Size = UDim2.new(0, 8, 0, 8)
+TitleDot.Position = UDim2.new(0, 12, 0.5, -4)
+TitleDot.BackgroundColor3 = Color3.fromRGB(0, 185, 255)
+TitleDot.BorderSizePixel = 0
+TitleDot.Parent = TopBar
+Instance.new("UICorner", TitleDot).CornerRadius = UDim.new(1, 0)
+
 local Title = Instance.new("TextLabel")
-Title.Size = UDim2.new(1, -44, 1, 0)
-Title.Position = UDim2.new(0, 12, 0, 0)
+Title.Size = UDim2.new(1, -64, 1, 0)
+Title.Position = UDim2.new(0, 26, 0, 0)
 Title.BackgroundTransparency = 1
-Title.Text = "◆ Ghi Chú Màn Hình"
+Title.Text = "Ghi Chú Màn Hình"
 Title.TextColor3 = Color3.fromRGB(255, 255, 255)
 Title.Font = Enum.Font.GothamBold
 Title.TextSize = 14
@@ -149,14 +186,15 @@ Title.TextXAlignment = Enum.TextXAlignment.Left
 Title.Parent = TopBar
 
 local CloseBtn = Instance.new("TextButton")
-CloseBtn.Size = UDim2.new(0, 30, 0, 30)
-CloseBtn.Position = UDim2.new(1, -34, 0, 3)
-CloseBtn.BackgroundTransparency = 1
+CloseBtn.Size = UDim2.new(0, 28, 0, 28)
+CloseBtn.Position = UDim2.new(1, -32, 0.5, -14)
+CloseBtn.BackgroundColor3 = Color3.fromRGB(45, 28, 34)
 CloseBtn.Text = "X"
-CloseBtn.TextColor3 = Color3.fromRGB(255, 95, 95)
+CloseBtn.TextColor3 = Color3.fromRGB(255, 105, 105)
 CloseBtn.Font = Enum.Font.GothamBold
-CloseBtn.TextSize = 14
+CloseBtn.TextSize = 13
 CloseBtn.Parent = TopBar
+Instance.new("UICorner", CloseBtn).CornerRadius = UDim.new(0, 7)
 
 AttachDrag(MainFrame, TopBar)
 
@@ -198,7 +236,7 @@ InputBox.MultiLine = true
 InputBox.Parent = Content
 Instance.new("UICorner", InputBox).CornerRadius = UDim.new(0, 8)
 
--- Hàng nút: Hiện/Ẩn chữ & Xóa chữ (chia tỷ lệ chuẩn, không tràn mép phải)
+-- Hàng nút: Hiện/Ẩn chữ & Xóa chữ
 local ActionRow = Instance.new("Frame")
 ActionRow.Size = UDim2.new(1, 0, 0, 34)
 ActionRow.BackgroundTransparency = 1
@@ -208,7 +246,7 @@ local ToggleShowBtn = Instance.new("TextButton")
 ToggleShowBtn.Size = UDim2.new(0.65, -4, 1, 0)
 ToggleShowBtn.Position = UDim2.new(0, 0, 0, 0)
 ToggleShowBtn.BackgroundColor3 = Color3.fromRGB(0, 150, 255)
-ToggleShowBtn.Text = "◉ Hiển thị lên màn hình"
+ToggleShowBtn.Text = "Hiển thị lên màn hình"
 ToggleShowBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
 ToggleShowBtn.Font = Enum.Font.GothamBold
 ToggleShowBtn.TextSize = 12
@@ -219,7 +257,7 @@ local ClearBtn = Instance.new("TextButton")
 ClearBtn.Size = UDim2.new(0.35, -4, 1, 0)
 ClearBtn.Position = UDim2.new(0.65, 4, 0, 0)
 ClearBtn.BackgroundColor3 = Color3.fromRGB(205, 62, 62)
-ClearBtn.Text = "⌫ Xóa"
+ClearBtn.Text = "Xóa"
 ClearBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
 ClearBtn.Font = Enum.Font.GothamBold
 ClearBtn.TextSize = 12
@@ -237,7 +275,7 @@ local SizeLabel = Instance.new("TextLabel")
 SizeLabel.Size = UDim2.new(1, -92, 1, 0)
 SizeLabel.Position = UDim2.new(0, 10, 0, 0)
 SizeLabel.BackgroundTransparency = 1
-SizeLabel.Text = "⇄ Kích thước: 24"
+SizeLabel.Text = "Kích thước: 24"
 SizeLabel.TextColor3 = Color3.fromRGB(225, 225, 235)
 SizeLabel.Font = Enum.Font.GothamMedium
 SizeLabel.TextSize = 12
@@ -270,7 +308,7 @@ Instance.new("UICorner", PlusBtn).CornerRadius = UDim.new(0, 6)
 local FontBtn = Instance.new("TextButton")
 FontBtn.Size = UDim2.new(1, 0, 0, 32)
 FontBtn.BackgroundColor3 = Color3.fromRGB(32, 32, 46)
-FontBtn.Text = "Aa Font: FredokaOne"
+FontBtn.Text = "Font: FredokaOne"
 FontBtn.TextColor3 = Color3.fromRGB(225, 225, 235)
 FontBtn.Font = Enum.Font.GothamMedium
 FontBtn.TextSize = 12
@@ -281,7 +319,7 @@ Instance.new("UICorner", FontBtn).CornerRadius = UDim.new(0, 8)
 local ColorBtn = Instance.new("TextButton")
 ColorBtn.Size = UDim2.new(1, 0, 0, 32)
 ColorBtn.BackgroundColor3 = Color3.fromRGB(32, 32, 46)
-ColorBtn.Text = "◈ Màu chữ: Trắng"
+ColorBtn.Text = "Màu chữ: Trắng"
 ColorBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
 ColorBtn.Font = Enum.Font.GothamMedium
 ColorBtn.TextSize = 12
@@ -292,7 +330,7 @@ Instance.new("UICorner", ColorBtn).CornerRadius = UDim.new(0, 8)
 local EffectBtn = Instance.new("TextButton")
 EffectBtn.Size = UDim2.new(1, 0, 0, 32)
 EffectBtn.BackgroundColor3 = Color3.fromRGB(32, 32, 46)
-EffectBtn.Text = "✦ Hiệu ứng: Không"
+EffectBtn.Text = "Hiệu ứng: Không"
 EffectBtn.TextColor3 = Color3.fromRGB(255, 215, 0)
 EffectBtn.Font = Enum.Font.GothamMedium
 EffectBtn.TextSize = 12
@@ -303,7 +341,7 @@ Instance.new("UICorner", EffectBtn).CornerRadius = UDim.new(0, 8)
 local BgToggleBtn = Instance.new("TextButton")
 BgToggleBtn.Size = UDim2.new(1, 0, 0, 32)
 BgToggleBtn.BackgroundColor3 = Color3.fromRGB(32, 32, 46)
-BgToggleBtn.Text = "▣ Nền chữ: Tắt"
+BgToggleBtn.Text = "Nền chữ: Tắt"
 BgToggleBtn.TextColor3 = Color3.fromRGB(185, 185, 205)
 BgToggleBtn.Font = Enum.Font.GothamMedium
 BgToggleBtn.TextSize = 12
@@ -354,10 +392,10 @@ ToggleShowBtn.MouseButton1Click:Connect(function()
 		if InputBox.Text ~= "" then
 			DisplayLabel.Text = InputBox.Text
 		end
-		ToggleShowBtn.Text = "◐ Đang hiển thị"
+		ToggleShowBtn.Text = "Đang hiển thị"
 		ToggleShowBtn.BackgroundColor3 = Color3.fromRGB(40, 180, 90)
 	else
-		ToggleShowBtn.Text = "◉ Hiển thị lên màn hình"
+		ToggleShowBtn.Text = "Hiển thị lên màn hình"
 		ToggleShowBtn.BackgroundColor3 = Color3.fromRGB(0, 150, 255)
 	end
 end)
@@ -370,32 +408,32 @@ end)
 MinusBtn.MouseButton1Click:Connect(function()
 	currentSize = math.max(10, currentSize - 2)
 	DisplayLabel.TextSize = currentSize
-	SizeLabel.Text = "⇄ Kích thước: " .. currentSize
+	SizeLabel.Text = "Kích thước: " .. currentSize
 end)
 
 PlusBtn.MouseButton1Click:Connect(function()
 	currentSize = math.min(72, currentSize + 2)
 	DisplayLabel.TextSize = currentSize
-	SizeLabel.Text = "⇄ Kích thước: " .. currentSize
+	SizeLabel.Text = "Kích thước: " .. currentSize
 end)
 
 FontBtn.MouseButton1Click:Connect(function()
 	fontIdx = (fontIdx % #fonts) + 1
 	DisplayLabel.Font = fonts[fontIdx].Enum
-	FontBtn.Text = "Aa Font: " .. fonts[fontIdx].Name
+	FontBtn.Text = "Font: " .. fonts[fontIdx].Name
 end)
 
 ColorBtn.MouseButton1Click:Connect(function()
 	colorIdx = (colorIdx % #colors) + 1
 	DisplayLabel.TextColor3 = colors[colorIdx].Val
-	ColorBtn.Text = "◈ Màu chữ: " .. colors[colorIdx].Name
+	ColorBtn.Text = "Màu chữ: " .. colors[colorIdx].Name
 	ColorBtn.TextColor3 = colors[colorIdx].Val
 end)
 
 EffectBtn.MouseButton1Click:Connect(function()
 	effectIdx = (effectIdx % #effects) + 1
 	local currentEffect = effects[effectIdx]
-	EffectBtn.Text = "✦ Hiệu ứng: " .. currentEffect
+	EffectBtn.Text = "Hiệu ứng: " .. currentEffect
 
 	DisplayLabel.TextTransparency = 0
 	TextStroke.Color = Color3.fromRGB(0, 0, 0)
@@ -417,10 +455,10 @@ BgToggleBtn.MouseButton1Click:Connect(function()
 		if not DisplayContainer:FindFirstChild("UICorner") then
 			Instance.new("UICorner", DisplayContainer).CornerRadius = UDim.new(0, 10)
 		end
-		BgToggleBtn.Text = "▣ Nền chữ: Bật"
+		BgToggleBtn.Text = "Nền chữ: Bật"
 	else
 		DisplayContainer.BackgroundTransparency = 1
-		BgToggleBtn.Text = "▣ Nền chữ: Tắt"
+		BgToggleBtn.Text = "Nền chữ: Tắt"
 	end
 end)
 
