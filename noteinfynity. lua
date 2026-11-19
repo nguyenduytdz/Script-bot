@@ -1,72 +1,75 @@
 -- Services
 local Players = game:GetService("Players")
-local TweenService = game:GetService("TweenService")
 local RunService = game:GetService("RunService")
+local UserInputService = game:GetService("UserInputService")
 local CoreGui = game:GetService("CoreGui")
 
 local LocalPlayer = Players.LocalPlayer
 
--- Bảo vệ UI (hỗ trợ hầu hết các Executor trên Mobile & PC)
+-- Bảo vệ UI
 local ParentGui = (gethui and gethui()) or CoreGui or LocalPlayer:WaitForChild("PlayerGui")
 
--- Xóa UI cũ nếu chạy lại script
 if ParentGui:FindFirstChild("ScreenNoteSystem") then
 	ParentGui.ScreenNoteSystem:Destroy()
 end
 
--- Tạo ScreenGui chính
 local ScreenGui = Instance.new("ScreenGui")
 ScreenGui.Name = "ScreenNoteSystem"
 ScreenGui.ResetOnSpawn = false
+ScreenGui.IgnoreGuiInset = true
 ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 ScreenGui.Parent = ParentGui
 
--- Hàm hỗ trợ kéo thả (Draggable) mượt mà cho cả cảm ứng Mobile & Chuột
-local function MakeDraggable(guiObject, dragHandle)
-	dragHandle = dragHandle or guiObject
-	local dragging, dragInput, dragStart, startPos
+-- Hàm kéo thả độc lập, không xung đột cử chỉ vuốt/xoay trên điện thoại
+local function AttachDrag(targetFrame, handleObject)
+	handleObject = handleObject or targetFrame
+	handleObject.Active = true
 
-	dragHandle.InputBegan:Connect(function(input)
+	local isDragging = false
+	local activeInput = nil
+	local dragOrigin = Vector2.zero
+	local frameOrigin = UDim2.new()
+
+	handleObject.InputBegan:Connect(function(input)
+		if isDragging then return end
 		if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-			dragging = true
-			dragStart = input.Position
-			startPos = guiObject.Position
+			isDragging = true
+			activeInput = input
+			dragOrigin = input.Position
+			frameOrigin = targetFrame.Position
 
 			input.Changed:Connect(function()
-				if input.UserInputState == Enum.UserInputState.End then
-					dragging = false
+				if input.UserInputState == Enum.UserInputState.End and input == activeInput then
+					isDragging = false
+					activeInput = nil
 				end
 			end)
 		end
 	end)
 
-	dragHandle.InputChanged:Connect(function(input)
+	UserInputService.InputChanged:Connect(function(input)
+		if not isDragging or input ~= activeInput then return end
 		if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
-			dragInput = input
-		end
-	end)
-
-	game:GetService("UserInputService").InputChanged:Connect(function(input)
-		if input == dragInput and dragging then
-			local delta = input.Position - dragStart
-			guiObject.Position = UDim2.new(
-				startPos.X.Scale,
-				startPos.X.Offset + delta.X,
-				startPos.Y.Scale,
-				startPos.Y.Offset + delta.Y
+			local delta = input.Position - dragOrigin
+			targetFrame.Position = UDim2.new(
+				frameOrigin.X.Scale,
+				frameOrigin.X.Offset + delta.X,
+				frameOrigin.Y.Scale,
+				frameOrigin.Y.Offset + delta.Y
 			)
 		end
 	end)
 end
 
 -- ==========================================
--- 1. PHẦN CHỮ HIỂN THỊ TRÊN MÀN HÌNH (FLOATING TEXT)
+-- 1. CHỮ GHI CHÚ HIỂN THỊ TRÊN MÀN HÌNH
 -- ==========================================
 local DisplayContainer = Instance.new("Frame")
 DisplayContainer.Name = "DisplayContainer"
-DisplayContainer.Size = UDim2.new(0, 300, 0, 60)
-DisplayContainer.Position = UDim2.new(0.5, -150, 0.15, 0)
+DisplayContainer.Size = UDim2.new(0, 260, 0, 52)
+DisplayContainer.Position = UDim2.new(0.5, -130, 0.14, 0)
 DisplayContainer.BackgroundTransparency = 1
+DisplayContainer.Active = true
 DisplayContainer.Visible = false
 DisplayContainer.Parent = ScreenGui
 
@@ -87,67 +90,58 @@ TextStroke.Thickness = 2
 TextStroke.Color = Color3.fromRGB(0, 0, 0)
 TextStroke.Parent = DisplayLabel
 
-MakeDraggable(DisplayContainer, DisplayLabel)
+AttachDrag(DisplayContainer, DisplayLabel)
 
 -- ==========================================
--- 2. NÚT BẬT/TẮT MENU NHỎ GỌN
+-- 2. NÚT BẬT / TẮT MENU
 -- ==========================================
 local ToggleBtn = Instance.new("TextButton")
 ToggleBtn.Name = "ToggleMenuBtn"
-ToggleBtn.Size = UDim2.new(0, 42, 0, 42)
-ToggleBtn.Position = UDim2.new(0.05, 0, 0.25, 0)
-ToggleBtn.BackgroundColor3 = Color3.fromRGB(25, 25, 35)
-ToggleBtn.Text = "📝"
-ToggleBtn.TextSize = 20
+ToggleBtn.Size = UDim2.new(0, 40, 0, 40)
+ToggleBtn.Position = UDim2.new(0.04, 0, 0.25, 0)
+ToggleBtn.BackgroundColor3 = Color3.fromRGB(24, 24, 34)
+ToggleBtn.Text = "☰"
+ToggleBtn.TextColor3 = Color3.fromRGB(0, 185, 255)
+ToggleBtn.Font = Enum.Font.GothamBold
+ToggleBtn.TextSize = 18
 ToggleBtn.Parent = ScreenGui
 
-local ToggleCorner = Instance.new("UICorner")
-ToggleCorner.CornerRadius = UDim.new(1, 0)
-ToggleCorner.Parent = ToggleBtn
-
-local ToggleStroke = Instance.new("UIStroke")
+Instance.new("UICorner", ToggleBtn).CornerRadius = UDim.new(1, 0)
+local ToggleStroke = Instance.new("UIStroke", ToggleBtn)
 ToggleStroke.Color = Color3.fromRGB(0, 170, 255)
-ToggleStroke.Thickness = 2
-ToggleStroke.Parent = ToggleBtn
+ToggleStroke.Thickness = 1.8
 
-MakeDraggable(ToggleBtn)
+AttachDrag(ToggleBtn)
 
 -- ==========================================
--- 3. BẢNG ĐIỀU KHIỂN CHÍNH (CONTROL PANEL)
+-- 3. BẢNG ĐIỀU KHIỂN CHÍNH
 -- ==========================================
 local MainFrame = Instance.new("Frame")
 MainFrame.Name = "MainFrame"
-MainFrame.Size = UDim2.new(0, 310, 0, 340)
-MainFrame.Position = UDim2.new(0.5, -155, 0.5, -170)
-MainFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 28)
+MainFrame.Size = UDim2.new(0, 316, 0, 340)
+MainFrame.Position = UDim2.new(0.5, -158, 0.5, -170)
+MainFrame.BackgroundColor3 = Color3.fromRGB(19, 19, 27)
 MainFrame.BorderSizePixel = 0
 MainFrame.Parent = ScreenGui
 
-local MainCorner = Instance.new("UICorner")
-MainCorner.CornerRadius = UDim.new(0, 12)
-MainCorner.Parent = MainFrame
-
-local MainStroke = Instance.new("UIStroke")
-MainStroke.Color = Color3.fromRGB(60, 60, 80)
+Instance.new("UICorner", MainFrame).CornerRadius = UDim.new(0, 12)
+local MainStroke = Instance.new("UIStroke", MainFrame)
+MainStroke.Color = Color3.fromRGB(62, 62, 84)
 MainStroke.Thickness = 1.5
-MainStroke.Parent = MainFrame
 
 -- Thanh tiêu đề
 local TopBar = Instance.new("Frame")
 TopBar.Size = UDim2.new(1, 0, 0, 36)
-TopBar.BackgroundColor3 = Color3.fromRGB(30, 30, 42)
+TopBar.BackgroundColor3 = Color3.fromRGB(29, 29, 41)
 TopBar.BorderSizePixel = 0
 TopBar.Parent = MainFrame
-
-local TopCorner = Instance.new("UICorner")
-TopCorner.CornerRadius = UDim.new(0, 12)
-TopCorner.Parent = TopBar
+Instance.new("UICorner", TopBar).CornerRadius = UDim.new(0, 12)
 
 local Title = Instance.new("TextLabel")
-Title.Size = UDim2.new(1, -40, 1, 0)
+Title.Size = UDim2.new(1, -44, 1, 0)
 Title.Position = UDim2.new(0, 12, 0, 0)
 Title.BackgroundTransparency = 1
-Title.Text = "📌 Ghi Chú Màn Hình"
+Title.Text = "◆ Ghi Chú Màn Hình"
 Title.TextColor3 = Color3.fromRGB(255, 255, 255)
 Title.Font = Enum.Font.GothamBold
 Title.TextSize = 14
@@ -156,37 +150,45 @@ Title.Parent = TopBar
 
 local CloseBtn = Instance.new("TextButton")
 CloseBtn.Size = UDim2.new(0, 30, 0, 30)
-CloseBtn.Position = UDim2.new(1, -33, 0, 3)
+CloseBtn.Position = UDim2.new(1, -34, 0, 3)
 CloseBtn.BackgroundTransparency = 1
 CloseBtn.Text = "✕"
-CloseBtn.TextColor3 = Color3.fromRGB(255, 90, 90)
+CloseBtn.TextColor3 = Color3.fromRGB(255, 95, 95)
 CloseBtn.Font = Enum.Font.GothamBold
-CloseBtn.TextSize = 16
+CloseBtn.TextSize = 15
 CloseBtn.Parent = TopBar
 
-MakeDraggable(MainFrame, TopBar)
+AttachDrag(MainFrame, TopBar)
 
--- Khu vực nội dung cuộn được
+-- Khu vực nội dung: ẩn thanh cuộn & chừa lề phải chuẩn để không cắt nút
 local Content = Instance.new("ScrollingFrame")
-Content.Size = UDim2.new(1, -20, 1, -46)
-Content.Position = UDim2.new(0, 10, 0, 42)
+Content.Size = UDim2.new(1, -24, 1, -48)
+Content.Position = UDim2.new(0, 12, 0, 42)
 Content.BackgroundTransparency = 1
-Content.ScrollBarThickness = 3
-Content.CanvasSize = UDim2.new(0, 0, 0, 330)
+Content.BorderSizePixel = 0
+Content.ScrollBarThickness = 0
+Content.ScrollingDirection = Enum.ScrollingDirection.Y
+Content.CanvasSize = UDim2.new(0, 0, 0, 0)
+Content.ClipsDescendants = true
 Content.Parent = MainFrame
 
 local UIList = Instance.new("UIListLayout")
 UIList.Padding = UDim.new(0, 8)
 UIList.SortOrder = Enum.SortOrder.LayoutOrder
+UIList.HorizontalAlignment = Enum.HorizontalAlignment.Center
 UIList.Parent = Content
 
--- Ô nhập chữ (TextBox)
+UIList:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
+	Content.CanvasSize = UDim2.new(0, 0, 0, UIList.AbsoluteContentSize.Y + 12)
+end)
+
+-- Ô nhập chữ
 local InputBox = Instance.new("TextBox")
-InputBox.Size = UDim2.new(1, 0, 0, 65)
-InputBox.BackgroundColor3 = Color3.fromRGB(32, 32, 45)
+InputBox.Size = UDim2.new(1, 0, 0, 62)
+InputBox.BackgroundColor3 = Color3.fromRGB(32, 32, 46)
 InputBox.TextColor3 = Color3.fromRGB(255, 255, 255)
 InputBox.PlaceholderText = "Nhập nội dung ghi chú tại đây..."
-InputBox.PlaceholderColor3 = Color3.fromRGB(140, 140, 160)
+InputBox.PlaceholderColor3 = Color3.fromRGB(140, 140, 165)
 InputBox.Text = ""
 InputBox.Font = Enum.Font.Gotham
 InputBox.TextSize = 13
@@ -194,10 +196,7 @@ InputBox.TextWrapped = true
 InputBox.ClearTextOnFocus = false
 InputBox.MultiLine = true
 InputBox.Parent = Content
-
-local InputCorner = Instance.new("UICorner")
-InputCorner.CornerRadius = UDim.new(0, 8)
-InputCorner.Parent = InputBox
+Instance.new("UICorner", InputBox).CornerRadius = UDim.new(0, 8)
 
 -- Hàng nút: Hiện/Ẩn chữ & Xóa chữ
 local ActionRow = Instance.new("Frame")
@@ -206,9 +205,9 @@ ActionRow.BackgroundTransparency = 1
 ActionRow.Parent = Content
 
 local ToggleShowBtn = Instance.new("TextButton")
-ToggleShowBtn.Size = UDim2.new(0.65, -4, 1, 0)
+ToggleShowBtn.Size = UDim2.new(0.66, -4, 1, 0)
 ToggleShowBtn.BackgroundColor3 = Color3.fromRGB(0, 150, 255)
-ToggleShowBtn.Text = "👁️ Hiển thị lên màn hình"
+ToggleShowBtn.Text = "◉ Hiển thị chữ"
 ToggleShowBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
 ToggleShowBtn.Font = Enum.Font.GothamBold
 ToggleShowBtn.TextSize = 12
@@ -216,39 +215,39 @@ ToggleShowBtn.Parent = ActionRow
 Instance.new("UICorner", ToggleShowBtn).CornerRadius = UDim.new(0, 8)
 
 local ClearBtn = Instance.new("TextButton")
-ClearBtn.Size = UDim2.new(0.35, 0, 1, 0)
-ClearBtn.Position = UDim2.new(0.65, 4, 0, 0)
-ClearBtn.BackgroundColor3 = Color3.fromRGB(200, 60, 60)
-ClearBtn.Text = "🗑️ Xóa"
+ClearBtn.Size = UDim2.new(0.34, -2, 1, 0)
+ClearBtn.Position = UDim2.new(0.66, 2, 0, 0)
+ClearBtn.BackgroundColor3 = Color3.fromRGB(205, 62, 62)
+ClearBtn.Text = "⌫ Xóa"
 ClearBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
 ClearBtn.Font = Enum.Font.GothamBold
 ClearBtn.TextSize = 12
 ClearBtn.Parent = ActionRow
 Instance.new("UICorner", ClearBtn).CornerRadius = UDim.new(0, 8)
 
--- Điều chỉnh kích thước chữ (Size)
+-- Điều chỉnh kích thước chữ
 local SizeRow = Instance.new("Frame")
-SizeRow.Size = UDim2.new(1, 0, 0, 32)
-SizeRow.BackgroundColor3 = Color3.fromRGB(32, 32, 45)
+SizeRow.Size = UDim2.new(1, 0, 0, 34)
+SizeRow.BackgroundColor3 = Color3.fromRGB(32, 32, 46)
 SizeRow.Parent = Content
 Instance.new("UICorner", SizeRow).CornerRadius = UDim.new(0, 8)
 
 local SizeLabel = Instance.new("TextLabel")
-SizeLabel.Size = UDim2.new(0.5, 0, 1, 0)
+SizeLabel.Size = UDim2.new(1, -92, 1, 0)
 SizeLabel.Position = UDim2.new(0, 10, 0, 0)
 SizeLabel.BackgroundTransparency = 1
-SizeLabel.Text = "Kích thước: 24"
-SizeLabel.TextColor3 = Color3.fromRGB(220, 220, 230)
+SizeLabel.Text = "⇄ Cỡ chữ: 24"
+SizeLabel.TextColor3 = Color3.fromRGB(225, 225, 235)
 SizeLabel.Font = Enum.Font.GothamMedium
 SizeLabel.TextSize = 12
 SizeLabel.TextXAlignment = Enum.TextXAlignment.Left
 SizeLabel.Parent = SizeRow
 
 local MinusBtn = Instance.new("TextButton")
-MinusBtn.Size = UDim2.new(0, 35, 0, 24)
+MinusBtn.Size = UDim2.new(0, 34, 0, 24)
 MinusBtn.Position = UDim2.new(1, -80, 0.5, -12)
-MinusBtn.BackgroundColor3 = Color3.fromRGB(50, 50, 70)
-MinusBtn.Text = "-"
+MinusBtn.BackgroundColor3 = Color3.fromRGB(52, 52, 74)
+MinusBtn.Text = "−"
 MinusBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
 MinusBtn.Font = Enum.Font.GothamBold
 MinusBtn.TextSize = 16
@@ -256,9 +255,9 @@ MinusBtn.Parent = SizeRow
 Instance.new("UICorner", MinusBtn).CornerRadius = UDim.new(0, 6)
 
 local PlusBtn = Instance.new("TextButton")
-PlusBtn.Size = UDim2.new(0, 35, 0, 24)
+PlusBtn.Size = UDim2.new(0, 34, 0, 24)
 PlusBtn.Position = UDim2.new(1, -40, 0.5, -12)
-PlusBtn.BackgroundColor3 = Color3.fromRGB(50, 50, 70)
+PlusBtn.BackgroundColor3 = Color3.fromRGB(52, 52, 74)
 PlusBtn.Text = "+"
 PlusBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
 PlusBtn.Font = Enum.Font.GothamBold
@@ -266,33 +265,33 @@ PlusBtn.TextSize = 16
 PlusBtn.Parent = SizeRow
 Instance.new("UICorner", PlusBtn).CornerRadius = UDim.new(0, 6)
 
--- Chọn Font chữ
+-- Nút chọn Font chữ
 local FontBtn = Instance.new("TextButton")
 FontBtn.Size = UDim2.new(1, 0, 0, 32)
-FontBtn.BackgroundColor3 = Color3.fromRGB(32, 32, 45)
-FontBtn.Text = "🔤 Font: FredokaOne (Bấm để đổi)"
-FontBtn.TextColor3 = Color3.fromRGB(220, 220, 230)
+FontBtn.BackgroundColor3 = Color3.fromRGB(32, 32, 46)
+FontBtn.Text = "Aa Font: FredokaOne"
+FontBtn.TextColor3 = Color3.fromRGB(225, 225, 235)
 FontBtn.Font = Enum.Font.GothamMedium
 FontBtn.TextSize = 12
 FontBtn.Parent = Content
 Instance.new("UICorner", FontBtn).CornerRadius = UDim.new(0, 8)
 
--- Chọn Màu chữ
+-- Nút chọn Màu chữ
 local ColorBtn = Instance.new("TextButton")
 ColorBtn.Size = UDim2.new(1, 0, 0, 32)
-ColorBtn.BackgroundColor3 = Color3.fromRGB(32, 32, 45)
-ColorBtn.Text = "🎨 Màu chữ: Trắng (Bấm để đổi)"
+ColorBtn.BackgroundColor3 = Color3.fromRGB(32, 32, 46)
+ColorBtn.Text = "◈ Màu: Trắng"
 ColorBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
 ColorBtn.Font = Enum.Font.GothamMedium
 ColorBtn.TextSize = 12
 ColorBtn.Parent = Content
 Instance.new("UICorner", ColorBtn).CornerRadius = UDim.new(0, 8)
 
--- Chọn Hiệu ứng chữ
+-- Nút chọn Hiệu ứng chữ
 local EffectBtn = Instance.new("TextButton")
 EffectBtn.Size = UDim2.new(1, 0, 0, 32)
-EffectBtn.BackgroundColor3 = Color3.fromRGB(32, 32, 45)
-EffectBtn.Text = "✨ Hiệu ứng: Không (Bấm để đổi)"
+EffectBtn.BackgroundColor3 = Color3.fromRGB(32, 32, 46)
+EffectBtn.Text = "✦ Hiệu ứng: Không"
 EffectBtn.TextColor3 = Color3.fromRGB(255, 215, 0)
 EffectBtn.Font = Enum.Font.GothamMedium
 EffectBtn.TextSize = 12
@@ -302,9 +301,9 @@ Instance.new("UICorner", EffectBtn).CornerRadius = UDim.new(0, 8)
 -- Nút bật/tắt nền mờ cho chữ
 local BgToggleBtn = Instance.new("TextButton")
 BgToggleBtn.Size = UDim2.new(1, 0, 0, 32)
-BgToggleBtn.BackgroundColor3 = Color3.fromRGB(32, 32, 45)
-BgToggleBtn.Text = "⬛ Nền chữ: Tắt (Bấm để bật)"
-BgToggleBtn.TextColor3 = Color3.fromRGB(180, 180, 200)
+BgToggleBtn.BackgroundColor3 = Color3.fromRGB(32, 32, 46)
+BgToggleBtn.Text = "▣ Nền chữ: Tắt"
+BgToggleBtn.TextColor3 = Color3.fromRGB(185, 185, 205)
 BgToggleBtn.Font = Enum.Font.GothamMedium
 BgToggleBtn.TextSize = 12
 BgToggleBtn.Parent = Content
@@ -317,19 +316,17 @@ local currentSize = 24
 local isShowing = false
 local hasBg = false
 
--- Danh sách Font
 local fonts = {
 	{Name = "FredokaOne", Enum = Enum.Font.FredokaOne},
 	{Name = "GothamBold", Enum = Enum.Font.GothamBold},
-	{Name = "Arcade (Pixel)", Enum = Enum.Font.Arcade},
-	{Name = "Code (Lập trình)", Enum = Enum.Font.Code},
-	{Name = "Creepster (Kinh dị)", Enum = Enum.Font.Creepster},
+	{Name = "Arcade", Enum = Enum.Font.Arcade},
+	{Name = "Code", Enum = Enum.Font.Code},
+	{Name = "Creepster", Enum = Enum.Font.Creepster},
 	{Name = "LuckiestGuy", Enum = Enum.Font.LuckiestGuy},
-	{Name = "SciFi (Tương lai)", Enum = Enum.Font.SciFi}
+	{Name = "SciFi", Enum = Enum.Font.SciFi}
 }
 local fontIdx = 1
 
--- Danh sách Màu
 local colors = {
 	{Name = "Trắng", Val = Color3.fromRGB(255, 255, 255)},
 	{Name = "Vàng Gold", Val = Color3.fromRGB(255, 215, 0)},
@@ -340,23 +337,15 @@ local colors = {
 }
 local colorIdx = 1
 
--- Danh sách Hiệu ứng
 local effects = {"Không", "Cầu vồng (RGB)", "Nhấp nháy (Pulse)", "Phát sáng (Neon)", "Lơ lửng (Float)"}
 local effectIdx = 1
 
--- Cập nhật nội dung trực tiếp khi gõ
 InputBox:GetPropertyChangedSignal("Text"):Connect(function()
-	if InputBox.Text == "" then
-		DisplayLabel.Text = "Ghi chú trống..."
-	else
-		DisplayLabel.Text = InputBox.Text
-	end
-	-- Tự động co giãn khung chứa theo độ dài chữ
-	local textBounds = DisplayLabel.TextBounds
-	DisplayContainer.Size = UDim2.new(0, math.clamp(textBounds.X + 30, 150, 500), 0, math.max(textBounds.Y + 20, 50))
+	DisplayLabel.Text = (InputBox.Text == "") and "Ghi chú trống..." or InputBox.Text
+	local bounds = DisplayLabel.TextBounds
+	DisplayContainer.Size = UDim2.new(0, math.clamp(bounds.X + 32, 140, 480), 0, math.max(bounds.Y + 20, 48))
 end)
 
--- Bật / Tắt hiển thị chữ ra màn hình
 ToggleShowBtn.MouseButton1Click:Connect(function()
 	isShowing = not isShowing
 	DisplayContainer.Visible = isShowing
@@ -364,55 +353,49 @@ ToggleShowBtn.MouseButton1Click:Connect(function()
 		if InputBox.Text ~= "" then
 			DisplayLabel.Text = InputBox.Text
 		end
-		ToggleShowBtn.Text = "🙈 Ẩn khỏi màn hình"
+		ToggleShowBtn.Text = "◐ Đang hiển thị"
 		ToggleShowBtn.BackgroundColor3 = Color3.fromRGB(40, 180, 90)
 	else
-		ToggleShowBtn.Text = "👁️ Hiển thị lên màn hình"
+		ToggleShowBtn.Text = "◉ Hiển thị chữ"
 		ToggleShowBtn.BackgroundColor3 = Color3.fromRGB(0, 150, 255)
 	end
 end)
 
--- Xóa chữ
 ClearBtn.MouseButton1Click:Connect(function()
 	InputBox.Text = ""
 	DisplayLabel.Text = ""
 end)
 
--- Tăng / Giảm kích thước chữ
 MinusBtn.MouseButton1Click:Connect(function()
 	currentSize = math.max(10, currentSize - 2)
 	DisplayLabel.TextSize = currentSize
-	SizeLabel.Text = "Kích thước: " .. currentSize
+	SizeLabel.Text = "⇄ Cỡ chữ: " .. currentSize
 end)
 
 PlusBtn.MouseButton1Click:Connect(function()
 	currentSize = math.min(72, currentSize + 2)
 	DisplayLabel.TextSize = currentSize
-	SizeLabel.Text = "Kích thước: " .. currentSize
+	SizeLabel.Text = "⇄ Cỡ chữ: " .. currentSize
 end)
 
--- Đổi Font
 FontBtn.MouseButton1Click:Connect(function()
 	fontIdx = (fontIdx % #fonts) + 1
 	DisplayLabel.Font = fonts[fontIdx].Enum
-	FontBtn.Text = "🔤 Font: " .. fonts[fontIdx].Name
+	FontBtn.Text = "Aa Font: " .. fonts[fontIdx].Name
 end)
 
--- Đổi Màu
 ColorBtn.MouseButton1Click:Connect(function()
 	colorIdx = (colorIdx % #colors) + 1
 	DisplayLabel.TextColor3 = colors[colorIdx].Val
-	ColorBtn.Text = "🎨 Màu chữ: " .. colors[colorIdx].Name
+	ColorBtn.Text = "◈ Màu: " .. colors[colorIdx].Name
 	ColorBtn.TextColor3 = colors[colorIdx].Val
 end)
 
--- Đổi Hiệu ứng
 EffectBtn.MouseButton1Click:Connect(function()
 	effectIdx = (effectIdx % #effects) + 1
 	local currentEffect = effects[effectIdx]
-	EffectBtn.Text = "✨ Hiệu ứng: " .. currentEffect
+	EffectBtn.Text = "✦ Hiệu ứng: " .. currentEffect
 
-	-- Reset các thuộc tính hiệu ứng cũ
 	DisplayLabel.TextTransparency = 0
 	TextStroke.Color = Color3.fromRGB(0, 0, 0)
 	TextStroke.Thickness = 2
@@ -425,7 +408,6 @@ EffectBtn.MouseButton1Click:Connect(function()
 	end
 end)
 
--- Bật/Tắt nền mờ sau chữ giúp dễ đọc hơn
 BgToggleBtn.MouseButton1Click:Connect(function()
 	hasBg = not hasBg
 	if hasBg then
@@ -434,14 +416,13 @@ BgToggleBtn.MouseButton1Click:Connect(function()
 		if not DisplayContainer:FindFirstChild("UICorner") then
 			Instance.new("UICorner", DisplayContainer).CornerRadius = UDim.new(0, 10)
 		end
-		BgToggleBtn.Text = "⬛ Nền chữ: Bật (Dễ đọc)"
+		BgToggleBtn.Text = "▣ Nền chữ: Bật"
 	else
 		DisplayContainer.BackgroundTransparency = 1
-		BgToggleBtn.Text = "⬛ Nền chữ: Tắt (Bấm để bật)"
+		BgToggleBtn.Text = "▣ Nền chữ: Tắt"
 	end
 end)
 
--- Đóng / Mở bảng điều khiển
 CloseBtn.MouseButton1Click:Connect(function()
 	MainFrame.Visible = false
 end)
@@ -450,7 +431,6 @@ ToggleBtn.MouseButton1Click:Connect(function()
 	MainFrame.Visible = not MainFrame.Visible
 end)
 
--- Vòng lặp xử lý hiệu ứng động (RGB, Nhấp nháy, Lơ lửng)
 local tickCount = 0
 RunService.RenderStepped:Connect(function(dt)
 	if not isShowing then return end
