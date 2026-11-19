@@ -120,7 +120,7 @@ IconStroke.Parent = ToggleIconBtn
 
 local MainFrame = Instance.new("Frame")
 MainFrame.Name = "MainFrame"
-MainFrame.Size = UDim2.new(0, 310, 0, 340)
+MainFrame.Size = UDim2.new(0, 310, 0, 365)
 MainFrame.Position = UDim2.new(0.05, 0, 0.2, 0)
 MainFrame.BackgroundColor3 = Color3.fromRGB(25, 25, 30)
 MainFrame.BorderSizePixel = 0
@@ -195,20 +195,46 @@ StatusLabel.TextYAlignment = Enum.TextYAlignment.Top
 StatusLabel.Parent = Tab1Content
 Instance.new("UICorner", StatusLabel).CornerRadius = UDim.new(0, 8)
 
+-- Ô nhập & lưu số tiền tối thiểu để lọc cả Lưu Lịch Sử & Gửi Webhook
+local CustomMoneyInput = Instance.new("TextBox")
+CustomMoneyInput.Size = UDim2.new(1, -92, 0, 28)
+CustomMoneyInput.Position = UDim2.new(0, 10, 0, 72)
+CustomMoneyInput.BackgroundColor3 = Color3.fromRGB(38, 38, 46)
+CustomMoneyInput.TextColor3 = Color3.fromRGB(255, 255, 255)
+CustomMoneyInput.PlaceholderColor3 = Color3.fromRGB(155, 155, 165)
+CustomMoneyInput.PlaceholderText = "💰 Tiền lưu/gửi (vd: 1M, 1B, 0)..."
+CustomMoneyInput.Text = ""
+CustomMoneyInput.TextSize = 10
+CustomMoneyInput.Font = Enum.Font.Gotham
+CustomMoneyInput.ClearTextOnFocus = false
+CustomMoneyInput.Parent = Tab1Content
+Instance.new("UICorner", CustomMoneyInput).CornerRadius = UDim.new(0, 6)
+
+local SaveMoneyBtn = Instance.new("TextButton")
+SaveMoneyBtn.Size = UDim2.new(0, 66, 0, 28)
+SaveMoneyBtn.Position = UDim2.new(1, -76, 0, 72)
+SaveMoneyBtn.BackgroundColor3 = Color3.fromRGB(52, 152, 219)
+SaveMoneyBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+SaveMoneyBtn.TextSize = 10
+SaveMoneyBtn.Font = Enum.Font.GothamBold
+SaveMoneyBtn.Text = "💾 Lưu"
+SaveMoneyBtn.Parent = Tab1Content
+Instance.new("UICorner", SaveMoneyBtn).CornerRadius = UDim.new(0, 6)
+
 local FilterDropdownBtn = Instance.new("TextButton")
 FilterDropdownBtn.Size = UDim2.new(1, -20, 0, 28)
-FilterDropdownBtn.Position = UDim2.new(0, 10, 0, 72)
+FilterDropdownBtn.Position = UDim2.new(0, 10, 0, 106)
 FilterDropdownBtn.BackgroundColor3 = Color3.fromRGB(45, 45, 55)
 FilterDropdownBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
 FilterDropdownBtn.TextSize = 11
 FilterDropdownBtn.Font = Enum.Font.GothamBold
-FilterDropdownBtn.Text = "🔽 Lọc Tiền: Tất cả (0)"
+FilterDropdownBtn.Text = "🔽 Lọc Lưu & Gửi: Tất cả (0)"
 FilterDropdownBtn.Parent = Tab1Content
 Instance.new("UICorner", FilterDropdownBtn).CornerRadius = UDim.new(0, 6)
 
 local DropdownListFrame = Instance.new("ScrollingFrame")
 DropdownListFrame.Size = UDim2.new(1, -20, 0, 90)
-DropdownListFrame.Position = UDim2.new(0, 10, 0, 103)
+DropdownListFrame.Position = UDim2.new(0, 10, 0, 138)
 DropdownListFrame.BackgroundColor3 = Color3.fromRGB(35, 35, 42)
 DropdownListFrame.BorderSizePixel = 0
 DropdownListFrame.Visible = false
@@ -222,6 +248,29 @@ UIListLayout.SortOrder = Enum.SortOrder.LayoutOrder
 UIListLayout.Padding = UDim.new(0, 3)
 UIListLayout.Parent = DropdownListFrame
 
+local isDropdownOpen = false
+
+local function applyMinMoneyFilter(val, labelText)
+    CURRENT_MIN_MONEY = math.max(0, tonumber(val) or 0)
+    if CURRENT_MIN_MONEY == 0 then
+        FilterDropdownBtn.Text = "🔽 Lọc Lưu & Gửi: Tất cả (0)"
+    else
+        FilterDropdownBtn.Text = "🔽 Lọc Lưu & Gửi: " .. (labelText or (formatBigNumber(CURRENT_MIN_MONEY) .. "+/s"))
+    end
+    isDropdownOpen = false
+    DropdownListFrame.Visible = false
+end
+
+onButtonClicked(SaveMoneyBtn, function()
+    local rawText = CustomMoneyInput.Text or ""
+    if rawText:gsub("%s+", "") == "" then
+        applyMinMoneyFilter(0, "Tất cả (0)")
+        return
+    end
+    local parsedVal = parseRawMoneyToNumber(rawText)
+    applyMinMoneyFilter(parsedVal, rawText .. "+")
+end)
+
 local function createFilterOption(name, val)
     local optBtn = Instance.new("TextButton")
     optBtn.Size = UDim2.new(1, -4, 0, 24)
@@ -234,10 +283,8 @@ local function createFilterOption(name, val)
     Instance.new("UICorner", optBtn).CornerRadius = UDim.new(0, 4)
 
     onButtonClicked(optBtn, function()
-        CURRENT_MIN_MONEY = val
-        FilterDropdownBtn.Text = "🔽 Lọc Tiền: " .. name
-        isDropdownOpen = false
-        DropdownListFrame.Visible = false
+        CustomMoneyInput.Text = val == 0 and "" or name
+        applyMinMoneyFilter(val, name)
     end)
 end
 
@@ -248,20 +295,19 @@ createFilterOption("Từ 1T+ /s", 1e12)
 createFilterOption("Từ 1Qa+ /s", 1e15)
 createFilterOption("Từ 1spd+ /s", 1e54)
 
-local isDropdownOpen = false
 onButtonClicked(FilterDropdownBtn, function()
     isDropdownOpen = not isDropdownOpen
     DropdownListFrame.Visible = isDropdownOpen
     if isDropdownOpen then
         FilterDropdownBtn.Text = "🔼 Đóng bảng lọc tiền"
     else
-        FilterDropdownBtn.Text = "🔽 Lọc Tiền: " .. (CURRENT_MIN_MONEY == 0 and "Tất cả" or formatBigNumber(CURRENT_MIN_MONEY) .. "+")
+        FilterDropdownBtn.Text = "🔽 Lọc Lưu & Gửi: " .. (CURRENT_MIN_MONEY == 0 and "Tất cả" or formatBigNumber(CURRENT_MIN_MONEY) .. "+")
     end
 end)
 
 local ToggleButton = Instance.new("TextButton")
 ToggleButton.Size = UDim2.new(1, -20, 0, 36)
-ToggleButton.Position = UDim2.new(0, 10, 0, 105)
+ToggleButton.Position = UDim2.new(0, 10, 0, 142)
 ToggleButton.BackgroundColor3 = Color3.fromRGB(46, 204, 113)
 ToggleButton.TextColor3 = Color3.fromRGB(255, 255, 255)
 ToggleButton.TextSize = 13
@@ -272,7 +318,7 @@ Instance.new("UICorner", ToggleButton).CornerRadius = UDim.new(0, 8)
 
 local FooterLabel = Instance.new("TextLabel")
 FooterLabel.Size = UDim2.new(1, -20, 0, 30)
-FooterLabel.Position = UDim2.new(0, 10, 0, 195)
+FooterLabel.Position = UDim2.new(0, 10, 0, 232)
 FooterLabel.BackgroundTransparency = 1
 FooterLabel.TextColor3 = Color3.fromRGB(160, 160, 170)
 FooterLabel.TextSize = 11
@@ -283,11 +329,11 @@ FooterLabel.Parent = Tab1Content
 
 DropdownListFrame:GetPropertyChangedSignal("Visible"):Connect(function()
     if DropdownListFrame.Visible then
-        ToggleButton.Position = UDim2.new(0, 10, 0, 198)
-        FooterLabel.Position = UDim2.new(0, 10, 0, 238)
+        ToggleButton.Position = UDim2.new(0, 10, 0, 233)
+        FooterLabel.Position = UDim2.new(0, 10, 0, 272)
     else
-        ToggleButton.Position = UDim2.new(0, 10, 0, 105)
-        FooterLabel.Position = UDim2.new(0, 10, 0, 195)
+        ToggleButton.Position = UDim2.new(0, 10, 0, 142)
+        FooterLabel.Position = UDim2.new(0, 10, 0, 232)
     end
 end)
 
@@ -313,7 +359,6 @@ HistorySearch.Parent = MainFrame
 HistorySearch.Visible = false
 Instance.new("UICorner", HistorySearch).CornerRadius = UDim.new(0, 6)
 
--- Nút Lọc
 local HistoryFilterBtn = Instance.new("TextButton")
 HistoryFilterBtn.Size = UDim2.new(0, 32, 0, 30)
 HistoryFilterBtn.Position = UDim2.new(0, 145, 0, 66)
@@ -326,7 +371,6 @@ HistoryFilterBtn.Parent = MainFrame
 HistoryFilterBtn.Visible = false
 Instance.new("UICorner", HistoryFilterBtn).CornerRadius = UDim.new(0, 6)
 
--- Nút bật/tắt Chế độ chọn nhiều mục để xóa
 local HistorySelectBtn = Instance.new("TextButton")
 HistorySelectBtn.Size = UDim2.new(0, 32, 0, 30)
 HistorySelectBtn.Position = UDim2.new(0, 182, 0, 66)
@@ -339,7 +383,6 @@ HistorySelectBtn.Parent = MainFrame
 HistorySelectBtn.Visible = false
 Instance.new("UICorner", HistorySelectBtn).CornerRadius = UDim.new(0, 6)
 
--- Ô hiển thị số lượng pet
 local HistoryCountLabel = Instance.new("TextLabel")
 HistoryCountLabel.Size = UDim2.new(0, 70, 0, 30)
 HistoryCountLabel.Position = UDim2.new(0, 219, 0, 66)
@@ -353,7 +396,6 @@ HistoryCountLabel.Parent = MainFrame
 HistoryCountLabel.Visible = false
 Instance.new("UICorner", HistoryCountLabel).CornerRadius = UDim.new(0, 6)
 
--- Thanh hành động xóa (Hiện khi bật chế độ chọn)
 local DeleteActionBar = Instance.new("Frame")
 DeleteActionBar.Size = UDim2.new(1, -20, 0, 30)
 DeleteActionBar.Position = UDim2.new(0, 10, 1, -38)
@@ -384,7 +426,6 @@ DeleteAllBtn.Text = "Xóa tất cả"
 DeleteAllBtn.Parent = DeleteActionBar
 Instance.new("UICorner", DeleteAllBtn).CornerRadius = UDim.new(0, 4)
 
--- Menu popup Lọc
 local HistoryFilterPopup = Instance.new("Frame")
 HistoryFilterPopup.Size = UDim2.new(0, 130, 0, 88)
 HistoryFilterPopup.Position = UDim2.new(0, 145, 0, 99)
@@ -473,7 +514,6 @@ refreshHistory = function()
 
             local textLeftOffset = 5
 
-            -- Nếu bật chế độ chọn, hiện checkbox tích chọn
             if isSelectMode then
                 textLeftOffset = 32
                 local checkBtn = Instance.new("TextButton")
@@ -523,7 +563,6 @@ refreshHistory = function()
     updateSelectedCountText()
 end
 
--- Bấm nút thùng rác để bật/tắt chế độ chọn nhiều mục
 onButtonClicked(HistorySelectBtn, function()
     isSelectMode = not isSelectMode
     selectedIndices = {}
@@ -534,7 +573,6 @@ onButtonClicked(HistorySelectBtn, function()
     refreshHistory()
 end)
 
--- Xóa các mục đã chọn
 onButtonClicked(DeleteSelectedBtn, function()
     local newRecords = {}
     for idx, record in ipairs(HistoryRecords) do
@@ -547,7 +585,6 @@ onButtonClicked(DeleteSelectedBtn, function()
     refreshHistory()
 end)
 
--- Xóa toàn bộ
 onButtonClicked(DeleteAllBtn, function()
     HistoryRecords = {}
     selectedIndices = {}
@@ -761,9 +798,13 @@ local function isRealPet(item)
 end
 
 -- ==========================================
--- GỬI WEBHOOK & GHI LỊCH SỬ
+-- GỬI WEBHOOK & GHI LỊCH SỬ (ÁP DỤNG MỐC TIỀN CHO CẢ 2)
 -- ==========================================
 local function sendDiscordWebhook(petData)
+    if CURRENT_MIN_MONEY > 0 and petData.NumericMoney < CURRENT_MIN_MONEY then
+        return
+    end
+
     petsCaughtCount = petsCaughtCount + 1
 
     local vnTimeTable = os.date("!*t", os.time() + 25200)
@@ -775,7 +816,6 @@ local function sendDiscordWebhook(petData)
     if refreshHistory then refreshHistory() end
 
     if not isRunning then return end
-    if CURRENT_MIN_MONEY > 0 and petData.NumericMoney < CURRENT_MIN_MONEY then return end
 
     local playerName = LocalPlayer.Name
     local displayName = LocalPlayer.DisplayName
@@ -913,8 +953,8 @@ RunService.RenderStepped:Connect(function()
     )
 
     if isRunning then
-        FooterLabel.Text = string.format("Đã ghi nhận: %d thú | Trạng thái: 🟢 Đang gửi webhook", petsCaughtCount)
+        FooterLabel.Text = string.format("Đã lưu/gửi: %d thú | Trạng thái: 🟢 Đang chạy", petsCaughtCount)
     else
-        FooterLabel.Text = string.format("Đã ghi nhận: %d thú | Trạng thái: 🔴 Dừng gửi webhook (vẫn lưu lịch sử)", petsCaughtCount)
+        FooterLabel.Text = string.format("Đã lưu/gửi: %d thú | Trạng thái: 🔴 Đang tạm dừng gửi", petsCaughtCount)
     end
 end)
