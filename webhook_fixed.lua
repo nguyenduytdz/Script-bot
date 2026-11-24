@@ -7,8 +7,8 @@ local DiscordUserID = "1494250347731091497"
 local CURRENT_MIN_MONEY = 0
 
 -- Cấu hình Key:
--- isAdmin = true  -> Key Admin (mở toàn quyền tab Admin)
--- isAdmin = false -> Key thường (chỉ dùng script, không chỉnh/xóa key)
+-- isAdmin = true  -> Key Admin (hiện tab 🛡️ Admin và mở toàn quyền)
+-- isAdmin = false -> Key thường (ẩn hẳn tab 🛡️ Admin, không hiện tab admin)
 -- expireAt = nil  -> Vĩnh viễn; hoặc os.time() + số giây
 local INITIAL_KEYS = {
     ["ADMIN-VIP"] = { expireAt = nil, isAdmin = true },
@@ -260,8 +260,6 @@ TabContainer.ZIndex = 11
 TabContainer.Parent = MainFrame
 
 local Tab1Btn = Instance.new("TextButton")
-Tab1Btn.Size = UDim2.new(0.24, 0, 1, 0)
-Tab1Btn.Position = UDim2.new(0, 0, 0, 0)
 Tab1Btn.BackgroundColor3 = Color3.fromRGB(46, 204, 113)
 Tab1Btn.TextColor3 = Color3.fromRGB(255, 255, 255)
 Tab1Btn.TextSize = 9
@@ -272,8 +270,6 @@ Tab1Btn.Parent = TabContainer
 Instance.new("UICorner", Tab1Btn).CornerRadius = UDim.new(0, 7)
 
 local Tab2Btn = Instance.new("TextButton")
-Tab2Btn.Size = UDim2.new(0.24, 0, 1, 0)
-Tab2Btn.Position = UDim2.new(0.253, 0, 0, 0)
 Tab2Btn.BackgroundColor3 = Color3.fromRGB(36, 38, 52)
 Tab2Btn.TextColor3 = Color3.fromRGB(185, 185, 200)
 Tab2Btn.TextSize = 9
@@ -284,8 +280,6 @@ Tab2Btn.Parent = TabContainer
 Instance.new("UICorner", Tab2Btn).CornerRadius = UDim.new(0, 7)
 
 local Tab3Btn = Instance.new("TextButton")
-Tab3Btn.Size = UDim2.new(0.24, 0, 1, 0)
-Tab3Btn.Position = UDim2.new(0.506, 0, 0, 0)
 Tab3Btn.BackgroundColor3 = Color3.fromRGB(36, 38, 52)
 Tab3Btn.TextColor3 = Color3.fromRGB(185, 185, 200)
 Tab3Btn.TextSize = 9
@@ -295,17 +289,47 @@ Tab3Btn.ZIndex = 12
 Tab3Btn.Parent = TabContainer
 Instance.new("UICorner", Tab3Btn).CornerRadius = UDim.new(0, 7)
 
+-- Tab 4 mặc định ẨN (Visible = false). Chỉ hiện khi key đăng nhập là Admin (isAdmin == true)
 local Tab4Btn = Instance.new("TextButton")
-Tab4Btn.Size = UDim2.new(0.24, 0, 1, 0)
-Tab4Btn.Position = UDim2.new(0.76, 0, 0, 0)
 Tab4Btn.BackgroundColor3 = Color3.fromRGB(36, 38, 52)
 Tab4Btn.TextColor3 = Color3.fromRGB(185, 185, 200)
 Tab4Btn.TextSize = 9
 Tab4Btn.Font = Enum.Font.GothamBold
 Tab4Btn.Text = "🛡️ Admin"
+Tab4Btn.Visible = false
 Tab4Btn.ZIndex = 12
 Tab4Btn.Parent = TabContainer
 Instance.new("UICorner", Tab4Btn).CornerRadius = UDim.new(0, 7)
+
+local function layoutTabsByRole()
+    local showAdmin = isCurrentUserAdmin()
+    Tab4Btn.Visible = showAdmin
+    if showAdmin then
+        Tab1Btn.Size = UDim2.new(0.24, 0, 1, 0)
+        Tab1Btn.Position = UDim2.new(0, 0, 0, 0)
+
+        Tab2Btn.Size = UDim2.new(0.24, 0, 1, 0)
+        Tab2Btn.Position = UDim2.new(0.253, 0, 0, 0)
+
+        Tab3Btn.Size = UDim2.new(0.24, 0, 1, 0)
+        Tab3Btn.Position = UDim2.new(0.506, 0, 0, 0)
+
+        Tab4Btn.Size = UDim2.new(0.24, 0, 1, 0)
+        Tab4Btn.Position = UDim2.new(0.76, 0, 0, 0)
+    else
+        -- Key thường: chỉ có 3 tab (Webhook, Lịch sử, Settings), ẩn hẳn tab Admin
+        Tab1Btn.Size = UDim2.new(0.32, 0, 1, 0)
+        Tab1Btn.Position = UDim2.new(0, 0, 0, 0)
+
+        Tab2Btn.Size = UDim2.new(0.32, 0, 1, 0)
+        Tab2Btn.Position = UDim2.new(0.34, 0, 0, 0)
+
+        Tab3Btn.Size = UDim2.new(0.32, 0, 1, 0)
+        Tab3Btn.Position = UDim2.new(0.68, 0, 0, 0)
+    end
+end
+
+layoutTabsByRole()
 
 -- ==========================================
 -- DYNAMIC ISLAND TRÊN ĐẦU MÀN HÌNH
@@ -687,6 +711,8 @@ end)
 
 local function lockToKeyScreen(reasonText)
     isKeyUnlocked = false
+    ActiveKeyName = nil
+    layoutTabsByRole()
     MainFrame.Visible = false
     ToggleIconBtn.Visible = false
     KeyPanel.Visible = true
@@ -696,6 +722,7 @@ local function lockToKeyScreen(reasonText)
 end
 
 local refreshAdminView
+local openTab
 
 local function unlockScriptWithKey(k)
     ActiveKeyName = k
@@ -707,12 +734,16 @@ local function unlockScriptWithKey(k)
             KeyStore[k].usedAt = getVnTimeString()
         end
     end
+    layoutTabsByRole()
+    if openTab then
+        openTab(1)
+    end
     isKeyUnlocked = true
     KeyPanel.Visible = false
     ToggleIconBtn.Visible = true
     MainFrame.Visible = true
     isMenuVisible = true
-    if refreshAdminView then
+    if refreshAdminView and isCurrentUserAdmin() then
         refreshAdminView()
     end
 end
@@ -975,7 +1006,7 @@ SettingsInfoLabel.ZIndex = 13
 SettingsInfoLabel.Parent = Tab3Content
 Instance.new("UICorner", SettingsInfoLabel).CornerRadius = UDim.new(0, 8)
 
--- --- TAB 4: ADMIN (DANH SÁCH THIẾT BỊ/KEY -> DÒNG CHI TIẾT -> TRANG TÙY CHỈNH KEY) ---
+-- --- TAB 4: ADMIN (CHỈ MỞ ĐƯỢC KHI LÀ KEY ADMIN) ---
 local Tab4Content = Instance.new("Frame")
 Tab4Content.Size = UDim2.new(1, -16, 1, -70)
 Tab4Content.Position = UDim2.new(0, 8, 0, 66)
@@ -998,7 +1029,7 @@ AdminRoleBanner.BackgroundColor3 = Color3.fromRGB(28, 30, 42)
 AdminRoleBanner.TextColor3 = Color3.fromRGB(126, 232, 192)
 AdminRoleBanner.TextSize = 10
 AdminRoleBanner.Font = Enum.Font.GothamBold
-AdminRoleBanner.Text = "Đang tải quyền..."
+AdminRoleBanner.Text = "🛡️ Quyền ADMIN • Ấn key -> xem chi tiết -> ấn chi tiết để tùy chỉnh"
 AdminRoleBanner.ZIndex = 13
 AdminRoleBanner.Parent = AdminListPage
 Instance.new("UICorner", AdminRoleBanner).CornerRadius = UDim.new(0, 6)
@@ -1019,7 +1050,6 @@ AdminKeyLayout.SortOrder = Enum.SortOrder.LayoutOrder
 AdminKeyLayout.Padding = UDim.new(0, 5)
 AdminKeyLayout.Parent = AdminKeyScroll
 
--- Dòng chi tiết hiện ra khi ấn vào 1 key trên danh sách; ấn tiếp vào dòng chi tiết để mở trang tùy chỉnh key
 local KeyDetailRowBtn = Instance.new("TextButton")
 KeyDetailRowBtn.Size = UDim2.new(1, -6, 0, 96)
 KeyDetailRowBtn.Position = UDim2.new(0, 0, 0, 164)
@@ -1040,7 +1070,6 @@ DetailRowStroke.Color = Color3.fromRGB(90, 165, 255)
 DetailRowStroke.Thickness = 1.2
 DetailRowStroke.Parent = KeyDetailRowBtn
 
--- Trang tùy chỉnh key riêng biệt
 local KeyEditPage = Instance.new("ScrollingFrame")
 KeyEditPage.Size = UDim2.new(1, -6, 1, 0)
 KeyEditPage.Position = UDim2.new(0, 0, 0, 0)
@@ -1200,6 +1229,7 @@ local function buildKeyDetailSummary(k)
 end
 
 local function openKeyEditPage(k)
+    if not isCurrentUserAdmin() then return end
     if not k or k == "" then return end
     selectedAdminKey = k
     AdminListPage.Visible = false
@@ -1208,30 +1238,17 @@ local function openKeyEditPage(k)
 end
 
 refreshAdminView = function()
-    local canManage = isCurrentUserAdmin()
-    if canManage then
-        AdminRoleBanner.TextColor3 = Color3.fromRGB(126, 232, 192)
-        AdminRoleBanner.Text = "🛡️ Quyền ADMIN • Ấn key -> xem chi tiết -> ấn chi tiết để tùy chỉnh"
-    else
-        AdminRoleBanner.TextColor3 = Color3.fromRGB(255, 180, 90)
-        AdminRoleBanner.Text = "👤 Key thường • Chỉ xem danh sách & chi tiết (khóa chỉnh/xóa)"
+    layoutTabsByRole()
+    if not isCurrentUserAdmin() then
+        Tab4Content.Visible = false
+        AdminListPage.Visible = false
+        KeyEditPage.Visible = false
+        selectedAdminKey = nil
+        if openTab then
+            openTab(1)
+        end
+        return
     end
-
-    AddHoursBox.Active = canManage
-    AddTimeBtn.Active = canManage
-    SubTimeBtn.Active = canManage
-    Quick1hBtn.Active = canManage
-    Quick7dBtn.Active = canManage
-    PermKeyBtn.Active = canManage
-    DeleteForeverKeyBtn.Active = canManage
-
-    local alpha = canManage and 0 or 0.55
-    AddTimeBtn.BackgroundTransparency = alpha
-    SubTimeBtn.BackgroundTransparency = alpha
-    Quick1hBtn.BackgroundTransparency = alpha
-    Quick7dBtn.BackgroundTransparency = alpha
-    PermKeyBtn.BackgroundTransparency = alpha
-    DeleteForeverKeyBtn.BackgroundTransparency = alpha
 
     for _, child in ipairs(AdminKeyScroll:GetChildren()) do
         if child:IsA("TextButton") then
@@ -1311,11 +1328,7 @@ onButtonClicked(BackToAdminListBtn, function()
 end)
 
 local function adjustKeySeconds(deltaSec)
-    if not isCurrentUserAdmin() then
-        AdminActionStatus.TextColor3 = Color3.fromRGB(255, 180, 90)
-        AdminActionStatus.Text = "Key hiện tại là KEY THƯỜNG (không có quyền chỉnh sửa)."
-        return
-    end
+    if not isCurrentUserAdmin() then return end
     local k = selectedAdminKey
     if not k or k == "" then
         AdminActionStatus.TextColor3 = Color3.fromRGB(255, 125, 140)
@@ -1364,11 +1377,7 @@ onButtonClicked(Quick7dBtn, function()
 end)
 
 onButtonClicked(PermKeyBtn, function()
-    if not isCurrentUserAdmin() then
-        AdminActionStatus.TextColor3 = Color3.fromRGB(255, 180, 90)
-        AdminActionStatus.Text = "Key hiện tại là KEY THƯỜNG (không có quyền chỉnh sửa)."
-        return
-    end
+    if not isCurrentUserAdmin() then return end
     local k = selectedAdminKey
     if not k or RevokedKeys[k] or not KeyStore[k] then return end
     KeyStore[k].expireAt = nil
@@ -1378,11 +1387,7 @@ onButtonClicked(PermKeyBtn, function()
 end)
 
 onButtonClicked(DeleteForeverKeyBtn, function()
-    if not isCurrentUserAdmin() then
-        AdminActionStatus.TextColor3 = Color3.fromRGB(255, 180, 90)
-        AdminActionStatus.Text = "Key hiện tại là KEY THƯỜNG (không có quyền xóa)."
-        return
-    end
+    if not isCurrentUserAdmin() then return end
     local k = selectedAdminKey
     if not k or k == "" then return end
     RevokedKeys[k] = true
@@ -1390,7 +1395,6 @@ onButtonClicked(DeleteForeverKeyBtn, function()
     AdminActionStatus.TextColor3 = Color3.fromRGB(255, 125, 140)
     AdminActionStatus.Text = "🗑️ Đã xóa vĩnh viễn key: " .. k
     if ActiveKeyName == k then
-        ActiveKeyName = nil
         task.wait(0.25)
         lockToKeyScreen("Key " .. k .. " đã bị xóa vĩnh viễn!")
         return
@@ -1566,7 +1570,6 @@ refreshHistory = function()
     Tab2Content.CanvasSize = UDim2.new(0, 0, 0, shown * 73)
     HistoryCountLabel.Text = tostring(#HistoryRecords)
 end
-
 HistorySearch:GetPropertyChangedSignal("Text"):Connect(function()
     refreshHistory()
 end)
@@ -1583,60 +1586,53 @@ local function setActiveTabStyle(activeBtn)
     end
 end
 
-onButtonClicked(Tab1Btn, function()
-    setActiveTabStyle(Tab1Btn)
-    Tab1Content.Visible = true
-    Tab2Content.Visible = false
-    Tab3Content.Visible = false
-    Tab4Content.Visible = false
-    HistorySearch.Visible = false
-    HistoryFilterBtn.Visible = false
-    HistoryClearBtn.Visible = false
-    HistoryCountLabel.Visible = false
-    HistoryFilterPopup.Visible = false
-end)
+openTab = function(tabIndex)
+    layoutTabsByRole()
+    if tabIndex == 4 and not isCurrentUserAdmin() then
+        tabIndex = 1
+    end
 
-onButtonClicked(Tab2Btn, function()
-    setActiveTabStyle(Tab2Btn)
-    Tab1Content.Visible = false
-    Tab2Content.Visible = true
-    Tab3Content.Visible = false
-    Tab4Content.Visible = false
-    HistorySearch.Visible = true
-    HistoryFilterBtn.Visible = true
-    HistoryClearBtn.Visible = true
-    HistoryCountLabel.Visible = true
-    refreshHistory()
-end)
+    local isT1 = (tabIndex == 1)
+    local isT2 = (tabIndex == 2)
+    local isT3 = (tabIndex == 3)
+    local isT4 = (tabIndex == 4 and isCurrentUserAdmin())
 
-onButtonClicked(Tab3Btn, function()
-    setActiveTabStyle(Tab3Btn)
-    Tab1Content.Visible = false
-    Tab2Content.Visible = false
-    Tab3Content.Visible = true
-    Tab4Content.Visible = false
-    HistorySearch.Visible = false
-    HistoryFilterBtn.Visible = false
-    HistoryClearBtn.Visible = false
-    HistoryCountLabel.Visible = false
-    HistoryFilterPopup.Visible = false
-end)
+    if isT1 then
+        setActiveTabStyle(Tab1Btn)
+    elseif isT2 then
+        setActiveTabStyle(Tab2Btn)
+    elseif isT3 then
+        setActiveTabStyle(Tab3Btn)
+    elseif isT4 then
+        setActiveTabStyle(Tab4Btn)
+    end
 
-onButtonClicked(Tab4Btn, function()
-    setActiveTabStyle(Tab4Btn)
-    Tab1Content.Visible = false
-    Tab2Content.Visible = false
-    Tab3Content.Visible = false
-    Tab4Content.Visible = true
-    HistorySearch.Visible = false
-    HistoryFilterBtn.Visible = false
-    HistoryClearBtn.Visible = false
-    HistoryCountLabel.Visible = false
-    HistoryFilterPopup.Visible = false
-    AdminListPage.Visible = true
-    KeyEditPage.Visible = false
-    refreshAdminView()
-end)
+    Tab1Content.Visible = isT1
+    Tab2Content.Visible = isT2
+    Tab3Content.Visible = isT3
+    Tab4Content.Visible = isT4
+
+    HistorySearch.Visible = isT2
+    HistoryFilterBtn.Visible = isT2
+    HistoryClearBtn.Visible = isT2
+    HistoryCountLabel.Visible = isT2
+    if not isT2 then
+        HistoryFilterPopup.Visible = false
+    else
+        refreshHistory()
+    end
+
+    if isT4 then
+        AdminListPage.Visible = true
+        KeyEditPage.Visible = false
+        refreshAdminView()
+    end
+end
+
+onButtonClicked(Tab1Btn, function() openTab(1) end)
+onButtonClicked(Tab2Btn, function() openTab(2) end)
+onButtonClicked(Tab3Btn, function() openTab(3) end)
+onButtonClicked(Tab4Btn, function() openTab(4) end)
 
 -- ==========================================
 -- HÀM QUÉT MÀU SẮC & THÔNG TIN THÚ
@@ -1928,7 +1924,7 @@ onButtonClicked(ToggleButton, function()
 end)
 
 -- ==========================================
--- VÒNG LẶP CẬP NHẬT TRẠNG THÁI, ADMIN & TUYẾT
+-- VÒNG LẶP CẬP NHẬT TRẠNG THÁI, QUYỀN ADMIN & TUYẾT
 -- ==========================================
 local frameCount = 0
 local lastFpsUpdate = tick()
@@ -1955,8 +1951,10 @@ RunService.RenderStepped:Connect(function(dt)
     if isKeyUnlocked and ActiveKeyName then
         local ok, reason = isKeyValid(ActiveKeyName)
         if not ok then
-            ActiveKeyName = nil
             lockToKeyScreen(reason)
+        elseif not isCurrentUserAdmin() and (Tab4Btn.Visible or Tab4Content.Visible) then
+            layoutTabsByRole()
+            if openTab then openTab(1) end
         end
     end
 
