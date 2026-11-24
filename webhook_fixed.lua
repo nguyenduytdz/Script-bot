@@ -213,8 +213,93 @@ Tab3Btn.Parent = TabContainer
 Instance.new("UICorner", Tab3Btn).CornerRadius = UDim.new(0, 7)
 
 -- ==========================================
+-- DYNAMIC ISLAND TRÊN ĐẦU MÀN HÌNH
+-- ==========================================
+local DynamicIsland = Instance.new("Frame")
+DynamicIsland.Name = "u459DynamicIsland"
+DynamicIsland.AnchorPoint = Vector2.new(0.5, 0)
+DynamicIsland.Position = UDim2.new(0.5, 0, 0, 6)
+DynamicIsland.Size = UDim2.new(0, 210, 0, 34)
+DynamicIsland.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+DynamicIsland.BorderSizePixel = 0
+DynamicIsland.Visible = true
+DynamicIsland.ZIndex = 80
+DynamicIsland.Parent = ScreenGui
+local IslandCorner = Instance.new("UICorner", DynamicIsland)
+IslandCorner.CornerRadius = UDim.new(0, 17)
+
+local IslandStroke = Instance.new("UIStroke")
+IslandStroke.Color = Color3.fromRGB(255, 255, 255)
+IslandStroke.Transparency = 0.85
+IslandStroke.Thickness = 1
+IslandStroke.Parent = DynamicIsland
+
+local IslandCompactText = Instance.new("TextLabel")
+IslandCompactText.Size = UDim2.new(1, -20, 1, 0)
+IslandCompactText.Position = UDim2.new(0, 10, 0, 0)
+IslandCompactText.BackgroundTransparency = 1
+IslandCompactText.Text = "🟢 0 Pet • 00:00:00"
+IslandCompactText.TextColor3 = Color3.fromRGB(255, 255, 255)
+IslandCompactText.TextSize = 11
+IslandCompactText.Font = Enum.Font.GothamBold
+IslandCompactText.TextXAlignment = Enum.TextXAlignment.Center
+IslandCompactText.ZIndex = 82
+IslandCompactText.Parent = DynamicIsland
+
+local IslandExpandedText = Instance.new("TextLabel")
+IslandExpandedText.Size = UDim2.new(1, -24, 1, -10)
+IslandExpandedText.Position = UDim2.new(0, 12, 0, 5)
+IslandExpandedText.BackgroundTransparency = 1
+IslandExpandedText.Text = ""
+IslandExpandedText.TextColor3 = Color3.fromRGB(244, 240, 232)
+IslandExpandedText.TextSize = 11
+IslandExpandedText.Font = Enum.Font.Code
+IslandExpandedText.TextWrapped = true
+IslandExpandedText.TextXAlignment = Enum.TextXAlignment.Left
+IslandExpandedText.TextYAlignment = Enum.TextYAlignment.Center
+IslandExpandedText.Visible = false
+IslandExpandedText.ZIndex = 82
+IslandExpandedText.Parent = DynamicIsland
+
+local IslandTapBtn = Instance.new("TextButton")
+IslandTapBtn.Size = UDim2.new(1, 0, 1, 0)
+IslandTapBtn.Position = UDim2.new(0, 0, 0, 0)
+IslandTapBtn.BackgroundTransparency = 1
+IslandTapBtn.Text = ""
+IslandTapBtn.ZIndex = 85
+IslandTapBtn.Parent = DynamicIsland
+
+local isIslandExpanded = false
+local function setIslandExpanded(expanded)
+    isIslandExpanded = expanded
+    if expanded then
+        IslandCompactText.Visible = false
+        IslandExpandedText.Visible = true
+        TweenService:Create(DynamicIsland, TweenInfo.new(0.42, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
+            Size = UDim2.new(0, 326, 0, 78)
+        }):Play()
+        TweenService:Create(IslandCorner, TweenInfo.new(0.42, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+            CornerRadius = UDim.new(0, 22)
+        }):Play()
+    else
+        IslandExpandedText.Visible = false
+        IslandCompactText.Visible = true
+        TweenService:Create(DynamicIsland, TweenInfo.new(0.38, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+            Size = UDim2.new(0, 210, 0, 34)
+        }):Play()
+        TweenService:Create(IslandCorner, TweenInfo.new(0.38, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+            CornerRadius = UDim.new(0, 17)
+        }):Play()
+    end
+end
+
+onButtonClicked(IslandTapBtn, function()
+    setIslandExpanded(not isIslandExpanded)
+end)
+
+-- ==========================================
 -- KHUNG CHỮ NHẬT NẰM NGANG CHỈ HIỆN KHI CHẠY INTRO
--- CHẠY XONG TỰ ẨN / XOÁ VỀ TRẠNG THÁI BAN ĐẦU
+-- CHẠY XONG TỰ XOÁ VỀ TRẠNG THÁI BAN ĐẦU
 -- ==========================================
 local IntroRectFrame = Instance.new("Frame")
 IntroRectFrame.Name = "IntroHorizontalRect"
@@ -936,7 +1021,7 @@ local function isRealPet(item)
     return hasPetStat
 end
 
-    -- ==========================================
+-- ==========================================
 -- GỬI WEBHOOK & GHI LỊCH SỬ
 -- ==========================================
 local function sendDiscordWebhook(petData)
@@ -1095,5 +1180,17 @@ RunService.RenderStepped:Connect(function()
         FooterLabel.Text = string.format("Đã lưu/gửi: %d thú | Trạng thái: 🟢 Đang chạy", petsCaughtCount)
     else
         FooterLabel.Text = string.format("Đã lưu/gửi: %d thú | Trạng thái: 🔴 Đang tạm dừng gửi", petsCaughtCount)
+    end
+
+    if DynamicIsland.Visible then
+        local statusIcon = isRunning and "🟢" or "🔴"
+        IslandCompactText.Text = string.format("%s %d Pet • %s", statusIcon, #HistoryRecords, runTimeStr)
+        if isIslandExpanded then
+            local minMoneyStr = CURRENT_MIN_MONEY == 0 and "Tất cả" or (formatBigNumber(CURRENT_MIN_MONEY) .. "+/s")
+            IslandExpandedText.Text = string.format(
+                "%s %s | ⏱️ %s\n⚡ %d FPS | 📶 %dms | 💰 %s",
+                statusIcon, isRunning and "Đang chạy" or "Tạm dừng", runTimeStr, currentFps, ping, minMoneyStr
+            )
+        end
     end
 end)
