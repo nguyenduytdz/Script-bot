@@ -6,10 +6,14 @@ local DiscordUserID = "1494250347731091497"
 
 local CURRENT_MIN_MONEY = 0
 
--- Danh sách Key khởi tạo (expireAt = nil là vĩnh viễn; os.time() + giây là có hạn)
+-- Cấu hình Key:
+-- isAdmin = true  -> Key Admin (mở toàn quyền tab Admin)
+-- isAdmin = false -> Key thường (chỉ dùng script, không chỉnh/xóa key)
+-- expireAt = nil  -> Vĩnh viễn; hoặc os.time() + số giây
 local INITIAL_KEYS = {
-    ["LUMEN-2026"] = { expireAt = os.time() + 86400, isAdmin = true },
     ["ADMIN-VIP"] = { expireAt = nil, isAdmin = true },
+    ["LUMEN-2026"] = { expireAt = os.time() + 86400, isAdmin = true },
+    ["USER-24H"] = { expireAt = os.time() + 86400, isAdmin = false },
     ["THROWFOOD-FREE"] = { expireAt = os.time() + 3600, isAdmin = false }
 }
 
@@ -59,8 +63,16 @@ for k, cfg in pairs(INITIAL_KEYS) do
     KeyStore[string.upper(k)] = {
         expireAt = cfg.expireAt,
         isAdmin = cfg.isAdmin == true,
-        deviceInfo = nil
+        deviceInfo = nil,
+        usedAt = nil
     }
+end
+
+local function isCurrentUserAdmin()
+    if not ActiveKeyName or not KeyStore[ActiveKeyName] then
+        return false
+    end
+    return KeyStore[ActiveKeyName].isAdmin == true
 end
 
 local function getDeviceSummary()
@@ -70,6 +82,13 @@ local function getDeviceSummary()
     end)
     local touchTag = UserInputService.TouchEnabled and "Touch" or "PC/Other"
     return string.format("%s (%s) • @%s [%d]", platformName, touchTag, LocalPlayer.Name, LocalPlayer.UserId)
+end
+
+local function getVnTimeString()
+    local vnTimeTable = os.date("!*t", os.time() + 25200)
+    return string.format("%02d:%02d:%02d - %02d/%02d/%d",
+        vnTimeTable.hour, vnTimeTable.min, vnTimeTable.sec,
+        vnTimeTable.day, vnTimeTable.month, vnTimeTable.year)
 end
 
 local function formatRemainingTime(expireAt)
@@ -541,12 +560,12 @@ IntroSubLabel.ZIndex = 91
 IntroSubLabel.Parent = IntroRectFrame
 
 -- ==========================================
--- KHUNG NHẬP KEY CÓ HIỆU ỨNG TUYẾT RƠI & LẤP LÁNH
+-- KHUNG NHẬP KEY CÓ HIỆU ỨNG TUYẾT RƠI
 -- ==========================================
 local KeyPanel = Instance.new("Frame")
 KeyPanel.Name = "KeySystemPanel"
 KeyPanel.AnchorPoint = Vector2.new(0.5, 0.5)
-KeyPanel.Size = UDim2.new(0, 336, 0, 230)
+KeyPanel.Size = UDim2.new(0, 336, 0, 212)
 KeyPanel.Position = UDim2.new(0.5, 0, 0.5, 10)
 KeyPanel.BackgroundColor3 = Color3.fromRGB(16, 20, 34)
 KeyPanel.BorderSizePixel = 0
@@ -593,8 +612,8 @@ for i = 1, 24 do
 end
 
 local KeyTitle = Instance.new("TextLabel")
-KeyTitle.Size = UDim2.new(1, -24, 0, 26)
-KeyTitle.Position = UDim2.new(0, 12, 0, 12)
+KeyTitle.Size = UDim2.new(1, -24, 0, 28)
+KeyTitle.Position = UDim2.new(0, 12, 0, 14)
 KeyTitle.BackgroundTransparency = 1
 KeyTitle.Text = "❄️ NHẬP KEY KÍCH HOẠT"
 KeyTitle.TextColor3 = Color3.fromRGB(244, 240, 232)
@@ -603,25 +622,14 @@ KeyTitle.Font = Enum.Font.GothamBold
 KeyTitle.ZIndex = 73
 KeyTitle.Parent = KeyPanel
 
-local KeySubHint = Instance.new("TextLabel")
-KeySubHint.Size = UDim2.new(1, -24, 0, 18)
-KeySubHint.Position = UDim2.new(0, 12, 0, 38)
-KeySubHint.BackgroundTransparency = 1
-KeySubHint.Text = "Key mẫu: LUMEN-2026 • ADMIN-VIP"
-KeySubHint.TextColor3 = Color3.fromRGB(145, 215, 255)
-KeySubHint.TextSize = 10
-KeySubHint.Font = Enum.Font.Code
-KeySubHint.ZIndex = 73
-KeySubHint.Parent = KeyPanel
-
 local KeyInputBox = Instance.new("TextBox")
 KeyInputBox.Size = UDim2.new(1, -32, 0, 38)
-KeyInputBox.Position = UDim2.new(0, 16, 0, 66)
+KeyInputBox.Position = UDim2.new(0, 16, 0, 52)
 KeyInputBox.BackgroundColor3 = Color3.fromRGB(28, 34, 54)
 KeyInputBox.BackgroundTransparency = 0.15
 KeyInputBox.TextColor3 = Color3.fromRGB(255, 255, 255)
 KeyInputBox.PlaceholderColor3 = Color3.fromRGB(145, 160, 190)
-KeyInputBox.PlaceholderText = "Nhập key tại đây..."
+KeyInputBox.PlaceholderText = "Nhập key..."
 KeyInputBox.Text = ""
 KeyInputBox.TextSize = 12
 KeyInputBox.Font = Enum.Font.GothamBold
@@ -636,7 +644,7 @@ KeyBoxStroke.Parent = KeyInputBox
 
 local KeyStatusLabel = Instance.new("TextLabel")
 KeyStatusLabel.Size = UDim2.new(1, -32, 0, 22)
-KeyStatusLabel.Position = UDim2.new(0, 16, 0, 110)
+KeyStatusLabel.Position = UDim2.new(0, 16, 0, 96)
 KeyStatusLabel.BackgroundTransparency = 1
 KeyStatusLabel.Text = ""
 KeyStatusLabel.TextColor3 = Color3.fromRGB(255, 125, 140)
@@ -647,7 +655,7 @@ KeyStatusLabel.Parent = KeyPanel
 
 local SubmitKeyBtn = Instance.new("TextButton")
 SubmitKeyBtn.Size = UDim2.new(0.62, -20, 0, 38)
-SubmitKeyBtn.Position = UDim2.new(0, 16, 0, 140)
+SubmitKeyBtn.Position = UDim2.new(0, 16, 0, 124)
 SubmitKeyBtn.BackgroundColor3 = Color3.fromRGB(126, 232, 192)
 SubmitKeyBtn.TextColor3 = Color3.fromRGB(14, 18, 28)
 SubmitKeyBtn.Text = "✨ Xác nhận Key"
@@ -657,42 +665,24 @@ SubmitKeyBtn.ZIndex = 73
 SubmitKeyBtn.Parent = KeyPanel
 Instance.new("UICorner", SubmitKeyBtn).CornerRadius = UDim.new(0, 10)
 
-local CopySampleKeyBtn = Instance.new("TextButton")
-CopySampleKeyBtn.Size = UDim2.new(0.38, -16, 0, 38)
-CopySampleKeyBtn.Position = UDim2.new(0.62, 4, 0, 140)
-CopySampleKeyBtn.BackgroundColor3 = Color3.fromRGB(45, 58, 92)
-CopySampleKeyBtn.TextColor3 = Color3.fromRGB(220, 240, 255)
-CopySampleKeyBtn.Text = "🔑 Điền Key"
-CopySampleKeyBtn.TextSize = 11
-CopySampleKeyBtn.Font = Enum.Font.GothamBold
-CopySampleKeyBtn.ZIndex = 73
-CopySampleKeyBtn.Parent = KeyPanel
-Instance.new("UICorner", CopySampleKeyBtn).CornerRadius = UDim.new(0, 10)
-
 local FxToggleBtn = Instance.new("TextButton")
-FxToggleBtn.Size = UDim2.new(1, -32, 0, 26)
-FxToggleBtn.Position = UDim2.new(0, 16, 0, 188)
+FxToggleBtn.Size = UDim2.new(0.38, -16, 0, 38)
+FxToggleBtn.Position = UDim2.new(0.62, 4, 0, 124)
 FxToggleBtn.BackgroundColor3 = Color3.fromRGB(26, 32, 50)
 FxToggleBtn.BackgroundTransparency = 0.2
 FxToggleBtn.TextColor3 = Color3.fromRGB(165, 220, 255)
-FxToggleBtn.Text = "❄️ Hiệu ứng tuyết rơi: BẬT"
+FxToggleBtn.Text = "❄️ Tuyết: BẬT"
 FxToggleBtn.TextSize = 10
 FxToggleBtn.Font = Enum.Font.GothamBold
 FxToggleBtn.ZIndex = 73
 FxToggleBtn.Parent = KeyPanel
-Instance.new("UICorner", FxToggleBtn).CornerRadius = UDim.new(0, 8)
+Instance.new("UICorner", FxToggleBtn).CornerRadius = UDim.new(0, 10)
 
 local snowEnabled = true
 onButtonClicked(FxToggleBtn, function()
     snowEnabled = not snowEnabled
     FxLayer.Visible = snowEnabled
-    FxToggleBtn.Text = snowEnabled and "❄️ Hiệu ứng tuyết rơi: BẬT" or "❄️ Hiệu ứng tuyết rơi: TẮT"
-end)
-
-onButtonClicked(CopySampleKeyBtn, function()
-    KeyInputBox.Text = "LUMEN-2026"
-    KeyStatusLabel.TextColor3 = Color3.fromRGB(126, 232, 192)
-    KeyStatusLabel.Text = "Đã điền key mẫu LUMEN-2026"
+    FxToggleBtn.Text = snowEnabled and "❄️ Tuyết: BẬT" or "❄️ Tuyết: TẮT"
 end)
 
 local function lockToKeyScreen(reasonText)
@@ -705,16 +695,26 @@ local function lockToKeyScreen(reasonText)
     KeyStatusLabel.Text = reasonText or "Key không còn hiệu lực!"
 end
 
+local refreshAdminView
+
 local function unlockScriptWithKey(k)
     ActiveKeyName = k
-    if KeyStore[k] and not KeyStore[k].deviceInfo then
-        KeyStore[k].deviceInfo = getDeviceSummary()
+    if KeyStore[k] then
+        if not KeyStore[k].deviceInfo then
+            KeyStore[k].deviceInfo = getDeviceSummary()
+        end
+        if not KeyStore[k].usedAt then
+            KeyStore[k].usedAt = getVnTimeString()
+        end
     end
     isKeyUnlocked = true
     KeyPanel.Visible = false
     ToggleIconBtn.Visible = true
     MainFrame.Visible = true
     isMenuVisible = true
+    if refreshAdminView then
+        refreshAdminView()
+    end
 end
 
 onButtonClicked(SubmitKeyBtn, function()
@@ -975,51 +975,113 @@ SettingsInfoLabel.ZIndex = 13
 SettingsInfoLabel.Parent = Tab3Content
 Instance.new("UICorner", SettingsInfoLabel).CornerRadius = UDim.new(0, 8)
 
--- --- TAB 4: ADMIN (THIẾT BỊ, THỜI GIAN CÒN LẠI, THÊM GIỜ, XÓA VV KEY) ---
-local Tab4Content = Instance.new("ScrollingFrame")
+-- --- TAB 4: ADMIN (DANH SÁCH THIẾT BỊ/KEY -> DÒNG CHI TIẾT -> TRANG TÙY CHỈNH KEY) ---
+local Tab4Content = Instance.new("Frame")
 Tab4Content.Size = UDim2.new(1, -16, 1, -70)
 Tab4Content.Position = UDim2.new(0, 8, 0, 66)
 Tab4Content.BackgroundTransparency = 1
-Tab4Content.BorderSizePixel = 0
-Tab4Content.CanvasSize = UDim2.new(0, 0, 0, 320)
-Tab4Content.ScrollBarThickness = 4
 Tab4Content.Visible = false
 Tab4Content.ZIndex = 12
 Tab4Content.Parent = MainFrame
 
-local AdminInfoCard = Instance.new("TextLabel")
-AdminInfoCard.Size = UDim2.new(1, -6, 0, 96)
-AdminInfoCard.Position = UDim2.new(0, 0, 0, 0)
-AdminInfoCard.BackgroundColor3 = Color3.fromRGB(32, 34, 46)
-AdminInfoCard.TextColor3 = Color3.fromRGB(235, 240, 255)
-AdminInfoCard.TextSize = 10
-AdminInfoCard.Font = Enum.Font.Code
-AdminInfoCard.TextWrapped = true
-AdminInfoCard.TextXAlignment = Enum.TextXAlignment.Left
-AdminInfoCard.TextYAlignment = Enum.TextYAlignment.Top
-AdminInfoCard.Text = "Đang tải thông tin key & thiết bị..."
-AdminInfoCard.ZIndex = 13
-AdminInfoCard.Parent = Tab4Content
-Instance.new("UICorner", AdminInfoCard).CornerRadius = UDim.new(0, 8)
+local AdminListPage = Instance.new("Frame")
+AdminListPage.Size = UDim2.new(1, 0, 1, 0)
+AdminListPage.BackgroundTransparency = 1
+AdminListPage.Visible = true
+AdminListPage.ZIndex = 12
+AdminListPage.Parent = Tab4Content
 
-local TargetKeyBox = Instance.new("TextBox")
-TargetKeyBox.Size = UDim2.new(1, -6, 0, 28)
-TargetKeyBox.Position = UDim2.new(0, 0, 0, 102)
-TargetKeyBox.BackgroundColor3 = Color3.fromRGB(32, 34, 46)
-TargetKeyBox.TextColor3 = Color3.fromRGB(255, 255, 255)
-TargetKeyBox.PlaceholderColor3 = Color3.fromRGB(150, 155, 175)
-TargetKeyBox.PlaceholderText = "Mã Key (mặc định: key đang dùng)"
-TargetKeyBox.Text = ""
-TargetKeyBox.TextSize = 10
-TargetKeyBox.Font = Enum.Font.GothamBold
-TargetKeyBox.ClearTextOnFocus = false
-TargetKeyBox.ZIndex = 13
-TargetKeyBox.Parent = Tab4Content
-Instance.new("UICorner", TargetKeyBox).CornerRadius = UDim.new(0, 6)
+local AdminRoleBanner = Instance.new("TextLabel")
+AdminRoleBanner.Size = UDim2.new(1, -6, 0, 22)
+AdminRoleBanner.Position = UDim2.new(0, 0, 0, 0)
+AdminRoleBanner.BackgroundColor3 = Color3.fromRGB(28, 30, 42)
+AdminRoleBanner.TextColor3 = Color3.fromRGB(126, 232, 192)
+AdminRoleBanner.TextSize = 10
+AdminRoleBanner.Font = Enum.Font.GothamBold
+AdminRoleBanner.Text = "Đang tải quyền..."
+AdminRoleBanner.ZIndex = 13
+AdminRoleBanner.Parent = AdminListPage
+Instance.new("UICorner", AdminRoleBanner).CornerRadius = UDim.new(0, 6)
+
+local AdminKeyScroll = Instance.new("ScrollingFrame")
+AdminKeyScroll.Size = UDim2.new(1, -6, 0, 132)
+AdminKeyScroll.Position = UDim2.new(0, 0, 0, 26)
+AdminKeyScroll.BackgroundColor3 = Color3.fromRGB(26, 28, 40)
+AdminKeyScroll.BorderSizePixel = 0
+AdminKeyScroll.CanvasSize = UDim2.new(0, 0, 0, 0)
+AdminKeyScroll.ScrollBarThickness = 4
+AdminKeyScroll.ZIndex = 13
+AdminKeyScroll.Parent = AdminListPage
+Instance.new("UICorner", AdminKeyScroll).CornerRadius = UDim.new(0, 8)
+
+local AdminKeyLayout = Instance.new("UIListLayout")
+AdminKeyLayout.SortOrder = Enum.SortOrder.LayoutOrder
+AdminKeyLayout.Padding = UDim.new(0, 5)
+AdminKeyLayout.Parent = AdminKeyScroll
+
+-- Dòng chi tiết hiện ra khi ấn vào 1 key trên danh sách; ấn tiếp vào dòng chi tiết để mở trang tùy chỉnh key
+local KeyDetailRowBtn = Instance.new("TextButton")
+KeyDetailRowBtn.Size = UDim2.new(1, -6, 0, 96)
+KeyDetailRowBtn.Position = UDim2.new(0, 0, 0, 164)
+KeyDetailRowBtn.BackgroundColor3 = Color3.fromRGB(34, 38, 56)
+KeyDetailRowBtn.TextColor3 = Color3.fromRGB(240, 245, 255)
+KeyDetailRowBtn.TextSize = 10
+KeyDetailRowBtn.Font = Enum.Font.Code
+KeyDetailRowBtn.TextWrapped = true
+KeyDetailRowBtn.TextXAlignment = Enum.TextXAlignment.Left
+KeyDetailRowBtn.TextYAlignment = Enum.TextYAlignment.Top
+KeyDetailRowBtn.Visible = false
+KeyDetailRowBtn.Text = ""
+KeyDetailRowBtn.ZIndex = 14
+KeyDetailRowBtn.Parent = AdminListPage
+Instance.new("UICorner", KeyDetailRowBtn).CornerRadius = UDim.new(0, 8)
+local DetailRowStroke = Instance.new("UIStroke")
+DetailRowStroke.Color = Color3.fromRGB(90, 165, 255)
+DetailRowStroke.Thickness = 1.2
+DetailRowStroke.Parent = KeyDetailRowBtn
+
+-- Trang tùy chỉnh key riêng biệt
+local KeyEditPage = Instance.new("ScrollingFrame")
+KeyEditPage.Size = UDim2.new(1, -6, 1, 0)
+KeyEditPage.Position = UDim2.new(0, 0, 0, 0)
+KeyEditPage.BackgroundTransparency = 1
+KeyEditPage.BorderSizePixel = 0
+KeyEditPage.CanvasSize = UDim2.new(0, 0, 0, 290)
+KeyEditPage.ScrollBarThickness = 4
+KeyEditPage.Visible = false
+KeyEditPage.ZIndex = 13
+KeyEditPage.Parent = Tab4Content
+
+local BackToAdminListBtn = Instance.new("TextButton")
+BackToAdminListBtn.Size = UDim2.new(1, 0, 0, 26)
+BackToAdminListBtn.Position = UDim2.new(0, 0, 0, 0)
+BackToAdminListBtn.BackgroundColor3 = Color3.fromRGB(52, 73, 94)
+BackToAdminListBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+BackToAdminListBtn.Text = "⬅️ Quay lại danh sách Key & Thiết bị"
+BackToAdminListBtn.TextSize = 10
+BackToAdminListBtn.Font = Enum.Font.GothamBold
+BackToAdminListBtn.ZIndex = 14
+BackToAdminListBtn.Parent = KeyEditPage
+Instance.new("UICorner", BackToAdminListBtn).CornerRadius = UDim.new(0, 6)
+
+local EditTargetSummary = Instance.new("TextLabel")
+EditTargetSummary.Size = UDim2.new(1, 0, 0, 68)
+EditTargetSummary.Position = UDim2.new(0, 0, 0, 32)
+EditTargetSummary.BackgroundColor3 = Color3.fromRGB(32, 34, 46)
+EditTargetSummary.TextColor3 = Color3.fromRGB(235, 240, 255)
+EditTargetSummary.TextSize = 10
+EditTargetSummary.Font = Enum.Font.Code
+EditTargetSummary.TextWrapped = true
+EditTargetSummary.TextXAlignment = Enum.TextXAlignment.Left
+EditTargetSummary.TextYAlignment = Enum.TextYAlignment.Top
+EditTargetSummary.Text = ""
+EditTargetSummary.ZIndex = 14
+EditTargetSummary.Parent = KeyEditPage
+Instance.new("UICorner", EditTargetSummary).CornerRadius = UDim.new(0, 8)
 
 local AddHoursBox = Instance.new("TextBox")
 AddHoursBox.Size = UDim2.new(0.46, -3, 0, 28)
-AddHoursBox.Position = UDim2.new(0, 0, 0, 136)
+AddHoursBox.Position = UDim2.new(0, 0, 0, 106)
 AddHoursBox.BackgroundColor3 = Color3.fromRGB(32, 34, 46)
 AddHoursBox.TextColor3 = Color3.fromRGB(255, 255, 255)
 AddHoursBox.PlaceholderColor3 = Color3.fromRGB(150, 155, 175)
@@ -1028,121 +1090,249 @@ AddHoursBox.Text = "24"
 AddHoursBox.TextSize = 10
 AddHoursBox.Font = Enum.Font.GothamBold
 AddHoursBox.ClearTextOnFocus = false
-AddHoursBox.ZIndex = 13
-AddHoursBox.Parent = Tab4Content
+AddHoursBox.ZIndex = 14
+AddHoursBox.Parent = KeyEditPage
 Instance.new("UICorner", AddHoursBox).CornerRadius = UDim.new(0, 6)
 
 local AddTimeBtn = Instance.new("TextButton")
 AddTimeBtn.Size = UDim2.new(0.27, -3, 0, 28)
-AddTimeBtn.Position = UDim2.new(0.46, 2, 0, 136)
+AddTimeBtn.Position = UDim2.new(0.46, 2, 0, 106)
 AddTimeBtn.BackgroundColor3 = Color3.fromRGB(46, 204, 113)
 AddTimeBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
 AddTimeBtn.Text = "+ Thêm"
 AddTimeBtn.TextSize = 10
 AddTimeBtn.Font = Enum.Font.GothamBold
-AddTimeBtn.ZIndex = 13
-AddTimeBtn.Parent = Tab4Content
+AddTimeBtn.ZIndex = 14
+AddTimeBtn.Parent = KeyEditPage
 Instance.new("UICorner", AddTimeBtn).CornerRadius = UDim.new(0, 6)
 
 local SubTimeBtn = Instance.new("TextButton")
-SubTimeBtn.Size = UDim2.new(0.27, -4, 0, 28)
-SubTimeBtn.Position = UDim2.new(0.73, 1, 0, 136)
+SubTimeBtn.Size = UDim2.new(0.27, -2, 0, 28)
+SubTimeBtn.Position = UDim2.new(0.73, 1, 0, 106)
 SubTimeBtn.BackgroundColor3 = Color3.fromRGB(230, 126, 34)
 SubTimeBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
 SubTimeBtn.Text = "- Bớt"
 SubTimeBtn.TextSize = 10
 SubTimeBtn.Font = Enum.Font.GothamBold
-SubTimeBtn.ZIndex = 13
-SubTimeBtn.Parent = Tab4Content
+SubTimeBtn.ZIndex = 14
+SubTimeBtn.Parent = KeyEditPage
 Instance.new("UICorner", SubTimeBtn).CornerRadius = UDim.new(0, 6)
 
 local Quick1hBtn = Instance.new("TextButton")
 Quick1hBtn.Size = UDim2.new(0.32, -3, 0, 26)
-Quick1hBtn.Position = UDim2.new(0, 0, 0, 170)
+Quick1hBtn.Position = UDim2.new(0, 0, 0, 140)
 Quick1hBtn.BackgroundColor3 = Color3.fromRGB(52, 73, 94)
 Quick1hBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
 Quick1hBtn.Text = "+1 Giờ"
 Quick1hBtn.TextSize = 10
 Quick1hBtn.Font = Enum.Font.GothamBold
-Quick1hBtn.ZIndex = 13
-Quick1hBtn.Parent = Tab4Content
+Quick1hBtn.ZIndex = 14
+Quick1hBtn.Parent = KeyEditPage
 Instance.new("UICorner", Quick1hBtn).CornerRadius = UDim.new(0, 6)
 
 local Quick7dBtn = Instance.new("TextButton")
 Quick7dBtn.Size = UDim2.new(0.32, -3, 0, 26)
-Quick7dBtn.Position = UDim2.new(0.34, 0, 0, 170)
+Quick7dBtn.Position = UDim2.new(0.34, 0, 0, 140)
 Quick7dBtn.BackgroundColor3 = Color3.fromRGB(52, 73, 94)
 Quick7dBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
 Quick7dBtn.Text = "+7 Ngày"
 Quick7dBtn.TextSize = 10
 Quick7dBtn.Font = Enum.Font.GothamBold
-Quick7dBtn.ZIndex = 13
-Quick7dBtn.Parent = Tab4Content
+Quick7dBtn.ZIndex = 14
+Quick7dBtn.Parent = KeyEditPage
 Instance.new("UICorner", Quick7dBtn).CornerRadius = UDim.new(0, 6)
 
 local PermKeyBtn = Instance.new("TextButton")
-PermKeyBtn.Size = UDim2.new(0.32, -2, 0, 26)
-PermKeyBtn.Position = UDim2.new(0.68, 0, 0, 170)
+PermKeyBtn.Size = UDim2.new(0.32, -1, 0, 26)
+PermKeyBtn.Position = UDim2.new(0.68, 0, 0, 140)
 PermKeyBtn.BackgroundColor3 = Color3.fromRGB(61, 139, 255)
 PermKeyBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
 PermKeyBtn.Text = "♾️ Vĩnh viễn"
 PermKeyBtn.TextSize = 10
 PermKeyBtn.Font = Enum.Font.GothamBold
-PermKeyBtn.ZIndex = 13
-PermKeyBtn.Parent = Tab4Content
+PermKeyBtn.ZIndex = 14
+PermKeyBtn.Parent = KeyEditPage
 Instance.new("UICorner", PermKeyBtn).CornerRadius = UDim.new(0, 6)
 
 local DeleteForeverKeyBtn = Instance.new("TextButton")
-DeleteForeverKeyBtn.Size = UDim2.new(1, -6, 0, 32)
-DeleteForeverKeyBtn.Position = UDim2.new(0, 0, 0, 202)
+DeleteForeverKeyBtn.Size = UDim2.new(1, 0, 0, 32)
+DeleteForeverKeyBtn.Position = UDim2.new(0, 0, 0, 172)
 DeleteForeverKeyBtn.BackgroundColor3 = Color3.fromRGB(192, 57, 43)
 DeleteForeverKeyBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-DeleteForeverKeyBtn.Text = "🗑️ XÓA VĨNH VIỄN KEY NÀY (KHÔNG DÙNG ĐƯỢC NỮA)"
+DeleteForeverKeyBtn.Text = "🗑️ XÓA VĨNH VIỄN KEY NÀY"
 DeleteForeverKeyBtn.TextSize = 10
 DeleteForeverKeyBtn.Font = Enum.Font.GothamBold
-DeleteForeverKeyBtn.ZIndex = 13
-DeleteForeverKeyBtn.Parent = Tab4Content
+DeleteForeverKeyBtn.ZIndex = 14
+DeleteForeverKeyBtn.Parent = KeyEditPage
 Instance.new("UICorner", DeleteForeverKeyBtn).CornerRadius = UDim.new(0, 6)
 
 local AdminActionStatus = Instance.new("TextLabel")
-AdminActionStatus.Size = UDim2.new(1, -6, 0, 34)
-AdminActionStatus.Position = UDim2.new(0, 0, 0, 240)
+AdminActionStatus.Size = UDim2.new(1, 0, 0, 34)
+AdminActionStatus.Position = UDim2.new(0, 0, 0, 210)
 AdminActionStatus.BackgroundColor3 = Color3.fromRGB(28, 30, 42)
 AdminActionStatus.TextColor3 = Color3.fromRGB(126, 232, 192)
 AdminActionStatus.TextSize = 10
 AdminActionStatus.Font = Enum.Font.Code
 AdminActionStatus.TextWrapped = true
-AdminActionStatus.Text = "Sẵn sàng quản lý thời gian & xóa vĩnh viễn key."
-AdminActionStatus.ZIndex = 13
-AdminActionStatus.Parent = Tab4Content
+AdminActionStatus.Text = ""
+AdminActionStatus.ZIndex = 14
+AdminActionStatus.Parent = KeyEditPage
 Instance.new("UICorner", AdminActionStatus).CornerRadius = UDim.new(0, 6)
 
-local function resolveTargetKeyName()
-    local raw = string.upper((TargetKeyBox.Text or ""):gsub("^%s+", ""):gsub("%s+$", ""))
-    if raw ~= "" then return raw end
-    return ActiveKeyName or ""
+local selectedAdminKey = nil
+
+local function buildKeyDetailSummary(k)
+    if not k or k == "" then return "" end
+    local entry = KeyStore[k]
+    if entry then
+        local roleStr = entry.isAdmin and "Admin" or "Key thường"
+        local remStr = formatRemainingTime(entry.expireAt)
+        local devStr = entry.deviceInfo or "Chưa có thiết bị nhập"
+        local timeStr = entry.usedAt or "Chưa kích hoạt"
+        return string.format(
+            "🔑 Key: %s [%s]\n📱 Thiết bị: %s\n⏳ Còn lại: %s | 🕒 %s\n👉 Ấn vào đây để mở trang tùy chỉnh key",
+            k, roleStr, devStr, remStr, timeStr
+        )
+    elseif RevokedKeys[k] then
+        return string.format("🔑 Key: %s\n🗑️ Trạng thái: Đã xóa vĩnh viễn", k)
+    end
+    return ""
 end
 
+local function openKeyEditPage(k)
+    if not k or k == "" then return end
+    selectedAdminKey = k
+    AdminListPage.Visible = false
+    KeyEditPage.Visible = true
+    EditTargetSummary.Text = buildKeyDetailSummary(k)
+end
+
+refreshAdminView = function()
+    local canManage = isCurrentUserAdmin()
+    if canManage then
+        AdminRoleBanner.TextColor3 = Color3.fromRGB(126, 232, 192)
+        AdminRoleBanner.Text = "🛡️ Quyền ADMIN • Ấn key -> xem chi tiết -> ấn chi tiết để tùy chỉnh"
+    else
+        AdminRoleBanner.TextColor3 = Color3.fromRGB(255, 180, 90)
+        AdminRoleBanner.Text = "👤 Key thường • Chỉ xem danh sách & chi tiết (khóa chỉnh/xóa)"
+    end
+
+    AddHoursBox.Active = canManage
+    AddTimeBtn.Active = canManage
+    SubTimeBtn.Active = canManage
+    Quick1hBtn.Active = canManage
+    Quick7dBtn.Active = canManage
+    PermKeyBtn.Active = canManage
+    DeleteForeverKeyBtn.Active = canManage
+
+    local alpha = canManage and 0 or 0.55
+    AddTimeBtn.BackgroundTransparency = alpha
+    SubTimeBtn.BackgroundTransparency = alpha
+    Quick1hBtn.BackgroundTransparency = alpha
+    Quick7dBtn.BackgroundTransparency = alpha
+    PermKeyBtn.BackgroundTransparency = alpha
+    DeleteForeverKeyBtn.BackgroundTransparency = alpha
+
+    for _, child in ipairs(AdminKeyScroll:GetChildren()) do
+        if child:IsA("TextButton") then
+            child:Destroy()
+        end
+    end
+
+    local keysList = {}
+    for k, entry in pairs(KeyStore) do
+        table.insert(keysList, { code = k, entry = entry })
+    end
+    table.sort(keysList, function(a, b)
+        local aUsed = a.entry.deviceInfo ~= nil
+        local bUsed = b.entry.deviceInfo ~= nil
+        if aUsed ~= bUsed then return aUsed end
+        return a.code < b.code
+    end)
+
+    for idx, item in ipairs(keysList) do
+        local k = item.code
+        local entry = item.entry
+        local isSelected = (selectedAdminKey == k)
+
+        local rowBtn = Instance.new("TextButton")
+        rowBtn.Size = UDim2.new(1, -6, 0, 40)
+        rowBtn.BackgroundColor3 = isSelected and Color3.fromRGB(48, 56, 84) or Color3.fromRGB(34, 36, 50)
+        rowBtn.TextColor3 = Color3.fromRGB(240, 242, 250)
+        rowBtn.TextSize = 10
+        rowBtn.Font = Enum.Font.Code
+        rowBtn.TextXAlignment = Enum.TextXAlignment.Left
+        rowBtn.TextWrapped = true
+        rowBtn.LayoutOrder = idx
+        rowBtn.ZIndex = 14
+
+        local devShort = entry.deviceInfo or "Chưa gắn thiết bị"
+        local roleTag = entry.isAdmin and "ADMIN" or "THƯỜNG"
+        rowBtn.Text = string.format(" 🔑 %s [%s] • ⏳ %s\n 📱 %s", k, roleTag, formatRemainingTime(entry.expireAt), devShort)
+        rowBtn.Parent = AdminKeyScroll
+        Instance.new("UICorner", rowBtn).CornerRadius = UDim.new(0, 6)
+
+        onButtonClicked(rowBtn, function()
+            selectedAdminKey = k
+            KeyDetailRowBtn.Visible = true
+            KeyDetailRowBtn.Text = buildKeyDetailSummary(k)
+            refreshAdminView()
+        end)
+    end
+
+    AdminKeyScroll.CanvasSize = UDim2.new(0, 0, 0, #keysList * 45)
+
+    if selectedAdminKey and (KeyStore[selectedAdminKey] or RevokedKeys[selectedAdminKey]) then
+        KeyDetailRowBtn.Visible = true
+        KeyDetailRowBtn.Text = buildKeyDetailSummary(selectedAdminKey)
+        if KeyEditPage.Visible then
+            EditTargetSummary.Text = buildKeyDetailSummary(selectedAdminKey)
+        end
+    else
+        selectedAdminKey = nil
+        KeyDetailRowBtn.Visible = false
+        if KeyEditPage.Visible then
+            KeyEditPage.Visible = false
+            AdminListPage.Visible = true
+        end
+    end
+end
+
+onButtonClicked(KeyDetailRowBtn, function()
+    if selectedAdminKey then
+        openKeyEditPage(selectedAdminKey)
+    end
+end)
+
+onButtonClicked(BackToAdminListBtn, function()
+    KeyEditPage.Visible = false
+    AdminListPage.Visible = true
+    refreshAdminView()
+end)
+
 local function adjustKeySeconds(deltaSec)
-    local k = resolveTargetKeyName()
-    if k == "" then
-        AdminActionStatus.TextColor3 = Color3.fromRGB(255, 125, 140)
-        AdminActionStatus.Text = "Chưa có mã key để chỉnh thời gian."
+    if not isCurrentUserAdmin() then
+        AdminActionStatus.TextColor3 = Color3.fromRGB(255, 180, 90)
+        AdminActionStatus.Text = "Key hiện tại là KEY THƯỜNG (không có quyền chỉnh sửa)."
         return
     end
-    if RevokedKeys[k] then
+    local k = selectedAdminKey
+    if not k or k == "" then
         AdminActionStatus.TextColor3 = Color3.fromRGB(255, 125, 140)
-        AdminActionStatus.Text = "Key " .. k .. " đã bị xóa vĩnh viễn!"
+        AdminActionStatus.Text = "Chưa chọn key nào."
         return
     end
-    if not KeyStore[k] then
-        KeyStore[k] = { expireAt = os.time(), isAdmin = false, deviceInfo = nil }
+    if RevokedKeys[k] or not KeyStore[k] then
+        AdminActionStatus.TextColor3 = Color3.fromRGB(255, 125, 140)
+        AdminActionStatus.Text = "Key " .. k .. " không tồn tại hoặc đã bị xóa vĩnh viễn!"
+        return
     end
     local baseTime = KeyStore[k].expireAt or os.time()
     if baseTime < os.time() then baseTime = os.time() end
     KeyStore[k].expireAt = math.max(os.time(), baseTime + deltaSec)
     AdminActionStatus.TextColor3 = Color3.fromRGB(126, 232, 192)
     AdminActionStatus.Text = string.format("Đã cập nhật %s -> Còn: %s", k, formatRemainingTime(KeyStore[k].expireAt))
+    refreshAdminView()
 end
 
 onButtonClicked(AddTimeBtn, function()
@@ -1174,33 +1364,38 @@ onButtonClicked(Quick7dBtn, function()
 end)
 
 onButtonClicked(PermKeyBtn, function()
-    local k = resolveTargetKeyName()
-    if k == "" or RevokedKeys[k] then return end
-    if not KeyStore[k] then
-        KeyStore[k] = { expireAt = nil, isAdmin = false, deviceInfo = nil }
-    else
-        KeyStore[k].expireAt = nil
+    if not isCurrentUserAdmin() then
+        AdminActionStatus.TextColor3 = Color3.fromRGB(255, 180, 90)
+        AdminActionStatus.Text = "Key hiện tại là KEY THƯỜNG (không có quyền chỉnh sửa)."
+        return
     end
+    local k = selectedAdminKey
+    if not k or RevokedKeys[k] or not KeyStore[k] then return end
+    KeyStore[k].expireAt = nil
     AdminActionStatus.TextColor3 = Color3.fromRGB(126, 232, 192)
     AdminActionStatus.Text = "Đã đặt key " .. k .. " thành Vĩnh viễn!"
+    refreshAdminView()
 end)
 
 onButtonClicked(DeleteForeverKeyBtn, function()
-    local k = resolveTargetKeyName()
-    if k == "" then
-        AdminActionStatus.TextColor3 = Color3.fromRGB(255, 125, 140)
-        AdminActionStatus.Text = "Vui lòng chọn hoặc nhập mã key cần xóa vĩnh viễn."
+    if not isCurrentUserAdmin() then
+        AdminActionStatus.TextColor3 = Color3.fromRGB(255, 180, 90)
+        AdminActionStatus.Text = "Key hiện tại là KEY THƯỜNG (không có quyền xóa)."
         return
     end
+    local k = selectedAdminKey
+    if not k or k == "" then return end
     RevokedKeys[k] = true
     KeyStore[k] = nil
     AdminActionStatus.TextColor3 = Color3.fromRGB(255, 125, 140)
-    AdminActionStatus.Text = "🗑️ Đã xóa vĩnh viễn key: " .. k .. " (không thể dùng lại)"
+    AdminActionStatus.Text = "🗑️ Đã xóa vĩnh viễn key: " .. k
     if ActiveKeyName == k then
         ActiveKeyName = nil
         task.wait(0.25)
-        lockToKeyScreen("Key " .. k .. " đã bị xóa vĩnh viễn bởi Admin!")
+        lockToKeyScreen("Key " .. k .. " đã bị xóa vĩnh viễn!")
+        return
     end
+    refreshAdminView()
 end)
 
 -- --- TAB 2: LỊCH SỬ ---
@@ -1438,9 +1633,9 @@ onButtonClicked(Tab4Btn, function()
     HistoryClearBtn.Visible = false
     HistoryCountLabel.Visible = false
     HistoryFilterPopup.Visible = false
-    if TargetKeyBox.Text == "" and ActiveKeyName then
-        TargetKeyBox.Text = ActiveKeyName
-    end
+    AdminListPage.Visible = true
+    KeyEditPage.Visible = false
+    refreshAdminView()
 end)
 
 -- ==========================================
@@ -1624,11 +1819,7 @@ local function sendDiscordWebhook(petData)
     end
 
     petsCaughtCount = petsCaughtCount + 1
-
-    local vnTimeTable = os.date("!*t", os.time() + 25200)
-    local vnTimeString = string.format("%02d:%02d:%02d - %02d/%02d/%d",
-        vnTimeTable.hour, vnTimeTable.min, vnTimeTable.sec,
-        vnTimeTable.day, vnTimeTable.month, vnTimeTable.year)
+    local vnTimeString = getVnTimeString()
 
     table.insert(HistoryRecords, {data = petData, time = vnTimeString})
     if refreshHistory then refreshHistory() end
@@ -1767,19 +1958,6 @@ RunService.RenderStepped:Connect(function(dt)
             ActiveKeyName = nil
             lockToKeyScreen(reason)
         end
-    end
-
-    if Tab4Content.Visible then
-        local targetK = resolveTargetKeyName()
-        local entry = targetK ~= "" and KeyStore[targetK] or nil
-        local remStr = entry and formatRemainingTime(entry.expireAt) or (RevokedKeys[targetK] and "🗑️ Đã xóa VV" or "Không có")
-        local devStr = (entry and entry.deviceInfo) or getDeviceSummary()
-        AdminInfoCard.Text = string.format(
-            "🔑 Key: %s\n⏳ Còn lại: %s\n📱 Thiết bị: %s",
-            targetK ~= "" and targetK or "Chưa chọn",
-            remStr,
-            devStr
-        )
     end
 
     frameCount = frameCount + 1
