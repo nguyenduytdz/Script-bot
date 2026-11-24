@@ -48,6 +48,41 @@ pcall(function()
 end)
 
 -- ==========================================
+-- LƯU TRỮ & CHUYỂN ĐỔI TÀI KHOẢN
+-- ==========================================
+local SavedAccounts = {
+    {
+        Name = "Seoyeon Kim",
+        Email = "seoyeon@example.com",
+        Password = "lumen2026",
+        Phone = "Không có",
+        Workspace = "New Era Studio"
+    }
+}
+local ActiveAccount = SavedAccounts[1]
+local isAuthenticated = false
+
+local function findAccount(email, password)
+    local targetEmail = string.lower((email or ""):gsub("^%s+", ""):gsub("%s+$", ""))
+    for _, acc in ipairs(SavedAccounts) do
+        if string.lower(acc.Email) == targetEmail and acc.Password == password then
+            return acc
+        end
+    end
+    return nil
+end
+
+local function findAccountByEmail(email)
+    local targetEmail = string.lower((email or ""):gsub("^%s+", ""):gsub("%s+$", ""))
+    for _, acc in ipairs(SavedAccounts) do
+        if string.lower(acc.Email) == targetEmail then
+            return acc
+        end
+    end
+    return nil
+end
+
+-- ==========================================
 -- BẢNG HẬU TỐ SỐ LỚN
 -- ==========================================
 local Suffixes = {
@@ -122,7 +157,7 @@ ToggleIconBtn.TextSize = 22
 ToggleIconBtn.Font = Enum.Font.GothamBold
 ToggleIconBtn.Text = "⚡"
 ToggleIconBtn.Active = true
-ToggleIconBtn.Visible = true
+ToggleIconBtn.Visible = false
 ToggleIconBtn.ZIndex = 20
 ToggleIconBtn.Parent = ScreenGui
 Instance.new("UICorner", ToggleIconBtn).CornerRadius = UDim.new(1, 0)
@@ -139,7 +174,7 @@ MainFrame.BackgroundColor3 = Color3.fromRGB(22, 24, 34)
 MainFrame.BorderSizePixel = 0
 MainFrame.Active = true
 MainFrame.Draggable = true
-MainFrame.Visible = true
+MainFrame.Visible = false
 MainFrame.ZIndex = 10
 MainFrame.Parent = ScreenGui
 Instance.new("UICorner", MainFrame).CornerRadius = UDim.new(0, 18)
@@ -151,6 +186,7 @@ MainStroke.Parent = MainFrame
 
 local isMenuVisible = true
 onButtonClicked(ToggleIconBtn, function()
+    if not isAuthenticated then return end
     isMenuVisible = not isMenuVisible
     MainFrame.Visible = isMenuVisible
     TweenService:Create(ToggleIconBtn, TweenInfo.new(0.35, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
@@ -299,91 +335,160 @@ end)
 
 -- ==========================================
 -- KHUNG CHỮ NHẬT NẰM NGANG CHỈ HIỆN KHI CHẠY INTRO
--- CHẠY XONG TỰ XOÁ VỀ TRẠNG THÁI BAN ĐẦU
+-- MÔ PHỎNG VIDEO INTRO (TIA SÁNG QUỸ ĐẠO -> CẦU NĂNG LƯỢNG -> BÙNG SÁNG)
 -- ==========================================
 local IntroRectFrame = Instance.new("Frame")
 IntroRectFrame.Name = "IntroHorizontalRect"
 IntroRectFrame.AnchorPoint = Vector2.new(0.5, 0.5)
 IntroRectFrame.Size = UDim2.new(0, 480, 0, 180)
 IntroRectFrame.Position = UDim2.new(0.5, 0, 0.5, 0)
-IntroRectFrame.BackgroundColor3 = Color3.fromRGB(24, 27, 42)
+IntroRectFrame.BackgroundColor3 = Color3.fromRGB(10, 16, 28)
 IntroRectFrame.BorderSizePixel = 0
 IntroRectFrame.ZIndex = 90
 IntroRectFrame.Parent = ScreenGui
 Instance.new("UICorner", IntroRectFrame).CornerRadius = UDim.new(0, 18)
 local IntroStroke = Instance.new("UIStroke")
-IntroStroke.Color = Color3.fromRGB(126, 232, 192)
+IntroStroke.Color = Color3.fromRGB(115, 195, 255)
 IntroStroke.Thickness = 1.5
 IntroStroke.Parent = IntroRectFrame
 
 local IntroLabel = Instance.new("TextLabel")
-IntroLabel.Size = UDim2.new(1, -24, 0, 22)
-IntroLabel.Position = UDim2.new(0, 12, 0, 10)
+IntroLabel.Size = UDim2.new(1, -24, 0, 20)
+IntroLabel.Position = UDim2.new(0, 12, 0, 8)
 IntroLabel.BackgroundTransparency = 1
-IntroLabel.Text = "⚡ INTRO XE CHẠY THỜI ĐẠI MỚI"
-IntroLabel.TextColor3 = Color3.fromRGB(126, 232, 192)
-IntroLabel.TextSize = 12
+IntroLabel.Text = "✦ INTRO ORBIT CORE"
+IntroLabel.TextColor3 = Color3.fromRGB(165, 220, 255)
+IntroLabel.TextSize = 11
 IntroLabel.Font = Enum.Font.GothamBold
 IntroLabel.TextXAlignment = Enum.TextXAlignment.Left
 IntroLabel.ZIndex = 91
 IntroLabel.Parent = IntroRectFrame
 
-local IntroRoad = Instance.new("Frame")
-IntroRoad.Size = UDim2.new(1, -24, 0, 96)
-IntroRoad.Position = UDim2.new(0, 12, 0, 36)
-IntroRoad.BackgroundColor3 = Color3.fromRGB(34, 38, 58)
-IntroRoad.BorderSizePixel = 0
-IntroRoad.ClipsDescendants = true
-IntroRoad.ZIndex = 91
-IntroRoad.Parent = IntroRectFrame
-Instance.new("UICorner", IntroRoad).CornerRadius = UDim.new(0, 12)
+local IntroStage = Instance.new("Frame")
+IntroStage.Size = UDim2.new(1, -24, 0, 102)
+IntroStage.Position = UDim2.new(0, 12, 0, 30)
+IntroStage.BackgroundColor3 = Color3.fromRGB(12, 22, 42)
+IntroStage.BorderSizePixel = 0
+IntroStage.ClipsDescendants = true
+IntroStage.ZIndex = 91
+IntroStage.Parent = IntroRectFrame
+Instance.new("UICorner", IntroStage).CornerRadius = UDim.new(0, 12)
 
-local TrackStrip = Instance.new("Frame")
-TrackStrip.Size = UDim2.new(1, 0, 0, 28)
-TrackStrip.Position = UDim2.new(0, 0, 1, -28)
-TrackStrip.BackgroundColor3 = Color3.fromRGB(20, 22, 34)
-TrackStrip.BorderSizePixel = 0
-TrackStrip.ZIndex = 92
-TrackStrip.Parent = IntroRoad
+-- Các tia quỹ đạo sáng và điểm sáng ở đầu tia giống video
+local OrbitCenter = Instance.new("Frame")
+OrbitCenter.AnchorPoint = Vector2.new(0.5, 0.5)
+OrbitCenter.Size = UDim2.new(0, 74, 0, 74)
+OrbitCenter.Position = UDim2.new(0.5, 0, 0.5, 0)
+OrbitCenter.BackgroundTransparency = 1
+OrbitCenter.ZIndex = 93
+OrbitCenter.Parent = IntroStage
 
-local LineA = Instance.new("Frame")
-LineA.Size = UDim2.new(0, 46, 0, 3)
-LineA.Position = UDim2.new(0, 220, 1, -15)
-LineA.BackgroundColor3 = Color3.fromRGB(126, 232, 192)
-LineA.BorderSizePixel = 0
-LineA.ZIndex = 93
-LineA.Parent = IntroRoad
+local ringSpecs = {
+    {w = 72, h = 24, rot = 0,   color = Color3.fromRGB(190, 230, 255)},
+    {w = 72, h = 24, rot = 60,  color = Color3.fromRGB(120, 195, 255)},
+    {w = 72, h = 24, rot = -60, color = Color3.fromRGB(150, 215, 255)},
+    {w = 56, h = 56, rot = 30,  color = Color3.fromRGB(220, 245, 255)}
+}
 
-local LineB = Instance.new("Frame")
-LineB.Size = UDim2.new(0, 34, 0, 3)
-LineB.Position = UDim2.new(0, 90, 1, -15)
-LineB.BackgroundColor3 = Color3.fromRGB(90, 165, 255)
-LineB.BorderSizePixel = 0
-LineB.ZIndex = 93
-LineB.Parent = IntroRoad
+local orbitRings = {}
+local orbitTips = {}
+for i, spec in ipairs(ringSpecs) do
+    local ring = Instance.new("Frame")
+    ring.AnchorPoint = Vector2.new(0.5, 0.5)
+    ring.Size = UDim2.new(0, spec.w, 0, spec.h)
+    ring.Position = UDim2.new(0.5, 0, 0.5, 0)
+    ring.Rotation = spec.rot
+    ring.BackgroundTransparency = 1
+    ring.ZIndex = 93
+    ring.Parent = OrbitCenter
 
-local CarBox = Instance.new("Frame")
-CarBox.Size = UDim2.new(0, 78, 0, 22)
-CarBox.Position = UDim2.new(0, -80, 1, -36)
-CarBox.BackgroundColor3 = Color3.fromRGB(90, 165, 255)
-CarBox.BorderSizePixel = 0
-CarBox.ZIndex = 94
-CarBox.Parent = IntroRoad
-Instance.new("UICorner", CarBox).CornerRadius = UDim.new(0, 8)
+    local stroke = Instance.new("UIStroke")
+    stroke.Color = spec.color
+    stroke.Thickness = 1.6
+    stroke.Transparency = 0.85
+    stroke.Parent = ring
+    table.insert(orbitRings, stroke)
 
-local CarCabin = Instance.new("Frame")
-CarCabin.Size = UDim2.new(0, 40, 0, 9)
-CarCabin.Position = UDim2.new(0, 16, 0, -6)
-CarCabin.BackgroundColor3 = Color3.fromRGB(126, 232, 192)
-CarCabin.BorderSizePixel = 0
-CarCabin.ZIndex = 94
-CarCabin.Parent = CarBox
-Instance.new("UICorner", CarCabin).CornerRadius = UDim.new(0, 4)
+    local tip = Instance.new("Frame")
+    tip.AnchorPoint = Vector2.new(0.5, 0.5)
+    tip.Size = UDim2.new(0, 7, 0, 7)
+    tip.Position = UDim2.new(1, 0, 0.5, 0)
+    tip.BackgroundColor3 = Color3.fromRGB(240, 250, 255)
+    tip.BorderSizePixel = 0
+    tip.ZIndex = 95
+    tip.Parent = ring
+    Instance.new("UICorner", tip).CornerRadius = UDim.new(1, 0)
+    table.insert(orbitTips, tip)
+end
+
+-- Tia sáng mở đầu quét ngang (0:00 - 0:02)
+local SweepBeam = Instance.new("Frame")
+SweepBeam.AnchorPoint = Vector2.new(0.5, 0.5)
+SweepBeam.Size = UDim2.new(0, 140, 0, 2)
+SweepBeam.Position = UDim2.new(0.35, 0, 0.72, 0)
+SweepBeam.Rotation = -22
+SweepBeam.BackgroundColor3 = Color3.fromRGB(210, 240, 255)
+SweepBeam.BorderSizePixel = 0
+SweepBeam.ZIndex = 94
+SweepBeam.Parent = IntroStage
+Instance.new("UICorner", SweepBeam).CornerRadius = UDim.new(1, 0)
+
+local SweepHead = Instance.new("Frame")
+SweepHead.AnchorPoint = Vector2.new(0.5, 0.5)
+SweepHead.Size = UDim2.new(0, 8, 0, 8)
+SweepHead.Position = UDim2.new(1, 0, 0.5, 0)
+SweepHead.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+SweepHead.BorderSizePixel = 0
+SweepHead.ZIndex = 96
+SweepHead.Parent = SweepBeam
+Instance.new("UICorner", SweepHead).CornerRadius = UDim.new(1, 0)
+
+-- Hào quang & ánh sáng bùng lên cuối video (0:06 - 0:14)
+local CoreHalo = Instance.new("Frame")
+CoreHalo.AnchorPoint = Vector2.new(0.5, 0.5)
+CoreHalo.Size = UDim2.new(0, 10, 0, 10)
+CoreHalo.Position = UDim2.new(0.5, 0, 0.5, 0)
+CoreHalo.BackgroundColor3 = Color3.fromRGB(130, 200, 255)
+CoreHalo.BackgroundTransparency = 0.7
+CoreHalo.BorderSizePixel = 0
+CoreHalo.ZIndex = 94
+CoreHalo.Parent = IntroStage
+Instance.new("UICorner", CoreHalo).CornerRadius = UDim.new(1, 0)
+
+local CoreFlare = Instance.new("Frame")
+CoreFlare.AnchorPoint = Vector2.new(0.5, 0.5)
+CoreFlare.Size = UDim2.new(0, 6, 0, 6)
+CoreFlare.Position = UDim2.new(0.5, 0, 0.5, 0)
+CoreFlare.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+CoreFlare.BorderSizePixel = 0
+CoreFlare.ZIndex = 97
+CoreFlare.Parent = IntroStage
+Instance.new("UICorner", CoreFlare).CornerRadius = UDim.new(1, 0)
+
+local FlareRayH = Instance.new("Frame")
+FlareRayH.AnchorPoint = Vector2.new(0.5, 0.5)
+FlareRayH.Size = UDim2.new(0, 180, 0, 2)
+FlareRayH.Position = UDim2.new(0.5, 0, 0.5, 0)
+FlareRayH.BackgroundColor3 = Color3.fromRGB(215, 242, 255)
+FlareRayH.BackgroundTransparency = 1
+FlareRayH.BorderSizePixel = 0
+FlareRayH.ZIndex = 96
+FlareRayH.Parent = IntroStage
+
+local FlareRayV = Instance.new("Frame")
+FlareRayV.AnchorPoint = Vector2.new(0.5, 0.5)
+FlareRayV.Size = UDim2.new(0, 2, 0, 92)
+FlareRayV.Position = UDim2.new(0.5, 0, 0.5, 0)
+FlareRayV.BackgroundColor3 = Color3.fromRGB(215, 242, 255)
+FlareRayV.BackgroundTransparency = 1
+FlareRayV.BorderSizePixel = 0
+FlareRayV.ZIndex = 96
+FlareRayV.Parent = IntroStage
 
 local IntroBarBg = Instance.new("Frame")
-IntroBarBg.Size = UDim2.new(1, -24, 0, 8)
-IntroBarBg.Position = UDim2.new(0, 12, 0, 140)
-IntroBarBg.BackgroundColor3 = Color3.fromRGB(18, 20, 30)
+IntroBarBg.Size = UDim2.new(1, -24, 0, 7)
+IntroBarBg.Position = UDim2.new(0, 12, 0, 139)
+IntroBarBg.BackgroundColor3 = Color3.fromRGB(20, 26, 40)
 IntroBarBg.BorderSizePixel = 0
 IntroBarBg.ZIndex = 91
 IntroBarBg.Parent = IntroRectFrame
@@ -391,7 +496,7 @@ Instance.new("UICorner", IntroBarBg).CornerRadius = UDim.new(1, 0)
 
 local IntroBarFill = Instance.new("Frame")
 IntroBarFill.Size = UDim2.new(0, 0, 1, 0)
-IntroBarFill.BackgroundColor3 = Color3.fromRGB(126, 232, 192)
+IntroBarFill.BackgroundColor3 = Color3.fromRGB(145, 215, 255)
 IntroBarFill.BorderSizePixel = 0
 IntroBarFill.ZIndex = 92
 IntroBarFill.Parent = IntroBarBg
@@ -399,18 +504,272 @@ Instance.new("UICorner", IntroBarFill).CornerRadius = UDim.new(1, 0)
 
 local IntroSubLabel = Instance.new("TextLabel")
 IntroSubLabel.Size = UDim2.new(1, -24, 0, 18)
-IntroSubLabel.Position = UDim2.new(0, 12, 0, 152)
+IntroSubLabel.Position = UDim2.new(0, 12, 0, 151)
 IntroSubLabel.BackgroundTransparency = 1
 IntroSubLabel.Text = "Đang chạy intro... 0%"
-IntroSubLabel.TextColor3 = Color3.fromRGB(205, 205, 220)
+IntroSubLabel.TextColor3 = Color3.fromRGB(190, 215, 240)
 IntroSubLabel.TextSize = 10
 IntroSubLabel.Font = Enum.Font.Code
 IntroSubLabel.TextXAlignment = Enum.TextXAlignment.Left
 IntroSubLabel.ZIndex = 91
 IntroSubLabel.Parent = IntroRectFrame
 
+-- ==========================================
+-- TRANG TẠO TÀI KHOẢN & ĐĂNG NHẬP
+-- ==========================================
+local AuthPanel = Instance.new("Frame")
+AuthPanel.Name = "AuthAccountPanel"
+AuthPanel.AnchorPoint = Vector2.new(0.5, 0.5)
+AuthPanel.Size = UDim2.new(0, 336, 0, 320)
+AuthPanel.Position = UDim2.new(0.5, 0, 0.5, 10)
+AuthPanel.BackgroundColor3 = Color3.fromRGB(24, 27, 42)
+AuthPanel.BorderSizePixel = 0
+AuthPanel.Active = true
+AuthPanel.Draggable = true
+AuthPanel.Visible = false
+AuthPanel.ZIndex = 70
+AuthPanel.Parent = ScreenGui
+Instance.new("UICorner", AuthPanel).CornerRadius = UDim.new(0, 18)
+local AuthStroke = Instance.new("UIStroke")
+AuthStroke.Color = Color3.fromRGB(123, 97, 255)
+AuthStroke.Thickness = 1.4
+AuthStroke.Parent = AuthPanel
+
+local CreateAccPane = Instance.new("Frame")
+CreateAccPane.Size = UDim2.new(1, -16, 1, -16)
+CreateAccPane.Position = UDim2.new(0, 8, 0, 8)
+CreateAccPane.BackgroundTransparency = 1
+CreateAccPane.ZIndex = 71
+CreateAccPane.Parent = AuthPanel
+
+local CreateTitle = Instance.new("TextLabel")
+CreateTitle.Size = UDim2.new(0.58, 0, 0, 24)
+CreateTitle.Position = UDim2.new(0, 4, 0, 2)
+CreateTitle.BackgroundTransparency = 1
+CreateTitle.Text = "✨ Tạo tài khoản"
+CreateTitle.TextColor3 = Color3.fromRGB(244, 240, 232)
+CreateTitle.TextSize = 14
+CreateTitle.Font = Enum.Font.GothamBold
+CreateTitle.TextXAlignment = Enum.TextXAlignment.Left
+CreateTitle.ZIndex = 72
+CreateTitle.Parent = CreateAccPane
+
+local SwitchToLoginBtn = Instance.new("TextButton")
+SwitchToLoginBtn.Size = UDim2.new(0.42, -4, 0, 24)
+SwitchToLoginBtn.Position = UDim2.new(0.58, 0, 0, 2)
+SwitchToLoginBtn.BackgroundTransparency = 1
+SwitchToLoginBtn.Text = "Đã có TK? Đăng nhập"
+SwitchToLoginBtn.TextColor3 = Color3.fromRGB(64, 156, 255)
+SwitchToLoginBtn.TextSize = 10
+SwitchToLoginBtn.Font = Enum.Font.GothamBold
+SwitchToLoginBtn.TextXAlignment = Enum.TextXAlignment.Right
+SwitchToLoginBtn.ZIndex = 72
+SwitchToLoginBtn.Parent = CreateAccPane
+
+local SignUpNameBox = Instance.new("TextBox")
+SignUpNameBox.Size = UDim2.new(1, -8, 0, 34)
+SignUpNameBox.Position = UDim2.new(0, 4, 0, 34)
+SignUpNameBox.BackgroundColor3 = Color3.fromRGB(36, 39, 56)
+SignUpNameBox.TextColor3 = Color3.fromRGB(255, 255, 255)
+SignUpNameBox.PlaceholderColor3 = Color3.fromRGB(145, 145, 165)
+SignUpNameBox.PlaceholderText = "Họ tên (Name)"
+SignUpNameBox.Text = ""
+SignUpNameBox.TextSize = 11
+SignUpNameBox.Font = Enum.Font.Gotham
+SignUpNameBox.ClearTextOnFocus = false
+SignUpNameBox.ZIndex = 72
+SignUpNameBox.Parent = CreateAccPane
+Instance.new("UICorner", SignUpNameBox).CornerRadius = UDim.new(0, 8)
+
+local SignUpEmailBox = Instance.new("TextBox")
+SignUpEmailBox.Size = UDim2.new(1, -8, 0, 34)
+SignUpEmailBox.Position = UDim2.new(0, 4, 0, 74)
+SignUpEmailBox.BackgroundColor3 = Color3.fromRGB(36, 39, 56)
+SignUpEmailBox.TextColor3 = Color3.fromRGB(255, 255, 255)
+SignUpEmailBox.PlaceholderColor3 = Color3.fromRGB(145, 145, 165)
+SignUpEmailBox.PlaceholderText = "Email (vd: ten@domain.com)"
+SignUpEmailBox.Text = ""
+SignUpEmailBox.TextSize = 11
+SignUpEmailBox.Font = Enum.Font.Gotham
+SignUpEmailBox.ClearTextOnFocus = false
+SignUpEmailBox.ZIndex = 72
+SignUpEmailBox.Parent = CreateAccPane
+Instance.new("UICorner", SignUpEmailBox).CornerRadius = UDim.new(0, 8)
+
+local SignUpPwBox = Instance.new("TextBox")
+SignUpPwBox.Size = UDim2.new(1, -8, 0, 34)
+SignUpPwBox.Position = UDim2.new(0, 4, 0, 114)
+SignUpPwBox.BackgroundColor3 = Color3.fromRGB(36, 39, 56)
+SignUpPwBox.TextColor3 = Color3.fromRGB(255, 255, 255)
+SignUpPwBox.PlaceholderColor3 = Color3.fromRGB(145, 145, 165)
+SignUpPwBox.PlaceholderText = "Mật khẩu (ít nhất 6 ký tự)"
+SignUpPwBox.Text = ""
+SignUpPwBox.TextSize = 11
+SignUpPwBox.Font = Enum.Font.Gotham
+SignUpPwBox.ClearTextOnFocus = false
+SignUpPwBox.ZIndex = 72
+SignUpPwBox.Parent = CreateAccPane
+Instance.new("UICorner", SignUpPwBox).CornerRadius = UDim.new(0, 8)
+
+local SignUpPhoneBox = Instance.new("TextBox")
+SignUpPhoneBox.Size = UDim2.new(1, -8, 0, 34)
+SignUpPhoneBox.Position = UDim2.new(0, 4, 0, 154)
+SignUpPhoneBox.BackgroundColor3 = Color3.fromRGB(36, 39, 56)
+SignUpPhoneBox.TextColor3 = Color3.fromRGB(255, 255, 255)
+SignUpPhoneBox.PlaceholderColor3 = Color3.fromRGB(145, 145, 165)
+SignUpPhoneBox.PlaceholderText = "Số điện thoại (tuỳ chọn)"
+SignUpPhoneBox.Text = ""
+SignUpPhoneBox.TextSize = 11
+SignUpPhoneBox.Font = Enum.Font.Gotham
+SignUpPhoneBox.ClearTextOnFocus = false
+SignUpPhoneBox.ZIndex = 72
+SignUpPhoneBox.Parent = CreateAccPane
+Instance.new("UICorner", SignUpPhoneBox).CornerRadius = UDim.new(0, 8)
+
+local AgreeTermsBtn = Instance.new("TextButton")
+AgreeTermsBtn.Size = UDim2.new(1, -8, 0, 24)
+AgreeTermsBtn.Position = UDim2.new(0, 4, 0, 194)
+AgreeTermsBtn.BackgroundTransparency = 1
+AgreeTermsBtn.Text = "[✓] Lưu tài khoản vào danh sách & đồng ý"
+AgreeTermsBtn.TextColor3 = Color3.fromRGB(126, 232, 192)
+AgreeTermsBtn.TextSize = 10
+AgreeTermsBtn.Font = Enum.Font.GothamBold
+AgreeTermsBtn.TextXAlignment = Enum.TextXAlignment.Left
+AgreeTermsBtn.ZIndex = 72
+AgreeTermsBtn.Parent = CreateAccPane
+
+local agreedTerms = true
+onButtonClicked(AgreeTermsBtn, function()
+    agreedTerms = not agreedTerms
+    AgreeTermsBtn.Text = agreedTerms and "[✓] Lưu tài khoản vào danh sách & đồng ý" or "[ ] Lưu tài khoản vào danh sách & đồng ý"
+    AgreeTermsBtn.TextColor3 = agreedTerms and Color3.fromRGB(126, 232, 192) or Color3.fromRGB(170, 170, 190)
+end)
+
+local SignUpErrLabel = Instance.new("TextLabel")
+SignUpErrLabel.Size = UDim2.new(1, -8, 0, 20)
+SignUpErrLabel.Position = UDim2.new(0, 4, 0, 222)
+SignUpErrLabel.BackgroundTransparency = 1
+SignUpErrLabel.Text = ""
+SignUpErrLabel.TextColor3 = Color3.fromRGB(255, 125, 140)
+SignUpErrLabel.TextSize = 10
+SignUpErrLabel.Font = Enum.Font.GothamBold
+SignUpErrLabel.TextXAlignment = Enum.TextXAlignment.Left
+SignUpErrLabel.ZIndex = 72
+SignUpErrLabel.Parent = CreateAccPane
+
+local SignUpSubmitBtn = Instance.new("TextButton")
+SignUpSubmitBtn.Size = UDim2.new(1, -8, 0, 38)
+SignUpSubmitBtn.Position = UDim2.new(0, 4, 0, 248)
+SignUpSubmitBtn.BackgroundColor3 = Color3.fromRGB(126, 232, 192)
+SignUpSubmitBtn.TextColor3 = Color3.fromRGB(15, 16, 24)
+SignUpSubmitBtn.Text = "Tạo tài khoản & Vào Script"
+SignUpSubmitBtn.TextSize = 12
+SignUpSubmitBtn.Font = Enum.Font.GothamBold
+SignUpSubmitBtn.ZIndex = 72
+SignUpSubmitBtn.Parent = CreateAccPane
+Instance.new("UICorner", SignUpSubmitBtn).CornerRadius = UDim.new(0, 10)
+
+local LoginPane = Instance.new("Frame")
+LoginPane.Size = UDim2.new(1, -16, 1, -16)
+LoginPane.Position = UDim2.new(0, 8, 0, 8)
+LoginPane.BackgroundTransparency = 1
+LoginPane.Visible = false
+LoginPane.ZIndex = 71
+LoginPane.Parent = AuthPanel
+
+local LoginTitle = Instance.new("TextLabel")
+LoginTitle.Size = UDim2.new(0.58, 0, 0, 24)
+LoginTitle.Position = UDim2.new(0, 4, 0, 4)
+LoginTitle.BackgroundTransparency = 1
+LoginTitle.Text = "🔑 Đăng nhập"
+LoginTitle.TextColor3 = Color3.fromRGB(244, 240, 232)
+LoginTitle.TextSize = 14
+LoginTitle.Font = Enum.Font.GothamBold
+LoginTitle.TextXAlignment = Enum.TextXAlignment.Left
+LoginTitle.ZIndex = 72
+LoginTitle.Parent = LoginPane
+
+local SwitchToCreateBtn = Instance.new("TextButton")
+SwitchToCreateBtn.Size = UDim2.new(0.42, -4, 0, 24)
+SwitchToCreateBtn.Position = UDim2.new(0.58, 0, 0, 4)
+SwitchToCreateBtn.BackgroundTransparency = 1
+SwitchToCreateBtn.Text = "Chưa có TK? Tạo mới"
+SwitchToCreateBtn.TextColor3 = Color3.fromRGB(64, 156, 255)
+SwitchToCreateBtn.TextSize = 10
+SwitchToCreateBtn.Font = Enum.Font.GothamBold
+SwitchToCreateBtn.TextXAlignment = Enum.TextXAlignment.Right
+SwitchToCreateBtn.ZIndex = 72
+SwitchToCreateBtn.Parent = LoginPane
+
+local LoginEmailBox = Instance.new("TextBox")
+LoginEmailBox.Size = UDim2.new(1, -8, 0, 38)
+LoginEmailBox.Position = UDim2.new(0, 4, 0, 46)
+LoginEmailBox.BackgroundColor3 = Color3.fromRGB(36, 39, 56)
+LoginEmailBox.TextColor3 = Color3.fromRGB(255, 255, 255)
+LoginEmailBox.PlaceholderColor3 = Color3.fromRGB(145, 145, 165)
+LoginEmailBox.PlaceholderText = "Email tài khoản"
+LoginEmailBox.Text = SavedAccounts[1].Email
+LoginEmailBox.TextSize = 11
+LoginEmailBox.Font = Enum.Font.Gotham
+LoginEmailBox.ClearTextOnFocus = false
+LoginEmailBox.ZIndex = 72
+LoginEmailBox.Parent = LoginPane
+Instance.new("UICorner", LoginEmailBox).CornerRadius = UDim.new(0, 8)
+
+local LoginPwBox = Instance.new("TextBox")
+LoginPwBox.Size = UDim2.new(1, -8, 0, 38)
+LoginPwBox.Position = UDim2.new(0, 4, 0, 94)
+LoginPwBox.BackgroundColor3 = Color3.fromRGB(36, 39, 56)
+LoginPwBox.TextColor3 = Color3.fromRGB(255, 255, 255)
+LoginPwBox.PlaceholderColor3 = Color3.fromRGB(145, 145, 165)
+LoginPwBox.PlaceholderText = "Mật khẩu (mặc định: lumen2026)"
+LoginPwBox.Text = ""
+LoginPwBox.TextSize = 11
+LoginPwBox.Font = Enum.Font.Gotham
+LoginPwBox.ClearTextOnFocus = false
+LoginPwBox.ZIndex = 72
+LoginPwBox.Parent = LoginPane
+Instance.new("UICorner", LoginPwBox).CornerRadius = UDim.new(0, 8)
+
+local LoginErrLabel = Instance.new("TextLabel")
+LoginErrLabel.Size = UDim2.new(1, -8, 0, 26)
+LoginErrLabel.Position = UDim2.new(0, 4, 0, 142)
+LoginErrLabel.BackgroundTransparency = 1
+LoginErrLabel.Text = ""
+LoginErrLabel.TextColor3 = Color3.fromRGB(255, 125, 140)
+LoginErrLabel.TextSize = 10
+LoginErrLabel.Font = Enum.Font.GothamBold
+LoginErrLabel.TextWrapped = true
+LoginErrLabel.TextXAlignment = Enum.TextXAlignment.Left
+LoginErrLabel.ZIndex = 72
+LoginErrLabel.Parent = LoginPane
+
+local SignInBtn = Instance.new("TextButton")
+SignInBtn.Size = UDim2.new(1, -8, 0, 40)
+SignInBtn.Position = UDim2.new(0, 4, 0, 180)
+SignInBtn.BackgroundColor3 = Color3.fromRGB(244, 240, 232)
+SignInBtn.TextColor3 = Color3.fromRGB(15, 16, 24)
+SignInBtn.Text = "Sign in"
+SignInBtn.TextSize = 12
+SignInBtn.Font = Enum.Font.GothamBold
+SignInBtn.ZIndex = 72
+SignInBtn.Parent = LoginPane
+Instance.new("UICorner", SignInBtn).CornerRadius = UDim.new(0, 10)
+
+onButtonClicked(SwitchToLoginBtn, function()
+    CreateAccPane.Visible = false
+    LoginPane.Visible = true
+    SignUpErrLabel.Text = ""
+end)
+
+onButtonClicked(SwitchToCreateBtn, function()
+    LoginPane.Visible = false
+    CreateAccPane.Visible = true
+    LoginErrLabel.Text = ""
+end)
+
 local introElapsed = 0
-local introDuration = 2.2
+local introDuration = 3.2
 local introConn
 introConn = RunService.Heartbeat:Connect(function(dt)
     introElapsed = introElapsed + dt
@@ -418,17 +777,47 @@ introConn = RunService.Heartbeat:Connect(function(dt)
     IntroBarFill.Size = UDim2.new(ratio, 0, 1, 0)
     IntroSubLabel.Text = string.format("Đang chạy intro... %d%%", math.floor(ratio * 100))
 
-    local roadW = IntroRoad.AbsoluteSize.X
-    if roadW < 100 then roadW = 456 end
-    CarBox.Position = UDim2.new(0, -80 + (roadW + 100) * ratio, 1, -36)
-    LineA.Position = UDim2.new(0, roadW - ((introElapsed * 260) % (roadW + 50)), 1, -15)
-    LineB.Position = UDim2.new(0, roadW - ((introElapsed * 260 + 130) % (roadW + 50)), 1, -15)
+    -- Giai đoạn 1 (0 -> 0.55): Tia sáng quét & các điểm quỹ đạo hội tụ
+    local sweepP = math.clamp(ratio / 0.55, 0, 1)
+    SweepBeam.Position = UDim2.new(0.28 + 0.22 * sweepP, 0, 0.75 - 0.25 * sweepP, 0)
+    SweepBeam.BackgroundTransparency = sweepP > 0.85 and ((sweepP - 0.85) / 0.15) or 0
+
+    local convergeP = math.clamp((ratio - 0.1) / 0.5, 0, 1)
+    for i, stroke in ipairs(orbitRings) do
+        stroke.Transparency = 0.85 - 0.65 * convergeP
+        local tip = orbitTips[i]
+        local angle = (introElapsed * (1.8 + i * 0.45)) + (i * 1.4)
+        local rx = (0.35 - 0.15 * convergeP) * math.cos(angle)
+        local ry = (0.35 - 0.15 * convergeP) * math.sin(angle)
+        tip.Position = UDim2.new(0.5 + rx, 0, 0.5 + ry, 0)
+    end
+
+    -- Giai đoạn 2 (0.55 -> 0.75): Cầu quỹ đạo xoay đều ở tâm
+    local spinBoost = ratio > 0.55 and ((ratio - 0.55) * 4.5) or 0
+    OrbitCenter.Rotation = (introElapsed * 65 + spinBoost * 30) % 360
+
+    -- Giai đoạn 3 (0.75 -> 1.0): Lõi sáng bùng lên rực rỡ
+    local flareP = math.clamp((ratio - 0.72) / 0.28, 0, 1)
+    local haloSize = 10 + flareP * 78
+    CoreHalo.Size = UDim2.new(0, haloSize, 0, haloSize)
+    CoreHalo.BackgroundTransparency = 0.72 - 0.42 * flareP
+
+    local coreSize = 6 + flareP * 18
+    CoreFlare.Size = UDim2.new(0, coreSize, 0, coreSize)
+
+    FlareRayH.BackgroundTransparency = 1 - flareP * 0.85
+    FlareRayV.BackgroundTransparency = 1 - flareP * 0.85
+    FlareRayH.Size = UDim2.new(0, 60 + flareP * 180, 0, 2)
+    FlareRayV.Size = UDim2.new(0, 2, 0, 24 + flareP * 72)
 
     if ratio >= 1 then
         if introConn then introConn:Disconnect() end
         if IntroRectFrame then
             IntroRectFrame:Destroy()
         end
+        AuthPanel.Visible = true
+        CreateAccPane.Visible = true
+        LoginPane.Visible = false
     end
 end)
 
@@ -601,32 +990,216 @@ DropdownListFrame:GetPropertyChangedSignal("Visible"):Connect(function()
     end
 end)
 
--- --- TAB 3: SETTINGS (CÓ THANH CUỘN) ---
+-- --- TAB 3: SETTINGS (THÔNG TIN TÀI KHOẢN + CHUYỂN ĐỔI TÀI KHOẢN + THANH CUỘN) ---
 local Tab3Content = Instance.new("ScrollingFrame")
 Tab3Content.Size = UDim2.new(1, -16, 1, -70)
 Tab3Content.Position = UDim2.new(0, 8, 0, 66)
 Tab3Content.BackgroundTransparency = 1
 Tab3Content.BorderSizePixel = 0
-Tab3Content.CanvasSize = UDim2.new(0, 0, 0, 260)
+Tab3Content.CanvasSize = UDim2.new(0, 0, 0, 320)
 Tab3Content.ScrollBarThickness = 4
 Tab3Content.Visible = false
 Tab3Content.ZIndex = 12
 Tab3Content.Parent = MainFrame
 
+local ProfileCard = Instance.new("Frame")
+ProfileCard.Size = UDim2.new(1, -6, 0, 96)
+ProfileCard.Position = UDim2.new(0, 0, 0, 0)
+ProfileCard.BackgroundColor3 = Color3.fromRGB(32, 34, 46)
+ProfileCard.BorderSizePixel = 0
+ProfileCard.ZIndex = 13
+ProfileCard.Parent = Tab3Content
+Instance.new("UICorner", ProfileCard).CornerRadius = UDim.new(0, 8)
+
+local ProfileInfoLabel = Instance.new("TextLabel")
+ProfileInfoLabel.Size = UDim2.new(1, -12, 1, -8)
+ProfileInfoLabel.Position = UDim2.new(0, 6, 0, 4)
+ProfileInfoLabel.BackgroundTransparency = 1
+ProfileInfoLabel.Text = ""
+ProfileInfoLabel.TextColor3 = Color3.fromRGB(244, 240, 232)
+ProfileInfoLabel.TextSize = 11
+ProfileInfoLabel.Font = Enum.Font.Code
+ProfileInfoLabel.TextWrapped = true
+ProfileInfoLabel.TextXAlignment = Enum.TextXAlignment.Left
+ProfileInfoLabel.TextYAlignment = Enum.TextYAlignment.Top
+ProfileInfoLabel.ZIndex = 14
+ProfileInfoLabel.Parent = ProfileCard
+
+local SwitchAccTitle = Instance.new("TextLabel")
+SwitchAccTitle.Size = UDim2.new(1, -6, 0, 20)
+SwitchAccTitle.Position = UDim2.new(0, 0, 0, 102)
+SwitchAccTitle.BackgroundTransparency = 1
+SwitchAccTitle.Text = "🔄 Chuyển đổi tài khoản đã lưu:"
+SwitchAccTitle.TextColor3 = Color3.fromRGB(183, 164, 255)
+SwitchAccTitle.TextSize = 11
+SwitchAccTitle.Font = Enum.Font.GothamBold
+SwitchAccTitle.TextXAlignment = Enum.TextXAlignment.Left
+SwitchAccTitle.ZIndex = 13
+SwitchAccTitle.Parent = Tab3Content
+
+local SwitchAccList = Instance.new("Frame")
+SwitchAccList.Size = UDim2.new(1, -6, 0, 32)
+SwitchAccList.Position = UDim2.new(0, 0, 0, 124)
+SwitchAccList.BackgroundTransparency = 1
+SwitchAccList.ZIndex = 13
+SwitchAccList.Parent = Tab3Content
+local SwitchAccLayout = Instance.new("UIListLayout")
+SwitchAccLayout.SortOrder = Enum.SortOrder.LayoutOrder
+SwitchAccLayout.Padding = UDim.new(0, 4)
+SwitchAccLayout.Parent = SwitchAccList
+
+local OpenAuthBtn = Instance.new("TextButton")
+OpenAuthBtn.Size = UDim2.new(1, -6, 0, 34)
+OpenAuthBtn.Position = UDim2.new(0, 0, 0, 166)
+OpenAuthBtn.BackgroundColor3 = Color3.fromRGB(61, 139, 255)
+OpenAuthBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+OpenAuthBtn.Text = "➕ Tạo tài khoản / Đăng nhập khác"
+OpenAuthBtn.TextSize = 11
+OpenAuthBtn.Font = Enum.Font.GothamBold
+OpenAuthBtn.ZIndex = 13
+OpenAuthBtn.Parent = Tab3Content
+Instance.new("UICorner", OpenAuthBtn).CornerRadius = UDim.new(0, 8)
+
 local SettingsInfoLabel = Instance.new("TextLabel")
-SettingsInfoLabel.Size = UDim2.new(1, -6, 0, 140)
-SettingsInfoLabel.Position = UDim2.new(0, 0, 0, 0)
+SettingsInfoLabel.Size = UDim2.new(1, -6, 0, 84)
+SettingsInfoLabel.Position = UDim2.new(0, 0, 0, 208)
 SettingsInfoLabel.BackgroundColor3 = Color3.fromRGB(32, 34, 46)
-SettingsInfoLabel.TextColor3 = Color3.fromRGB(225, 225, 235)
-SettingsInfoLabel.TextSize = 11
+SettingsInfoLabel.TextColor3 = Color3.fromRGB(205, 205, 220)
+SettingsInfoLabel.TextSize = 10
 SettingsInfoLabel.Font = Enum.Font.Code
 SettingsInfoLabel.TextWrapped = true
 SettingsInfoLabel.TextXAlignment = Enum.TextXAlignment.Left
 SettingsInfoLabel.TextYAlignment = Enum.TextYAlignment.Top
-SettingsInfoLabel.Text = " ⚙️ Cài đặt Webhook & Bộ lọc\n • Tự động quét túi đồ & nhân vật\n • Lọc tiền theo hậu tố K, M, B, T, Qa, spd...\n • Lưu lịch sử pet bắt được kèm giờ VN"
+SettingsInfoLabel.Text = " • Quét túi đồ & nhân vật tự động\n • Lọc tiền theo hậu tố K, M, B, T, Qa, spd...\n • Lưu lịch sử pet bắt được kèm giờ VN"
 SettingsInfoLabel.ZIndex = 13
 SettingsInfoLabel.Parent = Tab3Content
 Instance.new("UICorner", SettingsInfoLabel).CornerRadius = UDim.new(0, 8)
+
+local refreshProfileUI
+local refreshAccountSwitcher
+
+refreshProfileUI = function()
+    ProfileInfoLabel.Text = string.format(
+        "👤 Tên: %s\n✉️ Email: %s\n📱 SĐT: %s\n🏢 Nhóm: %s",
+        ActiveAccount.Name or "User",
+        ActiveAccount.Email or "N/A",
+        ActiveAccount.Phone or "Không có",
+        ActiveAccount.Workspace or "Default"
+    )
+end
+
+refreshAccountSwitcher = function()
+    for _, child in ipairs(SwitchAccList:GetChildren()) do
+        if child:IsA("TextButton") then child:Destroy() end
+    end
+    for i, acc in ipairs(SavedAccounts) do
+        local isCurrent = (acc == ActiveAccount)
+        local itemBtn = Instance.new("TextButton")
+        itemBtn.Size = UDim2.new(1, 0, 0, 28)
+        itemBtn.BackgroundColor3 = isCurrent and Color3.fromRGB(46, 204, 113) or Color3.fromRGB(44, 46, 62)
+        itemBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+        itemBtn.TextSize = 10
+        itemBtn.Font = Enum.Font.GothamBold
+        itemBtn.Text = (isCurrent and "✓ " or "⇄ ") .. acc.Name .. " (" .. acc.Email .. ")"
+        itemBtn.LayoutOrder = i
+        itemBtn.ZIndex = 14
+        itemBtn.Parent = SwitchAccList
+        Instance.new("UICorner", itemBtn).CornerRadius = UDim.new(0, 6)
+
+        onButtonClicked(itemBtn, function()
+            ActiveAccount = acc
+            LoginEmailBox.Text = acc.Email
+            refreshProfileUI()
+            refreshAccountSwitcher()
+        end)
+    end
+    local listH = math.max(28, #SavedAccounts * 32)
+    SwitchAccList.Size = UDim2.new(1, -6, 0, listH)
+    local authBtnY = 124 + listH + 8
+    OpenAuthBtn.Position = UDim2.new(0, 0, 0, authBtnY)
+    local infoY = authBtnY + 42
+    SettingsInfoLabel.Position = UDim2.new(0, 0, 0, infoY)
+    Tab3Content.CanvasSize = UDim2.new(0, 0, 0, infoY + 96)
+end
+
+refreshProfileUI()
+refreshAccountSwitcher()
+
+local function enterAuthenticatedSession(acc)
+    ActiveAccount = acc
+    isAuthenticated = true
+    refreshProfileUI()
+    refreshAccountSwitcher()
+    AuthPanel.Visible = false
+    ToggleIconBtn.Visible = true
+    MainFrame.Visible = true
+    isMenuVisible = true
+end
+
+onButtonClicked(OpenAuthBtn, function()
+    isAuthenticated = false
+    MainFrame.Visible = false
+    ToggleIconBtn.Visible = false
+    AuthPanel.Visible = true
+    CreateAccPane.Visible = true
+    LoginPane.Visible = false
+    LoginEmailBox.Text = ActiveAccount.Email or ""
+    LoginPwBox.Text = ""
+    LoginErrLabel.Text = ""
+    SignUpErrLabel.Text = ""
+end)
+
+onButtonClicked(SignInBtn, function()
+    local acc = findAccount(LoginEmailBox.Text, LoginPwBox.Text)
+    if acc then
+        LoginErrLabel.Text = ""
+        enterAuthenticatedSession(acc)
+    else
+        LoginErrLabel.Text = "Sai email hoặc mật khẩu (mặc định: lumen2026)"
+    end
+end)
+
+onButtonClicked(SignUpSubmitBtn, function()
+    local nm = (SignUpNameBox.Text or ""):gsub("^%s+", ""):gsub("%s+$", "")
+    local em = (SignUpEmailBox.Text or ""):gsub("^%s+", ""):gsub("%s+$", "")
+    local pwVal = SignUpPwBox.Text or ""
+    local ph = (SignUpPhoneBox.Text or ""):gsub("^%s+", ""):gsub("%s+$", "")
+
+    if nm == "" then
+        SignUpErrLabel.Text = "Vui lòng nhập họ tên"
+        return
+    end
+    if not string.match(em, "^[^%s@]+@[^%s@]+%.[^%s@]+$") then
+        SignUpErrLabel.Text = "Email không hợp lệ"
+        return
+    end
+    if #pwVal < 6 then
+        SignUpErrLabel.Text = "Mật khẩu tối thiểu 6 ký tự"
+        return
+    end
+    if not agreedTerms then
+        SignUpErrLabel.Text = "Vui lòng đồng ý lưu tài khoản"
+        return
+    end
+
+    local existing = findAccountByEmail(em)
+    if existing then
+        existing.Name = nm
+        existing.Password = pwVal
+        existing.Phone = ph ~= "" and ph or existing.Phone
+        enterAuthenticatedSession(existing)
+    else
+        local newAcc = {
+            Name = nm,
+            Email = em,
+            Password = pwVal,
+            Phone = ph ~= "" and ph or "Không có",
+            Workspace = "New Era Account"
+        }
+        table.insert(SavedAccounts, newAcc)
+        enterAuthenticatedSession(newAcc)
+    end
+end)
 
 -- --- TAB 2: LỊCH SỬ ---
 local HistoryRecords = {}
@@ -847,6 +1420,8 @@ onButtonClicked(Tab3Btn, function()
     HistoryClearBtn.Visible = false
     HistoryCountLabel.Visible = false
     HistoryFilterPopup.Visible = false
+    refreshProfileUI()
+    refreshAccountSwitcher()
 end)
 
 -- ==========================================
