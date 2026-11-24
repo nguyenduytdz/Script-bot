@@ -1,10 +1,13 @@
 -- ==========================================
--- CẤU HÌNH THÔNG TIN CỦA BẠN
+-- CẤU HÌNH THÔNG TIN MẶC ĐỊNH
 -- ==========================================
-local WebhookURL = "https://discord.com/api/webhooks/1570446166754201803/pPCEG-HczkXcUA2fWQd6pYo62wgLmeBxf1ri812j1AO2W87wWCz1LzoF-6s8tgem5yEo"
-local DiscordUserID = "1494250347731091497"
+local DefaultWebhookURL = "https://discord.com/api/webhooks/1570446166754201803/pPCEG-HczkXcUA2fWQd6pYo62wgLmeBxf1ri812j1AO2W87wWCz1LzoF-6s8tgem5yEo"
+local DefaultDiscordUserID = "1494250347731091497"
 
+local WebhookURL = DefaultWebhookURL
+local DiscordUserID = DefaultDiscordUserID
 local CURRENT_MIN_MONEY = 0
+local saveAndSendMode = "both" -- "both" | "save_only" | "send_only"
 
 -- ==========================================
 -- KHỞI TẠO DỊCH VỤ & BIẾN TRẠNG THÁI
@@ -447,7 +450,6 @@ local function makeBottomTabBtn(order, text)
     return b
 end
 
--- Thứ tự: 1. Home ngay đầu trước Webhook, 2. Webhook, 3. Hop Sever, 4. Lịch sử, 5. Settings, 6. Ghi chú
 local TabHomeBtn = makeBottomTabBtn(1, "🏠 Home")
 local TabWebhookBtn = makeBottomTabBtn(2, "🚀 Webhook")
 local TabHopBtn = makeBottomTabBtn(3, "🌐 Hop Sever")
@@ -529,10 +531,7 @@ local function setIslandExpanded(expanded)
         IslandCompactText.Visible = true
         TweenService:Create(DynamicIsland, TweenInfo.new(0.38, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
             Size = UDim2.new(0, 210, 0, 34)
-        }):Play()
-        TweenService:Create(IslandCorner, TweenInfo.new(0.38, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
-            CornerRadius = UDim.new(0, 17)
-        }):Play()
+          }):Play()
     end
 end
 
@@ -830,13 +829,13 @@ HomeQuickHopBtn.ZIndex = 13
 HomeQuickHopBtn.Parent = HomeContent
 Instance.new("UICorner", HomeQuickHopBtn).CornerRadius = UDim.new(0, 8)
 
--- --- TAB WEBHOOK (CÓ THANH CUỘN) ---
+-- --- TAB WEBHOOK (WEBHOOK/ID CÁ NHÂN + CHỌN LƯU & GỬI + NÚT CHẠY + LỌC TIỀN) ---
 local Tab1Content = Instance.new("ScrollingFrame")
 Tab1Content.Size = UDim2.new(1, -16, 0, CONTENT_HEIGHT)
 Tab1Content.Position = UDim2.new(0, 8, 0, CONTENT_TOP_Y)
 Tab1Content.BackgroundTransparency = 1
 Tab1Content.BorderSizePixel = 0
-Tab1Content.CanvasSize = UDim2.new(0, 0, 0, 310)
+Tab1Content.CanvasSize = UDim2.new(0, 0, 0, 375)
 Tab1Content.ScrollBarThickness = 5
 Tab1Content.ScrollBarImageColor3 = Color3.fromRGB(130, 140, 175)
 Tab1Content.Visible = false
@@ -844,22 +843,105 @@ Tab1Content.ZIndex = 12
 Tab1Content.Parent = MainFrame
 
 local StatusLabel = Instance.new("TextLabel")
-StatusLabel.Size = UDim2.new(1, -8, 0, 62)
+StatusLabel.Size = UDim2.new(1, -8, 0, 48)
 StatusLabel.Position = UDim2.new(0, 0, 0, 0)
 StatusLabel.BackgroundColor3 = Color3.fromRGB(32, 34, 46)
 StatusLabel.TextColor3 = Color3.fromRGB(225, 225, 235)
-StatusLabel.TextSize = 11
+StatusLabel.TextSize = 10
 StatusLabel.Font = Enum.Font.Code
 StatusLabel.TextWrapped = true
 StatusLabel.TextXAlignment = Enum.TextXAlignment.Left
-StatusLabel.TextYAlignment = Enum.TextYAlignment.Top
+StatusLabel.TextYAlignment = Enum.TextYAlignment.Center
 StatusLabel.ZIndex = 13
 StatusLabel.Parent = Tab1Content
 Instance.new("UICorner", StatusLabel).CornerRadius = UDim.new(0, 8)
 
+local PersonalWebhookInput = Instance.new("TextBox")
+PersonalWebhookInput.Size = UDim2.new(1, -8, 0, 28)
+PersonalWebhookInput.Position = UDim2.new(0, 0, 0, 54)
+PersonalWebhookInput.BackgroundColor3 = Color3.fromRGB(32, 34, 46)
+PersonalWebhookInput.TextColor3 = Color3.fromRGB(255, 255, 255)
+PersonalWebhookInput.PlaceholderColor3 = Color3.fromRGB(155, 155, 170)
+PersonalWebhookInput.PlaceholderText = "🔗 Dán Webhook cá nhân (https://discord.com/api/webhooks/...)"
+PersonalWebhookInput.Text = WebhookURL
+PersonalWebhookInput.TextSize = 10
+PersonalWebhookInput.Font = Enum.Font.Gotham
+PersonalWebhookInput.ClearTextOnFocus = false
+PersonalWebhookInput.ZIndex = 13
+PersonalWebhookInput.Parent = Tab1Content
+Instance.new("UICorner", PersonalWebhookInput).CornerRadius = UDim.new(0, 6)
+
+local PersonalDiscordIdInput = Instance.new("TextBox")
+PersonalDiscordIdInput.Size = UDim2.new(1, -78, 0, 28)
+PersonalDiscordIdInput.Position = UDim2.new(0, 0, 0, 88)
+PersonalDiscordIdInput.BackgroundColor3 = Color3.fromRGB(32, 34, 46)
+PersonalDiscordIdInput.TextColor3 = Color3.fromRGB(255, 255, 255)
+PersonalDiscordIdInput.PlaceholderColor3 = Color3.fromRGB(155, 155, 170)
+PersonalDiscordIdInput.PlaceholderText = "🆔 ID Discord cá nhân (vd: 1494250347731091497)"
+PersonalDiscordIdInput.Text = DiscordUserID
+PersonalDiscordIdInput.TextSize = 10
+PersonalDiscordIdInput.Font = Enum.Font.Gotham
+PersonalDiscordIdInput.ClearTextOnFocus = false
+PersonalDiscordIdInput.ZIndex = 13
+PersonalDiscordIdInput.Parent = Tab1Content
+Instance.new("UICorner", PersonalDiscordIdInput).CornerRadius = UDim.new(0, 6)
+
+local ApplyWebhookBtn = Instance.new("TextButton")
+ApplyWebhookBtn.Size = UDim2.new(0, 66, 0, 28)
+ApplyWebhookBtn.Position = UDim2.new(1, -74, 0, 88)
+ApplyWebhookBtn.BackgroundColor3 = Color3.fromRGB(61, 139, 255)
+ApplyWebhookBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+ApplyWebhookBtn.TextSize = 10
+ApplyWebhookBtn.Font = Enum.Font.GothamBold
+ApplyWebhookBtn.Text = "✅ Áp dụng"
+ApplyWebhookBtn.ZIndex = 13
+ApplyWebhookBtn.Parent = Tab1Content
+Instance.new("UICorner", ApplyWebhookBtn).CornerRadius = UDim.new(0, 6)
+
+onButtonClicked(ApplyWebhookBtn, function()
+    local w = (PersonalWebhookInput.Text or ""):gsub("^%s+", ""):gsub("%s+$", "")
+    local dId = (PersonalDiscordIdInput.Text or ""):gsub("^%s+", ""):gsub("%s+$", "")
+    if w ~= "" then
+        WebhookURL = w
+    end
+    DiscordUserID = dId
+    ApplyWebhookBtn.Text = "✔ Xong"
+    task.delay(1.2, function()
+        if ApplyWebhookBtn and ApplyWebhookBtn.Parent then
+            ApplyWebhookBtn.Text = "✅ Áp dụng"
+        end
+    end)
+end)
+
+-- Chỗ chọn chế độ Lưu và Gửi
+local SaveSendModeBtn = Instance.new("TextButton")
+SaveSendModeBtn.Size = UDim2.new(1, -8, 0, 28)
+SaveSendModeBtn.Position = UDim2.new(0, 0, 0, 122)
+SaveSendModeBtn.BackgroundColor3 = Color3.fromRGB(40, 42, 56)
+SaveSendModeBtn.TextColor3 = Color3.fromRGB(130, 235, 185)
+SaveSendModeBtn.TextSize = 10
+SaveSendModeBtn.Font = Enum.Font.GothamBold
+SaveSendModeBtn.Text = "📤 Chế độ: Lưu lịch sử + Gửi Webhook"
+SaveSendModeBtn.ZIndex = 13
+SaveSendModeBtn.Parent = Tab1Content
+Instance.new("UICorner", SaveSendModeBtn).CornerRadius = UDim.new(0, 6)
+
+local saveSendCycle = {
+    { key = "both",      label = "📤 Chế độ: Lưu lịch sử + Gửi Webhook" },
+    { key = "save_only", label = "📥 Chế độ: Chỉ Lưu lịch sử (Không gửi)" },
+    { key = "send_only", label = "🚀 Chế độ: Chỉ Gửi Webhook" }
+}
+local saveSendIdx = 1
+
+onButtonClicked(SaveSendModeBtn, function()
+    saveSendIdx = (saveSendIdx % #saveSendCycle) + 1
+    saveAndSendMode = saveSendCycle[saveSendIdx].key
+    SaveSendModeBtn.Text = saveSendCycle[saveSendIdx].label
+end)
+
 local CustomMoneyInput = Instance.new("TextBox")
 CustomMoneyInput.Size = UDim2.new(1, -78, 0, 28)
-CustomMoneyInput.Position = UDim2.new(0, 0, 0, 70)
+CustomMoneyInput.Position = UDim2.new(0, 0, 0, 156)
 CustomMoneyInput.BackgroundColor3 = Color3.fromRGB(32, 34, 46)
 CustomMoneyInput.TextColor3 = Color3.fromRGB(255, 255, 255)
 CustomMoneyInput.PlaceholderColor3 = Color3.fromRGB(155, 155, 170)
@@ -874,7 +956,7 @@ Instance.new("UICorner", CustomMoneyInput).CornerRadius = UDim.new(0, 6)
 
 local SaveMoneyBtn = Instance.new("TextButton")
 SaveMoneyBtn.Size = UDim2.new(0, 66, 0, 28)
-SaveMoneyBtn.Position = UDim2.new(1, -74, 0, 70)
+SaveMoneyBtn.Position = UDim2.new(1, -74, 0, 156)
 SaveMoneyBtn.BackgroundColor3 = Color3.fromRGB(61, 139, 255)
 SaveMoneyBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
 SaveMoneyBtn.TextSize = 10
@@ -886,7 +968,7 @@ Instance.new("UICorner", SaveMoneyBtn).CornerRadius = UDim.new(0, 6)
 
 local FilterDropdownBtn = Instance.new("TextButton")
 FilterDropdownBtn.Size = UDim2.new(1, -8, 0, 28)
-FilterDropdownBtn.Position = UDim2.new(0, 0, 0, 104)
+FilterDropdownBtn.Position = UDim2.new(0, 0, 0, 190)
 FilterDropdownBtn.BackgroundColor3 = Color3.fromRGB(40, 42, 56)
 FilterDropdownBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
 FilterDropdownBtn.TextSize = 11
@@ -897,12 +979,12 @@ FilterDropdownBtn.Parent = Tab1Content
 Instance.new("UICorner", FilterDropdownBtn).CornerRadius = UDim.new(0, 6)
 
 local DropdownListFrame = Instance.new("ScrollingFrame")
-DropdownListFrame.Size = UDim2.new(1, -8, 0, 90)
-DropdownListFrame.Position = UDim2.new(0, 0, 0, 136)
+DropdownListFrame.Size = UDim2.new(1, -8, 0, 84)
+DropdownListFrame.Position = UDim2.new(0, 0, 0, 222)
 DropdownListFrame.BackgroundColor3 = Color3.fromRGB(28, 30, 42)
 DropdownListFrame.BorderSizePixel = 0
 DropdownListFrame.Visible = false
-DropdownListFrame.CanvasSize = UDim2.new(0, 0, 0, 175)
+DropdownListFrame.CanvasSize = UDim2.new(0, 0, 0, 165)
 DropdownListFrame.ScrollBarThickness = 4
 DropdownListFrame.ZIndex = 14
 DropdownListFrame.Parent = Tab1Content
@@ -967,20 +1049,20 @@ onButtonClicked(FilterDropdownBtn, function()
 end)
 
 local ToggleButton = Instance.new("TextButton")
-ToggleButton.Size = UDim2.new(1, -8, 0, 36)
-ToggleButton.Position = UDim2.new(0, 0, 0, 140)
+ToggleButton.Size = UDim2.new(1, -8, 0, 34)
+ToggleButton.Position = UDim2.new(0, 0, 0, 226)
 ToggleButton.BackgroundColor3 = Color3.fromRGB(46, 204, 113)
 ToggleButton.TextColor3 = Color3.fromRGB(255, 255, 255)
-ToggleButton.TextSize = 13
+ToggleButton.TextSize = 12
 ToggleButton.Font = Enum.Font.GothamBold
-ToggleButton.Text = "STOP SCRIPT"
+ToggleButton.Text = "⏹️ DỪNG CHẠY"
 ToggleButton.ZIndex = 13
 ToggleButton.Parent = Tab1Content
 Instance.new("UICorner", ToggleButton).CornerRadius = UDim.new(0, 8)
 
 local FooterLabel = Instance.new("TextLabel")
 FooterLabel.Size = UDim2.new(1, -8, 0, 28)
-FooterLabel.Position = UDim2.new(0, 0, 0, 184)
+FooterLabel.Position = UDim2.new(0, 0, 0, 266)
 FooterLabel.BackgroundTransparency = 1
 FooterLabel.TextColor3 = Color3.fromRGB(165, 165, 180)
 FooterLabel.TextSize = 11
@@ -992,22 +1074,22 @@ FooterLabel.Parent = Tab1Content
 
 DropdownListFrame:GetPropertyChangedSignal("Visible"):Connect(function()
     if DropdownListFrame.Visible then
-        ToggleButton.Position = UDim2.new(0, 0, 0, 232)
-        FooterLabel.Position = UDim2.new(0, 0, 0, 274)
+        ToggleButton.Position = UDim2.new(0, 0, 0, 312)
+        FooterLabel.Position = UDim2.new(0, 0, 0, 350)
     else
-        ToggleButton.Position = UDim2.new(0, 0, 0, 140)
-        FooterLabel.Position = UDim2.new(0, 0, 0, 184)
+        ToggleButton.Position = UDim2.new(0, 0, 0, 226)
+        FooterLabel.Position = UDim2.new(0, 0, 0, 266)
     end
 end)
 
--- --- TAB HOP SEVER (TÌM 1 NGƯỜI, PING THẤP, SEVER CŨ, COPY JOB, DÁN & JOIN JOB) ---
+-- --- TAB HOP SEVER (HIỂN THỊ DANH SÁCH SEVER KÈM NÚT JOIN + COPY JOB + DÁN & JOIN JOB) ---
 local HopContent = Instance.new("ScrollingFrame")
 HopContent.Size = UDim2.new(1, -16, 0, CONTENT_HEIGHT)
 HopContent.Position = UDim2.new(0, 8, 0, CONTENT_TOP_Y)
 HopContent.BackgroundTransparency = 1
 HopContent.BorderSizePixel = 0
 HopContent.ScrollingDirection = Enum.ScrollingDirection.Y
-HopContent.CanvasSize = UDim2.new(0, 0, 0, 320)
+HopContent.CanvasSize = UDim2.new(0, 0, 0, 360)
 HopContent.ScrollBarThickness = 5
 HopContent.ScrollBarImageColor3 = Color3.fromRGB(130, 140, 175)
 HopContent.Visible = false
@@ -1015,7 +1097,7 @@ HopContent.ZIndex = 12
 HopContent.Parent = MainFrame
 
 local HopStatusLabel = Instance.new("TextLabel")
-HopStatusLabel.Size = UDim2.new(1, -8, 0, 44)
+HopStatusLabel.Size = UDim2.new(1, -8, 0, 34)
 HopStatusLabel.Position = UDim2.new(0, 0, 0, 0)
 HopStatusLabel.BackgroundColor3 = Color3.fromRGB(32, 34, 46)
 HopStatusLabel.TextColor3 = Color3.fromRGB(220, 228, 242)
@@ -1024,86 +1106,102 @@ HopStatusLabel.Font = Enum.Font.Code
 HopStatusLabel.TextWrapped = true
 HopStatusLabel.TextXAlignment = Enum.TextXAlignment.Left
 HopStatusLabel.TextYAlignment = Enum.TextYAlignment.Center
-HopStatusLabel.Text = " 🌐 Job hiện tại: " .. tostring(game.JobId ~= "" and game.JobId or "Local")
+HopStatusLabel.Text = " 🌐 Chọn loại sever để hiển thị danh sách"
 HopStatusLabel.ZIndex = 13
 HopStatusLabel.Parent = HopContent
-Instance.new("UICorner", HopStatusLabel).CornerRadius = UDim.new(0, 8)
+Instance.new("UICorner", HopStatusLabel).CornerRadius = UDim.new(0, 7)
 
 local Hop1PlayerBtn = Instance.new("TextButton")
-Hop1PlayerBtn.Size = UDim2.new(0.49, -6, 0, 32)
-Hop1PlayerBtn.Position = UDim2.new(0, 0, 0, 50)
+Hop1PlayerBtn.Size = UDim2.new(0.32, -4, 0, 28)
+Hop1PlayerBtn.Position = UDim2.new(0, 0, 0, 40)
 Hop1PlayerBtn.BackgroundColor3 = Color3.fromRGB(46, 204, 113)
 Hop1PlayerBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-Hop1PlayerBtn.TextSize = 10
+Hop1PlayerBtn.TextSize = 9
 Hop1PlayerBtn.Font = Enum.Font.GothamBold
-Hop1PlayerBtn.Text = "👤 Sever 1 người"
+Hop1PlayerBtn.Text = "👤 1 người"
 Hop1PlayerBtn.ZIndex = 13
 Hop1PlayerBtn.Parent = HopContent
-Instance.new("UICorner", Hop1PlayerBtn).CornerRadius = UDim.new(0, 7)
+Instance.new("UICorner", Hop1PlayerBtn).CornerRadius = UDim.new(0, 6)
 
 local HopLowPingBtn = Instance.new("TextButton")
-HopLowPingBtn.Size = UDim2.new(0.49, -6, 0, 32)
-HopLowPingBtn.Position = UDim2.new(0.51, -2, 0, 50)
+HopLowPingBtn.Size = UDim2.new(0.32, -4, 0, 28)
+HopLowPingBtn.Position = UDim2.new(0.34, -2, 0, 40)
 HopLowPingBtn.BackgroundColor3 = Color3.fromRGB(61, 139, 255)
 HopLowPingBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-HopLowPingBtn.TextSize = 10
+HopLowPingBtn.TextSize = 9
 HopLowPingBtn.Font = Enum.Font.GothamBold
-HopLowPingBtn.Text = "⚡ Sever ping thấp"
-Hop1PlayerBtn.ZIndex = 13
+HopLowPingBtn.Text = "⚡ Ping thấp"
 HopLowPingBtn.ZIndex = 13
 HopLowPingBtn.Parent = HopContent
-Instance.new("UICorner", HopLowPingBtn).CornerRadius = UDim.new(0, 7)
+Instance.new("UICorner", HopLowPingBtn).CornerRadius = UDim.new(0, 6)
 
 local HopOldServerBtn = Instance.new("TextButton")
-HopOldServerBtn.Size = UDim2.new(0.49, -6, 0, 32)
-HopOldServerBtn.Position = UDim2.new(0, 0, 0, 88)
+HopOldServerBtn.Size = UDim2.new(0.32, -4, 0, 28)
+HopOldServerBtn.Position = UDim2.new(0.68, -2, 0, 40)
 HopOldServerBtn.BackgroundColor3 = Color3.fromRGB(142, 68, 173)
 HopOldServerBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-HopOldServerBtn.TextSize = 10
+HopOldServerBtn.TextSize = 9
 HopOldServerBtn.Font = Enum.Font.GothamBold
 HopOldServerBtn.Text = "🕰️ Sever cũ"
 HopOldServerBtn.ZIndex = 13
 HopOldServerBtn.Parent = HopContent
-Instance.new("UICorner", HopOldServerBtn).CornerRadius = UDim.new(0, 7)
+Instance.new("UICorner", HopOldServerBtn).CornerRadius = UDim.new(0, 6)
 
 local CopyCurrentJobBtn = Instance.new("TextButton")
-CopyCurrentJobBtn.Size = UDim2.new(0.49, -6, 0, 32)
-CopyCurrentJobBtn.Position = UDim2.new(0.51, -2, 0, 88)
+CopyCurrentJobBtn.Size = UDim2.new(1, -8, 0, 26)
+CopyCurrentJobBtn.Position = UDim2.new(0, 0, 0, 74)
 CopyCurrentJobBtn.BackgroundColor3 = Color3.fromRGB(230, 126, 34)
 CopyCurrentJobBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
 CopyCurrentJobBtn.TextSize = 10
 CopyCurrentJobBtn.Font = Enum.Font.GothamBold
-CopyCurrentJobBtn.Text = "📋 Copy ID Job"
+CopyCurrentJobBtn.Text = "📋 Copy JobId Sever Hiện Tại"
 CopyCurrentJobBtn.ZIndex = 13
 CopyCurrentJobBtn.Parent = HopContent
-Instance.new("UICorner", CopyCurrentJobBtn).CornerRadius = UDim.new(0, 7)
+Instance.new("UICorner", CopyCurrentJobBtn).CornerRadius = UDim.new(0, 6)
 
 local PasteJobInput = Instance.new("TextBox")
-PasteJobInput.Size = UDim2.new(1, -8, 0, 34)
-PasteJobInput.Position = UDim2.new(0, 0, 0, 128)
+PasteJobInput.Size = UDim2.new(1, -80, 0, 28)
+PasteJobInput.Position = UDim2.new(0, 0, 0, 106)
 PasteJobInput.BackgroundColor3 = Color3.fromRGB(32, 34, 46)
 PasteJobInput.TextColor3 = Color3.fromRGB(255, 255, 255)
 PasteJobInput.PlaceholderColor3 = Color3.fromRGB(155, 160, 180)
-PasteJobInput.PlaceholderText = "📌 Dán JobId server vào đây..."
+PasteJobInput.PlaceholderText = "📌 Dán JobId server..."
 PasteJobInput.Text = ""
 PasteJobInput.TextSize = 10
 PasteJobInput.Font = Enum.Font.Code
 PasteJobInput.ClearTextOnFocus = false
 PasteJobInput.ZIndex = 13
 PasteJobInput.Parent = HopContent
-Instance.new("UICorner", PasteJobInput).CornerRadius = UDim.new(0, 7)
+Instance.new("UICorner", PasteJobInput).CornerRadius = UDim.new(0, 6)
 
 local JoinJobBtn = Instance.new("TextButton")
-JoinJobBtn.Size = UDim2.new(1, -8, 0, 36)
-JoinJobBtn.Position = UDim2.new(0, 0, 0, 168)
+JoinJobBtn.Size = UDim2.new(0, 68, 0, 28)
+JoinJobBtn.Position = UDim2.new(1, -76, 0, 106)
 JoinJobBtn.BackgroundColor3 = Color3.fromRGB(31, 184, 154)
 JoinJobBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-JoinJobBtn.TextSize = 11
+JoinJobBtn.TextSize = 10
 JoinJobBtn.Font = Enum.Font.GothamBold
-JoinJobBtn.Text = "🚀 Join Vào JobId Này"
+JoinJobBtn.Text = "🚀 Join"
 JoinJobBtn.ZIndex = 13
 JoinJobBtn.Parent = HopContent
-Instance.new("UICorner", JoinJobBtn).CornerRadius = UDim.new(0, 8)
+Instance.new("UICorner", JoinJobBtn).CornerRadius = UDim.new(0, 6)
+
+-- Khung cuộn hiển thị danh sách server (Sever 1: ... [Join], Sever 2: ... [Join])
+local ServerListFrame = Instance.new("ScrollingFrame")
+ServerListFrame.Size = UDim2.new(1, -8, 0, 134)
+ServerListFrame.Position = UDim2.new(0, 0, 0, 140)
+ServerListFrame.BackgroundColor3 = Color3.fromRGB(26, 28, 40)
+ServerListFrame.BorderSizePixel = 0
+ServerListFrame.CanvasSize = UDim2.new(0, 0, 0, 0)
+ServerListFrame.ScrollBarThickness = 4
+ServerListFrame.ZIndex = 13
+ServerListFrame.Parent = HopContent
+Instance.new("UICorner", ServerListFrame).CornerRadius = UDim.new(0, 7)
+
+local ServerListLayout = Instance.new("UIListLayout")
+ServerListLayout.SortOrder = Enum.SortOrder.LayoutOrder
+ServerListLayout.Padding = UDim.new(0, 4)
+ServerListLayout.Parent = ServerListFrame
 
 local isHopping = false
 local function setHopStatus(msg)
@@ -1166,10 +1264,70 @@ local function teleportToJob(jobId, labelHint)
     end
 end
 
-local function hopByMode(mode)
+local function renderServerList(serverRows, titlePrefix)
+    for _, child in ipairs(ServerListFrame:GetChildren()) do
+        if child:IsA("Frame") then
+            child:Destroy()
+        end
+    end
+
+    local count = #serverRows
+    for idx, srv in ipairs(serverRows) do
+        local row = Instance.new("Frame")
+        row.Size = UDim2.new(1, -6, 0, 34)
+        row.BackgroundColor3 = Color3.fromRGB(36, 39, 54)
+        row.BorderSizePixel = 0
+        row.LayoutOrder = idx
+        row.ZIndex = 14
+        row.Parent = ServerListFrame
+        Instance.new("UICorner", row).CornerRadius = UDim.new(0, 6)
+
+        local lbl = Instance.new("TextLabel")
+        lbl.Size = UDim2.new(1, -64, 1, 0)
+        lbl.Position = UDim2.new(0, 6, 0, 0)
+        lbl.BackgroundTransparency = 1
+        lbl.TextColor3 = Color3.fromRGB(235, 238, 248)
+        lbl.TextSize = 9
+        lbl.Font = Enum.Font.Code
+        lbl.TextXAlignment = Enum.TextXAlignment.Left
+        lbl.TextWrapped = true
+        lbl.Text = string.format(
+            "Sever %d: %s người | %sms\nID: %s",
+            idx,
+            tostring(srv.playing or "?"),
+            tostring(srv.ping or "?"),
+            tostring(srv.id):sub(1, 14) .. "..."
+        )
+        lbl.ZIndex = 15
+        lbl.Parent = row
+
+        local joinBtn = Instance.new("TextButton")
+        joinBtn.Size = UDim2.new(0, 52, 0, 24)
+        joinBtn.Position = UDim2.new(1, -56, 0.5, -12)
+        joinBtn.BackgroundColor3 = Color3.fromRGB(46, 204, 113)
+        joinBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+        joinBtn.TextSize = 9
+        joinBtn.Font = Enum.Font.GothamBold
+        joinBtn.Text = "Join"
+        joinBtn.ZIndex = 15
+        joinBtn.Parent = row
+        Instance.new("UICorner", joinBtn).CornerRadius = UDim.new(0, 5)
+
+        local srvId = tostring(srv.id)
+        onButtonClicked(joinBtn, function()
+            PasteJobInput.Text = srvId
+            teleportToJob(srvId, "Sever " .. idx)
+        end)
+    end
+
+    ServerListFrame.CanvasSize = UDim2.new(0, 0, 0, count * 38 + 6)
+    setHopStatus(string.format("%s: tìm thấy %d sever", titlePrefix, count))
+end
+
+local function loadServersByMode(mode)
     if isHopping then return end
     isHopping = true
-    setHopStatus("🔍 Đang quét server...")
+    setHopStatus("🔍 Đang tải danh sách sever...")
 
     task.spawn(function()
         local servers, err = fetchPublicServers(4)
@@ -1179,58 +1337,45 @@ local function hopByMode(mode)
             return
         end
 
-        local chosen = nil
+        local list = {}
         if mode == "one_player" then
             for _, srv in ipairs(servers) do
-                local playing = tonumber(srv.playing) or 999
-                local maxPlayers = tonumber(srv.maxPlayers) or 0
-                if playing == 1 and maxPlayers > 1 then
-                    chosen = srv
-                    break
+                if (tonumber(srv.playing) or 999) == 1 then
+                    table.insert(list, srv)
                 end
             end
-            if not chosen then
-                -- Fallback server ít người nhất nếu chưa có server đúng 1 người
+            if #list == 0 then
                 table.sort(servers, function(a, b)
                     return (tonumber(a.playing) or 999) < (tonumber(b.playing) or 999)
                 end)
-                chosen = servers[1]
-            end
-        elseif mode == "low_ping" then
-            local validPing = {}
-            for _, srv in ipairs(servers) do
-                local playing = tonumber(srv.playing) or 0
-                local maxPlayers = tonumber(srv.maxPlayers) or 0
-                if playing < maxPlayers and srv.ping ~= nil then
-                    table.insert(validPing, srv)
+                for i = 1, math.min(15, #servers) do
+                    table.insert(list, servers[i])
                 end
             end
-            table.sort(validPing, function(a, b)
+            renderServerList(list, "👤 1 người")
+        elseif mode == "low_ping" then
+            for _, srv in ipairs(servers) do
+                if srv.ping ~= nil then
+                    table.insert(list, srv)
+                end
+            end
+            table.sort(list, function(a, b)
                 return (tonumber(a.ping) or 9999) < (tonumber(b.ping) or 9999)
             end)
-            chosen = validPing[1]
+            local topLow = {}
+            for i = 1, math.min(20, #list) do
+                table.insert(topLow, list[i])
+            end
+            renderServerList(topLow, "⚡ Ping thấp")
         elseif mode == "old_server" then
-            -- Các trang sau của danh sách Public server thường chứa server lâu đời hơn
             local olderServers, _ = fetchPublicServers(6)
             local pool = (olderServers and #olderServers > 0) and olderServers or servers
-            if #pool > 0 then
-                chosen = pool[#pool]
+            for i = #pool, math.max(1, #pool - 19), -1 do
+                table.insert(list, pool[i])
             end
+            renderServerList(list, "🕰️ Sever cũ")
         end
 
-        if chosen and chosen.id then
-            local infoStr = string.format(
-                "Job %s (%s/%s người, %sms)",
-                tostring(chosen.id):sub(1, 8),
-                tostring(chosen.playing or "?"),
-                tostring(chosen.maxPlayers or "?"),
-                tostring(chosen.ping or "?")
-            )
-            teleportToJob(chosen.id, infoStr)
-        else
-            setHopStatus("⚠️ Không tìm thấy server phù hợp, thử lại sau.")
-        end
-        task.wait(1.5)
         isHopping = false
     end)
 end
@@ -1253,13 +1398,13 @@ local function copyJobToClipboard()
     if copied then
         setHopStatus("📋 Đã copy JobId: " .. curId)
     else
-        setHopStatus("📌 Đã điền JobId vào ô dán: " .. curId)
+        setHopStatus("📌 Đã điền JobId: " .. curId)
     end
 end
 
-onButtonClicked(Hop1PlayerBtn, function() hopByMode("one_player") end)
-onButtonClicked(HopLowPingBtn, function() hopByMode("low_ping") end)
-onButtonClicked(HopOldServerBtn, function() hopByMode("old_server") end)
+onButtonClicked(Hop1PlayerBtn, function() loadServersByMode("one_player") end)
+onButtonClicked(HopLowPingBtn, function() loadServersByMode("low_ping") end)
+onButtonClicked(HopOldServerBtn, function() loadServersByMode("old_server") end)
 onButtonClicked(CopyCurrentJobBtn, copyJobToClipboard)
 onButtonClicked(HomeCopyJobBtn, copyJobToClipboard)
 onButtonClicked(JoinJobBtn, function()
@@ -1289,7 +1434,7 @@ SettingsInfoLabel.Font = Enum.Font.Code
 SettingsInfoLabel.TextWrapped = true
 SettingsInfoLabel.TextXAlignment = Enum.TextXAlignment.Left
 SettingsInfoLabel.TextYAlignment = Enum.TextYAlignment.Top
-SettingsInfoLabel.Text = " ⚙️ Cài đặt nâng cao:\n • Tự động quét Backpack & Character\n • Hỗ trợ lọc hậu tố tiền K, M, B, T, Qa, spd...\n • Lưu lịch sử thú bắt được kèm giờ Việt Nam\n • Hỗ trợ Hop Sever 1 người / ping thấp / sever cũ & Join JobId"
+SettingsInfoLabel.Text = " ⚙️ Cài đặt nâng cao:\n • Tự động quét Backpack & Character\n • Hỗ trợ lọc hậu tố tiền K, M, B, T, Qa, spd...\n • Lưu lịch sử thú bắt được kèm giờ Việt Nam\n • Hỗ trợ Hop Sever danh sách + Join JobId"
 SettingsInfoLabel.ZIndex = 13
 SettingsInfoLabel.Parent = Tab3Content
 Instance.new("UICorner", SettingsInfoLabel).CornerRadius = UDim.new(0, 8)
@@ -2015,10 +2160,13 @@ local function sendDiscordWebhook(petData)
     petsCaughtCount = petsCaughtCount + 1
     local vnTimeString = getVnTimeString()
 
-    table.insert(HistoryRecords, {data = petData, time = vnTimeString})
-    if refreshHistory then refreshHistory() end
+    if saveAndSendMode == "both" or saveAndSendMode == "save_only" then
+        table.insert(HistoryRecords, {data = petData, time = vnTimeString})
+        if refreshHistory then refreshHistory() end
+    end
 
-    if not isRunning or not httpRequest then return end
+    local shouldSend = (saveAndSendMode == "both" or saveAndSendMode == "send_only")
+    if not isRunning or not shouldSend or not httpRequest or WebhookURL == "" then return end
 
     local playerName = LocalPlayer.Name
     local displayName = LocalPlayer.DisplayName
@@ -2026,8 +2174,9 @@ local function sendDiscordWebhook(petData)
     local profileLink = "https://www.roblox.com/users/" .. userId .. "/profile"
     local avatarThumb = "https://www.roblox.com/headshot-thumbnail/image?userId=" .. userId .. "&width=420&height=420&format=png"
 
+    local pingPrefix = (DiscordUserID ~= "") and ("<@" .. DiscordUserID .. "> ") or ""
     local payload = {
-        ["content"] = "<@" .. DiscordUserID .. "> 🎉 Bạn vừa bắt được một sinh vật mới!",
+        ["content"] = pingPrefix .. "🎉 Bạn vừa bắt được một sinh vật mới!",
         ["embeds"] = {{
             ["title"] = "🐾 BẮT ĐƯỢC THÚ MỚI: " .. petData.Name,
             ["color"] = petData.EmbedColor,
@@ -2113,10 +2262,10 @@ end
 onButtonClicked(ToggleButton, function()
     isRunning = not isRunning
     if isRunning then
-        ToggleButton.Text = "STOP SCRIPT"
+        ToggleButton.Text = "⏹️ DỪNG CHẠY"
         ToggleButton.BackgroundColor3 = Color3.fromRGB(46, 204, 113)
     else
-        ToggleButton.Text = "START SCRIPT"
+        ToggleButton.Text = "▶️ CHẠY"
         ToggleButton.BackgroundColor3 = Color3.fromRGB(224, 86, 36)
     end
 end)
@@ -2180,14 +2329,14 @@ RunService.RenderStepped:Connect(function(dt)
     )
 
     StatusLabel.Text = string.format(
-        " ⏱️ Đã chạy: %s | 🇻🇳 %s\n 🎮 Game: %s\n ⚡ FPS: %d | 📶 Ping: %dms",
-        runTimeStr, vnClockStr, cachedGameName, currentFps, ping
+        " ⏱️ %s | 🇻🇳 %s\n ⚡ %d FPS | 📶 %dms | ID: %s",
+        runTimeStr, vnClockStr, currentFps, ping, DiscordUserID ~= "" and DiscordUserID or "Không"
     )
 
     if isRunning then
         FooterLabel.Text = string.format("Đã lưu/gửi: %d thú | Trạng thái: 🟢 Đang chạy", petsCaughtCount)
     else
-        FooterLabel.Text = string.format("Đã lưu/gửi: %d thú | Trạng thái: 🔴 Đang tạm dừng gửi", petsCaughtCount)
+        FooterLabel.Text = string.format("Đã lưu/gửi: %d thú | Trạng thái: 🔴 Đang tạm dừng", petsCaughtCount)
     end
 
     if DynamicIsland.Visible then
