@@ -15,6 +15,7 @@ local RunService = game:GetService("RunService")
 local MarketplaceService = game:GetService("MarketplaceService")
 local TweenService = game:GetService("TweenService")
 local UserInputService = game:GetService("UserInputService")
+local TeleportService = game:GetService("TeleportService")
 local LocalPlayer = Players.LocalPlayer
 
 local function getUiParent()
@@ -161,7 +162,160 @@ local function attachDrag(targetFrame, handleObject)
     end)
 end
 
--- GHI CHÚ NỔI TRÊN MÀN HÌNH (TỪ NOTEINFYNNITY)[span_0](start_span)[span_0](end_span)
+-- ==========================================
+-- HỘP THOẠI HỎI TRƯỚC KHI XÓA (MẪU U436)
+-- ==========================================
+local ConfirmOverlay = Instance.new("Frame")
+ConfirmOverlay.Name = "DeleteConfirmOverlay"
+ConfirmOverlay.Size = UDim2.new(1, 0, 1, 0)
+ConfirmOverlay.Position = UDim2.new(0, 0, 0, 0)
+ConfirmOverlay.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+ConfirmOverlay.BackgroundTransparency = 0.45
+ConfirmOverlay.BorderSizePixel = 0
+ConfirmOverlay.Visible = false
+ConfirmOverlay.ZIndex = 110
+ConfirmOverlay.Parent = ScreenGui
+
+local ConfirmCard = Instance.new("Frame")
+ConfirmCard.Name = "u436Dialog"
+ConfirmCard.AnchorPoint = Vector2.new(0.5, 0.5)
+ConfirmCard.Size = UDim2.new(0, 296, 0, 224)
+ConfirmCard.Position = UDim2.new(0.5, 0, 0.5, 0)
+ConfirmCard.BackgroundColor3 = Color3.fromRGB(26, 27, 37)
+ConfirmCard.BorderSizePixel = 0
+ConfirmCard.ZIndex = 112
+ConfirmCard.Parent = ConfirmOverlay
+Instance.new("UICorner", ConfirmCard).CornerRadius = UDim.new(0, 20)
+
+local ConfirmCardStroke = Instance.new("UIStroke")
+ConfirmCardStroke.Color = Color3.fromRGB(255, 255, 255)
+ConfirmCardStroke.Transparency = 0.84
+ConfirmCardStroke.Thickness = 1
+ConfirmCardStroke.Parent = ConfirmCard
+
+local ConfirmIconTile = Instance.new("Frame")
+ConfirmIconTile.Size = UDim2.new(0, 52, 0, 52)
+ConfirmIconTile.Position = UDim2.new(0, 20, 0, 18)
+ConfirmIconTile.BackgroundColor3 = Color3.fromRGB(217, 58, 85)
+ConfirmIconTile.BackgroundTransparency = 0.86
+ConfirmIconTile.BorderSizePixel = 0
+ConfirmIconTile.ZIndex = 113
+ConfirmIconTile.Parent = ConfirmCard
+Instance.new("UICorner", ConfirmIconTile).CornerRadius = UDim.new(0, 16)
+
+local ConfirmBinIcon = Instance.new("TextLabel")
+ConfirmBinIcon.Size = UDim2.new(1, 0, 1, 0)
+ConfirmBinIcon.BackgroundTransparency = 1
+ConfirmBinIcon.Text = "🗑️"
+ConfirmBinIcon.TextSize = 24
+ConfirmBinIcon.Font = Enum.Font.GothamBold
+ConfirmBinIcon.ZIndex = 114
+ConfirmBinIcon.Parent = ConfirmIconTile
+
+local ConfirmTitle = Instance.new("TextLabel")
+ConfirmTitle.Size = UDim2.new(1, -40, 0, 24)
+ConfirmTitle.Position = UDim2.new(0, 20, 0, 78)
+ConfirmTitle.BackgroundTransparency = 1
+ConfirmTitle.Text = "Xóa mục này?"
+ConfirmTitle.TextColor3 = Color3.fromRGB(244, 240, 232)
+ConfirmTitle.TextSize = 16
+ConfirmTitle.Font = Enum.Font.GothamBold
+ConfirmTitle.TextXAlignment = Enum.TextXAlignment.Left
+ConfirmTitle.ZIndex = 113
+ConfirmTitle.Parent = ConfirmCard
+
+local ConfirmDesc = Instance.new("TextLabel")
+ConfirmDesc.Size = UDim2.new(1, -40, 0, 44)
+ConfirmDesc.Position = UDim2.new(0, 20, 0, 104)
+ConfirmDesc.BackgroundTransparency = 1
+ConfirmDesc.Text = "Dữ liệu đã chọn sẽ bị xóa khỏi lịch sử. Hành động này không thể hoàn tác."
+ConfirmDesc.TextColor3 = Color3.fromRGB(185, 182, 194)
+ConfirmDesc.TextSize = 12
+ConfirmDesc.Font = Enum.Font.Gotham
+ConfirmDesc.TextWrapped = true
+ConfirmDesc.TextXAlignment = Enum.TextXAlignment.Left
+ConfirmDesc.TextYAlignment = Enum.TextYAlignment.Top
+ConfirmDesc.ZIndex = 113
+ConfirmDesc.Parent = ConfirmCard
+
+local ConfirmCancelBtn = Instance.new("TextButton")
+ConfirmCancelBtn.Size = UDim2.new(0.5, -24, 0, 40)
+ConfirmCancelBtn.Position = UDim2.new(0, 20, 1, -58)
+ConfirmCancelBtn.BackgroundColor3 = Color3.fromRGB(38, 40, 54)
+ConfirmCancelBtn.TextColor3 = Color3.fromRGB(244, 240, 232)
+ConfirmCancelBtn.Text = "Hủy"
+ConfirmCancelBtn.TextSize = 13
+ConfirmCancelBtn.Font = Enum.Font.GothamBold
+ConfirmCancelBtn.ZIndex = 114
+ConfirmCancelBtn.Parent = ConfirmCard
+Instance.new("UICorner", ConfirmCancelBtn).CornerRadius = UDim.new(0, 12)
+local CancelBtnStroke = Instance.new("UIStroke")
+CancelBtnStroke.Color = Color3.fromRGB(255, 255, 255)
+CancelBtnStroke.Transparency = 0.84
+CancelBtnStroke.Thickness = 1
+CancelBtnStroke.Parent = ConfirmCancelBtn
+
+local ConfirmDeleteBtn = Instance.new("TextButton")
+ConfirmDeleteBtn.Size = UDim2.new(0.5, -24, 0, 40)
+ConfirmDeleteBtn.Position = UDim2.new(0.5, 4, 1, -58)
+ConfirmDeleteBtn.BackgroundColor3 = Color3.fromRGB(229, 72, 77)
+ConfirmDeleteBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+ConfirmDeleteBtn.Text = "Xóa"
+ConfirmDeleteBtn.TextSize = 13
+ConfirmDeleteBtn.Font = Enum.Font.GothamBold
+ConfirmDeleteBtn.ZIndex = 114
+ConfirmDeleteBtn.Parent = ConfirmCard
+Instance.new("UICorner", ConfirmDeleteBtn).CornerRadius = UDim.new(0, 12)
+
+local pendingDeleteCallback = nil
+local isConfirmBusy = false
+
+local function closeConfirmDialog()
+    isConfirmBusy = false
+    pendingDeleteCallback = nil
+    ConfirmOverlay.Visible = false
+    ConfirmBinIcon.Text = "🗑️"
+    ConfirmBinIcon.Rotation = 0
+    ConfirmDeleteBtn.Text = "Xóa"
+end
+
+local function promptDeleteConfirm(titleText, descText, onConfirmed)
+    if isConfirmBusy then return end
+    pendingDeleteCallback = onConfirmed
+    ConfirmTitle.Text = titleText or "Xác nhận xóa?"
+    ConfirmDesc.Text = descText or "Hành động này sẽ xóa dữ liệu đã chọn."
+    ConfirmBinIcon.Text = "🗑️"
+    ConfirmBinIcon.Rotation = 0
+    ConfirmDeleteBtn.Text = "Xóa"
+    ConfirmOverlay.Visible = true
+    ConfirmCard.Size = UDim2.new(0, 266, 0, 202)
+    TweenService:Create(ConfirmCard, TweenInfo.new(0.28, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
+        Size = UDim2.new(0, 296, 0, 224)
+    }):Play()
+end
+
+onButtonClicked(ConfirmCancelBtn, function()
+    if isConfirmBusy then return end
+    closeConfirmDialog()
+end)
+
+onButtonClicked(ConfirmDeleteBtn, function()
+    if isConfirmBusy then return end
+    isConfirmBusy = true
+    ConfirmDeleteBtn.Text = "Đang xóa..."
+    ConfirmBinIcon.Text = "📥"
+    TweenService:Create(ConfirmBinIcon, TweenInfo.new(0.22, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+        Rotation = -28
+    }):Play()
+    task.delay(0.28, function()
+        if pendingDeleteCallback then
+            pcall(pendingDeleteCallback)
+        end
+        closeConfirmDialog()
+    end)
+end)
+
+-- GHI CHÚ NỔI TRÊN MÀN HÌNH
 local DisplayContainer = Instance.new("Frame")
 DisplayContainer.Name = "ScreenNoteDisplay"
 DisplayContainer.Size = UDim2.new(0, 280, 0, 54)
@@ -251,64 +405,55 @@ TitleLabel.Font = Enum.Font.GothamBold
 TitleLabel.ZIndex = 11
 TitleLabel.Parent = MainFrame
 
--- THANH TAB NẰM BÊN DƯỚI MENU NHỎ GỌN (NÚT PHẲNG, KHÔNG KÍNH LỎNG)
-local BottomTabBar = Instance.new("Frame")
+-- THANH TAB NẰM BÊN DƯỚI MENU NHỎ GỌN (CÓ CUỘN NGANG, KHÔNG LÀM PHÌNH MENU)
+local BottomTabBar = Instance.new("ScrollingFrame")
 BottomTabBar.Name = "BottomTabBar"
-BottomTabBar.Size = UDim2.new(1, -14, 0, 34)
-BottomTabBar.Position = UDim2.new(0, 7, 1, -40)
+BottomTabBar.Size = UDim2.new(1, -14, 0, 36)
+BottomTabBar.Position = UDim2.new(0, 7, 1, -42)
 BottomTabBar.BackgroundColor3 = Color3.fromRGB(28, 30, 42)
 BottomTabBar.BorderSizePixel = 0
+BottomTabBar.ScrollingDirection = Enum.ScrollingDirection.X
+BottomTabBar.ScrollBarThickness = 2
+BottomTabBar.ScrollBarImageColor3 = Color3.fromRGB(115, 130, 175)
+BottomTabBar.CanvasSize = UDim2.new(0, 462, 0, 0)
 BottomTabBar.ZIndex = 14
 BottomTabBar.Parent = MainFrame
 Instance.new("UICorner", BottomTabBar).CornerRadius = UDim.new(0, 10)
 
-local Tab1Btn = Instance.new("TextButton")
-Tab1Btn.Size = UDim2.new(0.242, 0, 1, -8)
-Tab1Btn.Position = UDim2.new(0.01, 0, 0, 4)
-Tab1Btn.BackgroundColor3 = Color3.fromRGB(46, 204, 113)
-Tab1Btn.TextColor3 = Color3.fromRGB(255, 255, 255)
-Tab1Btn.TextSize = 9
-Tab1Btn.Font = Enum.Font.GothamBold
-Tab1Btn.Text = "🚀 Webhook"
-Tab1Btn.ZIndex = 16
-Tab1Btn.Parent = BottomTabBar
-Instance.new("UICorner", Tab1Btn).CornerRadius = UDim.new(0, 7)
+local TabBarLayout = Instance.new("UIListLayout")
+TabBarLayout.FillDirection = Enum.FillDirection.Horizontal
+TabBarLayout.SortOrder = Enum.SortOrder.LayoutOrder
+TabBarLayout.VerticalAlignment = Enum.VerticalAlignment.Center
+TabBarLayout.Padding = UDim.new(0, 5)
+TabBarLayout.Parent = BottomTabBar
 
-local Tab2Btn = Instance.new("TextButton")
-Tab2Btn.Size = UDim2.new(0.242, 0, 1, -8)
-Tab2Btn.Position = UDim2.new(0.258, 0, 0, 4)
-Tab2Btn.BackgroundColor3 = Color3.fromRGB(40, 42, 56)
-Tab2Btn.TextColor3 = Color3.fromRGB(205, 210, 224)
-Tab2Btn.TextSize = 9
-Tab2Btn.Font = Enum.Font.GothamBold
-Tab2Btn.Text = "📜 Lịch sử"
-Tab2Btn.ZIndex = 16
-Tab2Btn.Parent = BottomTabBar
-Instance.new("UICorner", Tab2Btn).CornerRadius = UDim.new(0, 7)
+local TabBarPad = Instance.new("UIPadding")
+TabBarPad.PaddingLeft = UDim.new(0, 5)
+TabBarPad.PaddingRight = UDim.new(0, 5)
+TabBarPad.Parent = BottomTabBar
 
-local Tab3Btn = Instance.new("TextButton")
-Tab3Btn.Size = UDim2.new(0.242, 0, 1, -8)
-Tab3Btn.Position = UDim2.new(0.506, 0, 0, 4)
-Tab3Btn.BackgroundColor3 = Color3.fromRGB(40, 42, 56)
-Tab3Btn.TextColor3 = Color3.fromRGB(205, 210, 224)
-Tab3Btn.TextSize = 9
-Tab3Btn.Font = Enum.Font.GothamBold
-Tab3Btn.Text = "⚙️ Settings"
-Tab3Btn.ZIndex = 16
-Tab3Btn.Parent = BottomTabBar
-Instance.new("UICorner", Tab3Btn).CornerRadius = UDim.new(0, 7)
+local function makeBottomTabBtn(order, text)
+    local b = Instance.new("TextButton")
+    b.LayoutOrder = order
+    b.Size = UDim2.new(0, 72, 0, 26)
+    b.BackgroundColor3 = Color3.fromRGB(40, 42, 56)
+    b.TextColor3 = Color3.fromRGB(205, 210, 224)
+    b.TextSize = 9
+    b.Font = Enum.Font.GothamBold
+    b.Text = text
+    b.ZIndex = 16
+    b.Parent = BottomTabBar
+    Instance.new("UICorner", b).CornerRadius = UDim.new(0, 7)
+    return b
+end
 
-local Tab4Btn = Instance.new("TextButton")
-Tab4Btn.Size = UDim2.new(0.242, 0, 1, -8)
-Tab4Btn.Position = UDim2.new(0.754, 0, 0, 4)
-Tab4Btn.BackgroundColor3 = Color3.fromRGB(40, 42, 56)
-Tab4Btn.TextColor3 = Color3.fromRGB(205, 210, 224)
-Tab4Btn.TextSize = 9
-Tab4Btn.Font = Enum.Font.GothamBold
-Tab4Btn.Text = "📝 Ghi chú"
-Tab4Btn.ZIndex = 16
-Tab4Btn.Parent = BottomTabBar
-Instance.new("UICorner", Tab4Btn).CornerRadius = UDim.new(0, 7)
+-- Thứ tự: 1. Home ngay đầu trước Webhook, 2. Webhook, 3. Hop Sever, 4. Lịch sử, 5. Settings, 6. Ghi chú
+local TabHomeBtn = makeBottomTabBtn(1, "🏠 Home")
+local TabWebhookBtn = makeBottomTabBtn(2, "🚀 Webhook")
+local TabHopBtn = makeBottomTabBtn(3, "🌐 Hop Sever")
+local TabHistoryBtn = makeBottomTabBtn(4, "📜 Lịch sử")
+local TabSettingsBtn = makeBottomTabBtn(5, "⚙️ Settings")
+local TabNoteBtn = makeBottomTabBtn(6, "📝 Ghi chú")
 
 -- ==========================================
 -- DYNAMIC ISLAND TRÊN ĐẦU MÀN HÌNH
@@ -609,7 +754,7 @@ introConn = RunService.Heartbeat:Connect(function(dt)
             IntroRectFrame:Destroy()
         end
         isUiReady = true
-        if openTab then openTab(1) end
+        if openTab then openTab("home") end
         ToggleIconBtn.Visible = true
         MainFrame.Visible = true
         isMenuVisible = true
@@ -617,9 +762,75 @@ introConn = RunService.Heartbeat:Connect(function(dt)
 end)
 
 local CONTENT_TOP_Y = 34
-local CONTENT_HEIGHT = 280
+local CONTENT_HEIGHT = 278
 
--- --- TAB 1: WEBHOOK (CÓ THANH CUỘN) ---
+-- --- TAB HOME (ĐẦU TIÊN, TRƯỚC WEBHOOK) ---
+local HomeContent = Instance.new("ScrollingFrame")
+HomeContent.Size = UDim2.new(1, -16, 0, CONTENT_HEIGHT)
+HomeContent.Position = UDim2.new(0, 8, 0, CONTENT_TOP_Y)
+HomeContent.BackgroundTransparency = 1
+HomeContent.BorderSizePixel = 0
+HomeContent.CanvasSize = UDim2.new(0, 0, 0, 300)
+HomeContent.ScrollBarThickness = 5
+HomeContent.ScrollBarImageColor3 = Color3.fromRGB(130, 140, 175)
+HomeContent.Visible = true
+HomeContent.ZIndex = 12
+HomeContent.Parent = MainFrame
+
+local HomeInfoCard = Instance.new("TextLabel")
+HomeInfoCard.Size = UDim2.new(1, -8, 0, 128)
+HomeInfoCard.Position = UDim2.new(0, 0, 0, 0)
+HomeInfoCard.BackgroundColor3 = Color3.fromRGB(32, 34, 46)
+HomeInfoCard.TextColor3 = Color3.fromRGB(232, 235, 245)
+HomeInfoCard.TextSize = 11
+HomeInfoCard.Font = Enum.Font.Code
+HomeInfoCard.TextWrapped = true
+HomeInfoCard.TextXAlignment = Enum.TextXAlignment.Left
+HomeInfoCard.TextYAlignment = Enum.TextYAlignment.Top
+HomeInfoCard.Text = " 🏠 TỔNG QUAN HỆ THỐNG\n Đang tải thông tin server..."
+HomeInfoCard.ZIndex = 13
+HomeInfoCard.Parent = HomeContent
+Instance.new("UICorner", HomeInfoCard).CornerRadius = UDim.new(0, 8)
+
+local HomeJobBox = Instance.new("TextBox")
+HomeJobBox.Size = UDim2.new(1, -8, 0, 32)
+HomeJobBox.Position = UDim2.new(0, 0, 0, 136)
+HomeJobBox.BackgroundColor3 = Color3.fromRGB(28, 30, 42)
+HomeJobBox.TextColor3 = Color3.fromRGB(130, 215, 255)
+HomeJobBox.TextSize = 10
+HomeJobBox.Font = Enum.Font.Code
+HomeJobBox.TextEditable = false
+HomeJobBox.ClearTextOnFocus = false
+HomeJobBox.Text = tostring(game.JobId ~= "" and game.JobId or "Studio / Local")
+HomeJobBox.ZIndex = 13
+HomeJobBox.Parent = HomeContent
+Instance.new("UICorner", HomeJobBox).CornerRadius = UDim.new(0, 7)
+
+local HomeCopyJobBtn = Instance.new("TextButton")
+HomeCopyJobBtn.Size = UDim2.new(1, -8, 0, 32)
+HomeCopyJobBtn.Position = UDim2.new(0, 0, 0, 174)
+HomeCopyJobBtn.BackgroundColor3 = Color3.fromRGB(61, 139, 255)
+HomeCopyJobBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+HomeCopyJobBtn.TextSize = 11
+HomeCopyJobBtn.Font = Enum.Font.GothamBold
+HomeCopyJobBtn.Text = "📋 Copy JobId Sever Hiện Tại"
+HomeCopyJobBtn.ZIndex = 13
+HomeCopyJobBtn.Parent = HomeContent
+Instance.new("UICorner", HomeCopyJobBtn).CornerRadius = UDim.new(0, 8)
+
+local HomeQuickHopBtn = Instance.new("TextButton")
+HomeQuickHopBtn.Size = UDim2.new(1, -8, 0, 32)
+HomeQuickHopBtn.Position = UDim2.new(0, 0, 0, 212)
+HomeQuickHopBtn.BackgroundColor3 = Color3.fromRGB(46, 204, 113)
+HomeQuickHopBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+HomeQuickHopBtn.TextSize = 11
+HomeQuickHopBtn.Font = Enum.Font.GothamBold
+HomeQuickHopBtn.Text = "🌐 Mở Tab Hop Sever"
+HomeQuickHopBtn.ZIndex = 13
+HomeQuickHopBtn.Parent = HomeContent
+Instance.new("UICorner", HomeQuickHopBtn).CornerRadius = UDim.new(0, 8)
+
+-- --- TAB WEBHOOK (CÓ THANH CUỘN) ---
 local Tab1Content = Instance.new("ScrollingFrame")
 Tab1Content.Size = UDim2.new(1, -16, 0, CONTENT_HEIGHT)
 Tab1Content.Position = UDim2.new(0, 8, 0, CONTENT_TOP_Y)
@@ -628,7 +839,7 @@ Tab1Content.BorderSizePixel = 0
 Tab1Content.CanvasSize = UDim2.new(0, 0, 0, 310)
 Tab1Content.ScrollBarThickness = 5
 Tab1Content.ScrollBarImageColor3 = Color3.fromRGB(130, 140, 175)
-Tab1Content.Visible = true
+Tab1Content.Visible = false
 Tab1Content.ZIndex = 12
 Tab1Content.Parent = MainFrame
 
@@ -789,7 +1000,273 @@ DropdownListFrame:GetPropertyChangedSignal("Visible"):Connect(function()
     end
 end)
 
--- --- TAB 3: SETTINGS (CÓ THANH CUỘN) ---
+-- --- TAB HOP SEVER (TÌM 1 NGƯỜI, PING THẤP, SEVER CŨ, COPY JOB, DÁN & JOIN JOB) ---
+local HopContent = Instance.new("ScrollingFrame")
+HopContent.Size = UDim2.new(1, -16, 0, CONTENT_HEIGHT)
+HopContent.Position = UDim2.new(0, 8, 0, CONTENT_TOP_Y)
+HopContent.BackgroundTransparency = 1
+HopContent.BorderSizePixel = 0
+HopContent.ScrollingDirection = Enum.ScrollingDirection.Y
+HopContent.CanvasSize = UDim2.new(0, 0, 0, 320)
+HopContent.ScrollBarThickness = 5
+HopContent.ScrollBarImageColor3 = Color3.fromRGB(130, 140, 175)
+HopContent.Visible = false
+HopContent.ZIndex = 12
+HopContent.Parent = MainFrame
+
+local HopStatusLabel = Instance.new("TextLabel")
+HopStatusLabel.Size = UDim2.new(1, -8, 0, 44)
+HopStatusLabel.Position = UDim2.new(0, 0, 0, 0)
+HopStatusLabel.BackgroundColor3 = Color3.fromRGB(32, 34, 46)
+HopStatusLabel.TextColor3 = Color3.fromRGB(220, 228, 242)
+HopStatusLabel.TextSize = 10
+HopStatusLabel.Font = Enum.Font.Code
+HopStatusLabel.TextWrapped = true
+HopStatusLabel.TextXAlignment = Enum.TextXAlignment.Left
+HopStatusLabel.TextYAlignment = Enum.TextYAlignment.Center
+HopStatusLabel.Text = " 🌐 Job hiện tại: " .. tostring(game.JobId ~= "" and game.JobId or "Local")
+HopStatusLabel.ZIndex = 13
+HopStatusLabel.Parent = HopContent
+Instance.new("UICorner", HopStatusLabel).CornerRadius = UDim.new(0, 8)
+
+local Hop1PlayerBtn = Instance.new("TextButton")
+Hop1PlayerBtn.Size = UDim2.new(0.49, -6, 0, 32)
+Hop1PlayerBtn.Position = UDim2.new(0, 0, 0, 50)
+Hop1PlayerBtn.BackgroundColor3 = Color3.fromRGB(46, 204, 113)
+Hop1PlayerBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+Hop1PlayerBtn.TextSize = 10
+Hop1PlayerBtn.Font = Enum.Font.GothamBold
+Hop1PlayerBtn.Text = "👤 Sever 1 người"
+Hop1PlayerBtn.ZIndex = 13
+Hop1PlayerBtn.Parent = HopContent
+Instance.new("UICorner", Hop1PlayerBtn).CornerRadius = UDim.new(0, 7)
+
+local HopLowPingBtn = Instance.new("TextButton")
+HopLowPingBtn.Size = UDim2.new(0.49, -6, 0, 32)
+HopLowPingBtn.Position = UDim2.new(0.51, -2, 0, 50)
+HopLowPingBtn.BackgroundColor3 = Color3.fromRGB(61, 139, 255)
+HopLowPingBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+HopLowPingBtn.TextSize = 10
+HopLowPingBtn.Font = Enum.Font.GothamBold
+HopLowPingBtn.Text = "⚡ Sever ping thấp"
+Hop1PlayerBtn.ZIndex = 13
+HopLowPingBtn.ZIndex = 13
+HopLowPingBtn.Parent = HopContent
+Instance.new("UICorner", HopLowPingBtn).CornerRadius = UDim.new(0, 7)
+
+local HopOldServerBtn = Instance.new("TextButton")
+HopOldServerBtn.Size = UDim2.new(0.49, -6, 0, 32)
+HopOldServerBtn.Position = UDim2.new(0, 0, 0, 88)
+HopOldServerBtn.BackgroundColor3 = Color3.fromRGB(142, 68, 173)
+HopOldServerBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+HopOldServerBtn.TextSize = 10
+HopOldServerBtn.Font = Enum.Font.GothamBold
+HopOldServerBtn.Text = "🕰️ Sever cũ"
+HopOldServerBtn.ZIndex = 13
+HopOldServerBtn.Parent = HopContent
+Instance.new("UICorner", HopOldServerBtn).CornerRadius = UDim.new(0, 7)
+
+local CopyCurrentJobBtn = Instance.new("TextButton")
+CopyCurrentJobBtn.Size = UDim2.new(0.49, -6, 0, 32)
+CopyCurrentJobBtn.Position = UDim2.new(0.51, -2, 0, 88)
+CopyCurrentJobBtn.BackgroundColor3 = Color3.fromRGB(230, 126, 34)
+CopyCurrentJobBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+CopyCurrentJobBtn.TextSize = 10
+CopyCurrentJobBtn.Font = Enum.Font.GothamBold
+CopyCurrentJobBtn.Text = "📋 Copy ID Job"
+CopyCurrentJobBtn.ZIndex = 13
+CopyCurrentJobBtn.Parent = HopContent
+Instance.new("UICorner", CopyCurrentJobBtn).CornerRadius = UDim.new(0, 7)
+
+local PasteJobInput = Instance.new("TextBox")
+PasteJobInput.Size = UDim2.new(1, -8, 0, 34)
+PasteJobInput.Position = UDim2.new(0, 0, 0, 128)
+PasteJobInput.BackgroundColor3 = Color3.fromRGB(32, 34, 46)
+PasteJobInput.TextColor3 = Color3.fromRGB(255, 255, 255)
+PasteJobInput.PlaceholderColor3 = Color3.fromRGB(155, 160, 180)
+PasteJobInput.PlaceholderText = "📌 Dán JobId server vào đây..."
+PasteJobInput.Text = ""
+PasteJobInput.TextSize = 10
+PasteJobInput.Font = Enum.Font.Code
+PasteJobInput.ClearTextOnFocus = false
+PasteJobInput.ZIndex = 13
+PasteJobInput.Parent = HopContent
+Instance.new("UICorner", PasteJobInput).CornerRadius = UDim.new(0, 7)
+
+local JoinJobBtn = Instance.new("TextButton")
+JoinJobBtn.Size = UDim2.new(1, -8, 0, 36)
+JoinJobBtn.Position = UDim2.new(0, 0, 0, 168)
+JoinJobBtn.BackgroundColor3 = Color3.fromRGB(31, 184, 154)
+JoinJobBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+JoinJobBtn.TextSize = 11
+JoinJobBtn.Font = Enum.Font.GothamBold
+JoinJobBtn.Text = "🚀 Join Vào JobId Này"
+JoinJobBtn.ZIndex = 13
+JoinJobBtn.Parent = HopContent
+Instance.new("UICorner", JoinJobBtn).CornerRadius = UDim.new(0, 8)
+
+local isHopping = false
+local function setHopStatus(msg)
+    HopStatusLabel.Text = " " .. tostring(msg)
+end
+
+local function fetchPublicServers(maxPages)
+    if not httpRequest then
+        return nil, "Executor không hỗ trợ httpRequest"
+    end
+    local allServers = {}
+    local cursor = ""
+    local pages = 0
+
+    while pages < (maxPages or 3) do
+        pages = pages + 1
+        local url = string.format(
+            "https://games.roblox.com/v1/games/%d/servers/Public?sortOrder=Asc&limit=100%s",
+            game.PlaceId,
+            cursor ~= "" and ("&cursor=" .. HttpService:UrlEncode(cursor)) or ""
+        )
+        local ok, res = pcall(function()
+            return httpRequest({ Url = url, Method = "GET" })
+        end)
+        if not ok or not res or not res.Body then
+            return nil, "Không lấy được danh sách server"
+        end
+        local dOk, decoded = pcall(function()
+            return HttpService:JSONDecode(res.Body)
+        end)
+        if not dOk or type(decoded) ~= "table" or type(decoded.data) ~= "table" then
+            return nil, "Lỗi đọc dữ liệu server"
+        end
+        for _, srv in ipairs(decoded.data) do
+            if type(srv) == "table" and srv.id and srv.id ~= game.JobId then
+                table.insert(allServers, srv)
+            end
+        end
+        if decoded.nextPageCursor and decoded.nextPageCursor ~= "" then
+            cursor = decoded.nextPageCursor
+        else
+            break
+        end
+    end
+    return allServers, nil
+end
+
+local function teleportToJob(jobId, labelHint)
+    local cleanId = tostring(jobId or ""):gsub("^%s+", ""):gsub("%s+$", "")
+    if cleanId == "" then
+        setHopStatus("⚠️ Vui lòng dán JobId hợp lệ trước khi Join!")
+        return
+    end
+    setHopStatus("🔄 Đang Join " .. (labelHint or cleanId) .. "...")
+    local ok, err = pcall(function()
+        TeleportService:TeleportToPlaceInstance(game.PlaceId, cleanId, LocalPlayer)
+    end)
+    if not ok then
+        setHopStatus("❌ Join thất bại: " .. tostring(err))
+    end
+end
+
+local function hopByMode(mode)
+    if isHopping then return end
+    isHopping = true
+    setHopStatus("🔍 Đang quét server...")
+
+    task.spawn(function()
+        local servers, err = fetchPublicServers(4)
+        if not servers then
+            setHopStatus("❌ " .. tostring(err))
+            isHopping = false
+            return
+        end
+
+        local chosen = nil
+        if mode == "one_player" then
+            for _, srv in ipairs(servers) do
+                local playing = tonumber(srv.playing) or 999
+                local maxPlayers = tonumber(srv.maxPlayers) or 0
+                if playing == 1 and maxPlayers > 1 then
+                    chosen = srv
+                    break
+                end
+            end
+            if not chosen then
+                -- Fallback server ít người nhất nếu chưa có server đúng 1 người
+                table.sort(servers, function(a, b)
+                    return (tonumber(a.playing) or 999) < (tonumber(b.playing) or 999)
+                end)
+                chosen = servers[1]
+            end
+        elseif mode == "low_ping" then
+            local validPing = {}
+            for _, srv in ipairs(servers) do
+                local playing = tonumber(srv.playing) or 0
+                local maxPlayers = tonumber(srv.maxPlayers) or 0
+                if playing < maxPlayers and srv.ping ~= nil then
+                    table.insert(validPing, srv)
+                end
+            end
+            table.sort(validPing, function(a, b)
+                return (tonumber(a.ping) or 9999) < (tonumber(b.ping) or 9999)
+            end)
+            chosen = validPing[1]
+        elseif mode == "old_server" then
+            -- Các trang sau của danh sách Public server thường chứa server lâu đời hơn
+            local olderServers, _ = fetchPublicServers(6)
+            local pool = (olderServers and #olderServers > 0) and olderServers or servers
+            if #pool > 0 then
+                chosen = pool[#pool]
+            end
+        end
+
+        if chosen and chosen.id then
+            local infoStr = string.format(
+                "Job %s (%s/%s người, %sms)",
+                tostring(chosen.id):sub(1, 8),
+                tostring(chosen.playing or "?"),
+                tostring(chosen.maxPlayers or "?"),
+                tostring(chosen.ping or "?")
+            )
+            teleportToJob(chosen.id, infoStr)
+        else
+            setHopStatus("⚠️ Không tìm thấy server phù hợp, thử lại sau.")
+        end
+        task.wait(1.5)
+        isHopping = false
+    end)
+end
+
+local function copyJobToClipboard()
+    local curId = tostring(game.JobId ~= "" and game.JobId or "Studio / Local")
+    local copied = false
+    if setclipboard then
+        pcall(function()
+            setclipboard(curId)
+            copied = true
+        end)
+    elseif toclipboard then
+        pcall(function()
+            toclipboard(curId)
+            copied = true
+        end)
+    end
+    PasteJobInput.Text = curId
+    if copied then
+        setHopStatus("📋 Đã copy JobId: " .. curId)
+    else
+        setHopStatus("📌 Đã điền JobId vào ô dán: " .. curId)
+    end
+end
+
+onButtonClicked(Hop1PlayerBtn, function() hopByMode("one_player") end)
+onButtonClicked(HopLowPingBtn, function() hopByMode("low_ping") end)
+onButtonClicked(HopOldServerBtn, function() hopByMode("old_server") end)
+onButtonClicked(CopyCurrentJobBtn, copyJobToClipboard)
+onButtonClicked(HomeCopyJobBtn, copyJobToClipboard)
+onButtonClicked(JoinJobBtn, function()
+    teleportToJob(PasteJobInput.Text, "JobId đã dán")
+end)
+
+-- --- TAB SETTINGS (CÓ THANH CUỘN) ---
 local Tab3Content = Instance.new("ScrollingFrame")
 Tab3Content.Size = UDim2.new(1, -16, 0, CONTENT_HEIGHT)
 Tab3Content.Position = UDim2.new(0, 8, 0, CONTENT_TOP_Y)
@@ -812,12 +1289,12 @@ SettingsInfoLabel.Font = Enum.Font.Code
 SettingsInfoLabel.TextWrapped = true
 SettingsInfoLabel.TextXAlignment = Enum.TextXAlignment.Left
 SettingsInfoLabel.TextYAlignment = Enum.TextYAlignment.Top
-SettingsInfoLabel.Text = " ⚙️ Cài đặt nâng cao:\n • Tự động quét Backpack & Character\n • Hỗ trợ lọc hậu tố tiền K, M, B, T, Qa, spd...\n • Lưu lịch sử thú bắt được kèm giờ Việt Nam\n • Cuộn xuống để xem thêm thông tin phiên bản"
+SettingsInfoLabel.Text = " ⚙️ Cài đặt nâng cao:\n • Tự động quét Backpack & Character\n • Hỗ trợ lọc hậu tố tiền K, M, B, T, Qa, spd...\n • Lưu lịch sử thú bắt được kèm giờ Việt Nam\n • Hỗ trợ Hop Sever 1 người / ping thấp / sever cũ & Join JobId"
 SettingsInfoLabel.ZIndex = 13
 SettingsInfoLabel.Parent = Tab3Content
 Instance.new("UICorner", SettingsInfoLabel).CornerRadius = UDim.new(0, 8)
 
--- --- TAB 4: GHI CHÚ MÀN HÌNH (CÓ THANH CUỘN NẰM TRONG KHUNG CỐ ĐỊNH) ---
+-- --- TAB GHI CHÚ MÀN HÌNH (CÓ THANH CUỘN NẰM TRONG KHUNG CỐ ĐỊNH) ---
 local Tab4Content = Instance.new("ScrollingFrame")
 Tab4Content.Size = UDim2.new(1, -16, 0, CONTENT_HEIGHT)
 Tab4Content.Position = UDim2.new(0, 8, 0, CONTENT_TOP_Y)
@@ -975,7 +1452,7 @@ NoteBgToggleBtn.ZIndex = 13
 NoteBgToggleBtn.Parent = Tab4Content
 Instance.new("UICorner", NoteBgToggleBtn).CornerRadius = UDim.new(0, 8)
 
--- Logic Ghi chú nổi trên màn hình[span_1](start_span)[span_1](end_span)
+-- Logic Ghi chú nổi trên màn hình
 local currentNoteSize = 22
 local isNoteShowing = false
 local hasNoteBg = false
@@ -1091,7 +1568,7 @@ onButtonClicked(NoteBgToggleBtn, function()
     end
 end)
 
--- --- TAB 2: LỊCH SỬ (CÓ THANH CUỘN) ---
+-- --- TAB LỊCH SỬ (CÓ THANH CUỘN & HỎI TRƯỚC KHI XÓA) ---
 local HistoryRecords = {}
 local historyFilterMode = "all"
 local refreshHistory
@@ -1188,8 +1665,15 @@ onButtonClicked(HistoryFilterBtn, function()
 end)
 
 onButtonClicked(HistoryClearBtn, function()
-    HistoryRecords = {}
-    if refreshHistory then refreshHistory() end
+    if #HistoryRecords == 0 then return end
+    promptDeleteConfirm(
+        "Xóa toàn bộ lịch sử?",
+        string.format("Tất cả %d mục trong lịch sử sẽ bị xóa. Không thể hoàn tác.", #HistoryRecords),
+        function()
+            HistoryRecords = {}
+            if refreshHistory then refreshHistory() end
+        end
+    )
 end)
 
 local Tab2Content = Instance.new("ScrollingFrame")
@@ -1214,7 +1698,7 @@ refreshHistory = function()
     end
     local shown = 0
     local q = string.lower(HistorySearch.Text or "")
-    for _, record in ipairs(HistoryRecords) do
+    for recIdx, record in ipairs(HistoryRecords) do
         local d = record.data
         local matchesName = (q == "" or string.find(string.lower(d.Name or ""), q, 1, true) ~= nil)
         local matchesFilter = true
@@ -1235,7 +1719,7 @@ refreshHistory = function()
             Instance.new("UICorner", itemFrame).CornerRadius = UDim.new(0, 6)
 
             local descLabel = Instance.new("TextLabel")
-            descLabel.Size = UDim2.new(1, -10, 1, 0)
+            descLabel.Size = UDim2.new(1, -38, 1, 0)
             descLabel.Position = UDim2.new(0, 5, 0, 0)
             descLabel.BackgroundTransparency = 1
             descLabel.TextColor3 = Color3.fromRGB(230, 230, 240)
@@ -1255,6 +1739,33 @@ refreshHistory = function()
             )
             descLabel.ZIndex = 14
             descLabel.Parent = itemFrame
+
+            local removeOneBtn = Instance.new("TextButton")
+            removeOneBtn.Size = UDim2.new(0, 24, 0, 24)
+            removeOneBtn.Position = UDim2.new(1, -28, 0.5, -12)
+            removeOneBtn.BackgroundColor3 = Color3.fromRGB(200, 60, 60)
+            removeOneBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+            removeOneBtn.TextSize = 11
+            removeOneBtn.Font = Enum.Font.GothamBold
+            removeOneBtn.Text = "✕"
+            removeOneBtn.ZIndex = 15
+            removeOneBtn.Parent = itemFrame
+            Instance.new("UICorner", removeOneBtn).CornerRadius = UDim.new(0, 6)
+
+            local targetIndex = recIdx
+            local targetPetName = d.Name or "Pet"
+            onButtonClicked(removeOneBtn, function()
+                promptDeleteConfirm(
+                    "Xóa mục này?",
+                    string.format("Mục “%s” sẽ bị xóa khỏi lịch sử. Không thể hoàn tác.", targetPetName),
+                    function()
+                        if HistoryRecords[targetIndex] then
+                            table.remove(HistoryRecords, targetIndex)
+                            refreshHistory()
+                        end
+                    end
+                )
+            end)
         end
     end
     Tab2Content.CanvasSize = UDim2.new(0, 0, 0, shown * 73)
@@ -1265,9 +1776,18 @@ HistorySearch:GetPropertyChangedSignal("Text"):Connect(function()
     refreshHistory()
 end)
 
-local function setActiveTabStyle(activeBtn)
-    for _, b in ipairs({Tab1Btn, Tab2Btn, Tab3Btn, Tab4Btn}) do
-        if b == activeBtn then
+local allTabButtons = {
+    home = TabHomeBtn,
+    webhook = TabWebhookBtn,
+    hop = TabHopBtn,
+    history = TabHistoryBtn,
+    settings = TabSettingsBtn,
+    note = TabNoteBtn
+}
+
+local function setActiveTabStyle(tabKey)
+    for k, b in pairs(allTabButtons) do
+        if k == tabKey then
             b.BackgroundColor3 = Color3.fromRGB(46, 204, 113)
             b.TextColor3 = Color3.fromRGB(255, 255, 255)
         else
@@ -1277,42 +1797,40 @@ local function setActiveTabStyle(activeBtn)
     end
 end
 
-openTab = function(tabIndex)
-    local isT1 = (tabIndex == 1)
-    local isT2 = (tabIndex == 2)
-    local isT3 = (tabIndex == 3)
-    local isT4 = (tabIndex == 4)
-
-    if isT1 then
-        setActiveTabStyle(Tab1Btn)
-    elseif isT2 then
-        setActiveTabStyle(Tab2Btn)
-    elseif isT3 then
-        setActiveTabStyle(Tab3Btn)
-    elseif isT4 then
-        setActiveTabStyle(Tab4Btn)
+openTab = function(tabKey)
+    if type(tabKey) == "number" then
+        local numMap = { "home", "webhook", "hop", "history", "settings", "note" }
+        tabKey = numMap[tabKey] or "home"
     end
 
-    Tab1Content.Visible = isT1
-    Tab2Content.Visible = isT2
-    Tab3Content.Visible = isT3
-    Tab4Content.Visible = isT4
+    setActiveTabStyle(tabKey)
 
-    HistorySearch.Visible = isT2
-    HistoryFilterBtn.Visible = isT2
-    HistoryClearBtn.Visible = isT2
-    HistoryCountLabel.Visible = isT2
-    if not isT2 then
+    HomeContent.Visible = (tabKey == "home")
+    Tab1Content.Visible = (tabKey == "webhook")
+    HopContent.Visible = (tabKey == "hop")
+    Tab2Content.Visible = (tabKey == "history")
+    Tab3Content.Visible = (tabKey == "settings")
+    Tab4Content.Visible = (tabKey == "note")
+
+    local isHist = (tabKey == "history")
+    HistorySearch.Visible = isHist
+    HistoryFilterBtn.Visible = isHist
+    HistoryClearBtn.Visible = isHist
+    HistoryCountLabel.Visible = isHist
+    if not isHist then
         HistoryFilterPopup.Visible = false
     else
         refreshHistory()
     end
 end
 
-onButtonClicked(Tab1Btn, function() openTab(1) end)
-onButtonClicked(Tab2Btn, function() openTab(2) end)
-onButtonClicked(Tab3Btn, function() openTab(3) end)
-onButtonClicked(Tab4Btn, function() openTab(4) end)
+onButtonClicked(TabHomeBtn, function() openTab("home") end)
+onButtonClicked(TabWebhookBtn, function() openTab("webhook") end)
+onButtonClicked(TabHopBtn, function() openTab("hop") end)
+onButtonClicked(TabHistoryBtn, function() openTab("history") end)
+onButtonClicked(TabSettingsBtn, function() openTab("settings") end)
+onButtonClicked(TabNoteBtn, function() openTab("note") end)
+onButtonClicked(HomeQuickHopBtn, function() openTab("hop") end)
 
 -- ==========================================
 -- HÀM QUÉT MÀU SẮC & THÔNG TIN THÚ
@@ -1651,6 +2169,15 @@ RunService.RenderStepped:Connect(function(dt)
     local m = math.floor((elapsedSeconds % 3600) / 60)
     local s = elapsedSeconds % 60
     local runTimeStr = string.format("%02d:%02d:%02d", h, m, s)
+
+    local plrCount = #Players:GetPlayers()
+    local maxPlr = Players.MaxPlayers
+
+    HomeInfoCard.Text = string.format(
+        " 🏠 TỔNG QUAN HỆ THỐNG\n 👤 Người chơi: %d/%d | 🐾 Đã bắt: %d\n ⏱️ Đã chạy: %s | 🇻🇳 %s\n ⚡ FPS: %d | 📶 Ping: %dms\n 🟢 Trạng thái: %s",
+        plrCount, maxPlr, #HistoryRecords, runTimeStr, vnClockStr, currentFps, ping,
+        isRunning and "Đang chạy" or "Tạm dừng"
+    )
 
     StatusLabel.Text = string.format(
         " ⏱️ Đã chạy: %s | 🇻🇳 %s\n 🎮 Game: %s\n ⚡ FPS: %d | 📶 Ping: %dms",
