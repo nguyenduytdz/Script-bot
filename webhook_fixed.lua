@@ -6,17 +6,6 @@ local DiscordUserID = "1494250347731091497"
 
 local CURRENT_MIN_MONEY = 0
 
--- Cấu hình Key:
--- isAdmin = true  -> Key Admin (hiện tab Admin và mở toàn quyền)
--- isAdmin = false -> Key thường (ẩn hẳn tab Admin, không hiện tab admin)
--- expireAt = nil  -> Vĩnh viễn; hoặc os.time() + số giây
-local INITIAL_KEYS = {
-    ["ADMIN-VIP"] = { expireAt = nil, isAdmin = true },
-    ["LUMEN-2026"] = { expireAt = os.time() + 86400, isAdmin = true },
-    ["USER-24H"] = { expireAt = os.time() + 86400, isAdmin = false },
-    ["THROWFOOD-FREE"] = { expireAt = os.time() + 3600, isAdmin = false }
-}
-
 -- ==========================================
 -- KHỞI TẠO DỊCH VỤ & BIẾN TRẠNG THÁI
 -- ==========================================
@@ -53,75 +42,13 @@ local isRunning = true
 local startTime = tick()
 local petsCaughtCount = 0
 local processedItems = {}
-local isKeyUnlocked = false
-
-local KeyStore = {}
-local RevokedKeys = {}
-local ActiveKeyName = nil
-
-for k, cfg in pairs(INITIAL_KEYS) do
-    KeyStore[string.upper(k)] = {
-        expireAt = cfg.expireAt,
-        isAdmin = cfg.isAdmin == true,
-        deviceInfo = nil,
-        usedAt = nil
-    }
-end
-
-local function isCurrentUserAdmin()
-    if not ActiveKeyName or not KeyStore[ActiveKeyName] then
-        return false
-    end
-    return KeyStore[ActiveKeyName].isAdmin == true
-end
-
-local function getDeviceSummary()
-    local platformName = "Unknown"
-    pcall(function()
-        platformName = tostring(UserInputService:GetPlatform()):gsub("Enum%.Platform%.", "")
-    end)
-    local touchTag = UserInputService.TouchEnabled and "Touch" or "PC/Other"
-    return string.format("%s (%s) • @%s [%d]", platformName, touchTag, LocalPlayer.Name, LocalPlayer.UserId)
-end
+local isUiReady = false
 
 local function getVnTimeString()
     local vnTimeTable = os.date("!*t", os.time() + 25200)
     return string.format("%02d:%02d:%02d - %02d/%02d/%d",
         vnTimeTable.hour, vnTimeTable.min, vnTimeTable.sec,
         vnTimeTable.day, vnTimeTable.month, vnTimeTable.year)
-end
-
-local function formatRemainingTime(expireAt)
-    if expireAt == nil then
-        return "♾️ Vĩnh viễn"
-    end
-    local rem = math.max(0, math.floor(expireAt - os.time()))
-    if rem <= 0 then
-        return "⛔ Hết hạn"
-    end
-    local d = math.floor(rem / 86400)
-    local h = math.floor((rem % 86400) / 3600)
-    local m = math.floor((rem % 3600) / 60)
-    local s = rem % 60
-    if d > 0 then
-        return string.format("%dd %02d:%02d:%02d", d, h, m, s)
-    end
-    return string.format("%02d:%02d:%02d", h, m, s)
-end
-
-local function isKeyValid(keyCode)
-    local k = string.upper((keyCode or ""):gsub("^%s+", ""):gsub("%s+$", ""))
-    if k == "" or RevokedKeys[k] then
-        return false, "Key đã bị xóa vĩnh viễn!"
-    end
-    local entry = KeyStore[k]
-    if not entry then
-        return false, "Key không tồn tại!"
-    end
-    if entry.expireAt ~= nil and os.time() >= entry.expireAt then
-        return false, "Key đã hết thời gian sử dụng!"
-    end
-    return true, "Hợp lệ"
 end
 
 local cachedGameName = "Throw Food For Animals"
@@ -177,51 +104,6 @@ local function formatBigNumber(val)
 end
 
 -- ==========================================
--- HIỆU ỨNG LIQUID GLASS CHỈ DÙNG CHO CÁC NÚT TAB BÊN DƯỚI
--- ==========================================
-local function applyBottomTabLiquidGlass(btn)
-    btn.BackgroundTransparency = 0.28
-
-    local corner = btn:FindFirstChildOfClass("UICorner")
-    if not corner then
-        corner = Instance.new("UICorner")
-        corner.Parent = btn
-    end
-    corner.CornerRadius = UDim.new(0, 8)
-
-    local glassGrad = Instance.new("UIGradient")
-    glassGrad.Rotation = 125
-    glassGrad.Color = ColorSequence.new({
-        ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 255, 255)),
-        ColorSequenceKeypoint.new(0.5, Color3.fromRGB(220, 232, 255)),
-        ColorSequenceKeypoint.new(1, Color3.fromRGB(165, 185, 225))
-    })
-    glassGrad.Transparency = NumberSequence.new({
-        NumberSequenceKeypoint.new(0, 0.58),
-        NumberSequenceKeypoint.new(0.5, 0.88),
-        NumberSequenceKeypoint.new(1, 0.65)
-    })
-    glassGrad.Parent = btn
-
-    local stroke = Instance.new("UIStroke")
-    stroke.Thickness = 1.15
-    stroke.Transparency = 0.42
-    stroke.Color = Color3.fromRGB(240, 248, 255)
-    stroke.Parent = btn
-
-    local strokeGrad = Instance.new("UIGradient")
-    strokeGrad.Rotation = 35
-    strokeGrad.Color = ColorSequence.new({
-        ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 255, 255)),
-        ColorSequenceKeypoint.new(0.5, Color3.fromRGB(170, 195, 235)),
-        ColorSequenceKeypoint.new(1, Color3.fromRGB(245, 250, 255))
-    })
-    strokeGrad.Parent = stroke
-
-    return glassGrad, stroke
-end
-
--- ==========================================
 -- TẠO GIAO DIỆN (UI) BAN ĐẦU
 -- ==========================================
 if UiParent:FindFirstChild("ThrowFoodAutoMenu") then
@@ -238,6 +120,77 @@ ScreenGui.Parent = UiParent
 local function onButtonClicked(btn, callback)
     btn.MouseButton1Click:Connect(callback)
 end
+
+local function attachDrag(targetFrame, handleObject)
+    handleObject = handleObject or targetFrame
+    handleObject.Active = true
+
+    local isDragging = false
+    local activeInput = nil
+    local dragOrigin = Vector2.zero
+    local frameOrigin = UDim2.new()
+
+    handleObject.InputBegan:Connect(function(input)
+        if isDragging then return end
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+            isDragging = true
+            activeInput = input
+            dragOrigin = input.Position
+            frameOrigin = targetFrame.Position
+
+            input.Changed:Connect(function()
+                if input.UserInputState == Enum.UserInputState.End and input == activeInput then
+                    isDragging = false
+                    activeInput = nil
+                end
+            end)
+        end
+    end)
+
+    UserInputService.InputChanged:Connect(function(input)
+        if not isDragging or input ~= activeInput then return end
+        if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
+            local delta = input.Position - dragOrigin
+            targetFrame.Position = UDim2.new(
+                frameOrigin.X.Scale,
+                frameOrigin.X.Offset + delta.X,
+                frameOrigin.Y.Scale,
+                frameOrigin.Y.Offset + delta.Y
+            )
+        end
+    end)
+end
+
+-- GHI CHÚ NỔI TRÊN MÀN HÌNH (TỪ NOTEINFYNNITY)[span_0](start_span)[span_0](end_span)
+local DisplayContainer = Instance.new("Frame")
+DisplayContainer.Name = "ScreenNoteDisplay"
+DisplayContainer.Size = UDim2.new(0, 280, 0, 54)
+DisplayContainer.Position = UDim2.new(0.5, -140, 0.14, 0)
+DisplayContainer.BackgroundTransparency = 1
+DisplayContainer.Active = true
+DisplayContainer.Visible = false
+DisplayContainer.ZIndex = 65
+DisplayContainer.Parent = ScreenGui
+
+local DisplayLabel = Instance.new("TextLabel")
+DisplayLabel.Name = "NoteText"
+DisplayLabel.Size = UDim2.new(1, 0, 1, 0)
+DisplayLabel.BackgroundTransparency = 1
+DisplayLabel.Text = "Ghi chú của bạn..."
+DisplayLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+DisplayLabel.TextSize = 22
+DisplayLabel.Font = Enum.Font.FredokaOne
+DisplayLabel.TextWrapped = true
+DisplayLabel.RichText = true
+DisplayLabel.ZIndex = 66
+DisplayLabel.Parent = DisplayContainer
+
+local TextStroke = Instance.new("UIStroke")
+TextStroke.Thickness = 2
+TextStroke.Color = Color3.fromRGB(0, 0, 0)
+TextStroke.Parent = DisplayLabel
+
+attachDrag(DisplayContainer, DisplayLabel)
 
 local ToggleIconBtn = Instance.new("TextButton")
 ToggleIconBtn.Name = "ToggleIconBtn"
@@ -258,6 +211,7 @@ IconStroke.Color = Color3.fromRGB(224, 86, 36)
 IconStroke.Thickness = 2
 IconStroke.Parent = ToggleIconBtn
 
+-- Giữ nguyên kích thước 326x360 của giao diện chính, không kéo dài to ra
 local MainFrame = Instance.new("Frame")
 MainFrame.Name = "MainFrame"
 MainFrame.Size = UDim2.new(0, 326, 0, 360)
@@ -278,7 +232,7 @@ MainStroke.Parent = MainFrame
 
 local isMenuVisible = true
 onButtonClicked(ToggleIconBtn, function()
-    if not isKeyUnlocked then return end
+    if not isUiReady then return end
     isMenuVisible = not isMenuVisible
     MainFrame.Visible = isMenuVisible
     TweenService:Create(ToggleIconBtn, TweenInfo.new(0.35, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
@@ -297,7 +251,7 @@ TitleLabel.Font = Enum.Font.GothamBold
 TitleLabel.ZIndex = 11
 TitleLabel.Parent = MainFrame
 
--- THANH TAB NẰM BÊN DƯỚI MENU NHỎ GỌN KIỂU YOUTUBE / TIKTOK
+-- THANH TAB NẰM BÊN DƯỚI MENU NHỎ GỌN (NÚT PHẲNG, KHÔNG KÍNH LỎNG)
 local BottomTabBar = Instance.new("Frame")
 BottomTabBar.Name = "BottomTabBar"
 BottomTabBar.Size = UDim2.new(1, -14, 0, 34)
@@ -309,81 +263,52 @@ BottomTabBar.Parent = MainFrame
 Instance.new("UICorner", BottomTabBar).CornerRadius = UDim.new(0, 10)
 
 local Tab1Btn = Instance.new("TextButton")
+Tab1Btn.Size = UDim2.new(0.242, 0, 1, -8)
+Tab1Btn.Position = UDim2.new(0.01, 0, 0, 4)
 Tab1Btn.BackgroundColor3 = Color3.fromRGB(46, 204, 113)
 Tab1Btn.TextColor3 = Color3.fromRGB(255, 255, 255)
 Tab1Btn.TextSize = 9
 Tab1Btn.Font = Enum.Font.GothamBold
 Tab1Btn.Text = "🚀 Webhook"
-Tab1Btn.ClipsDescendants = true
 Tab1Btn.ZIndex = 16
 Tab1Btn.Parent = BottomTabBar
-local glass1 = applyBottomTabLiquidGlass(Tab1Btn)
+Instance.new("UICorner", Tab1Btn).CornerRadius = UDim.new(0, 7)
 
 local Tab2Btn = Instance.new("TextButton")
-Tab2Btn.BackgroundColor3 = Color3.fromRGB(40, 44, 60)
+Tab2Btn.Size = UDim2.new(0.242, 0, 1, -8)
+Tab2Btn.Position = UDim2.new(0.258, 0, 0, 4)
+Tab2Btn.BackgroundColor3 = Color3.fromRGB(40, 42, 56)
 Tab2Btn.TextColor3 = Color3.fromRGB(205, 210, 224)
 Tab2Btn.TextSize = 9
 Tab2Btn.Font = Enum.Font.GothamBold
 Tab2Btn.Text = "📜 Lịch sử"
-Tab2Btn.ClipsDescendants = true
 Tab2Btn.ZIndex = 16
 Tab2Btn.Parent = BottomTabBar
-local glass2 = applyBottomTabLiquidGlass(Tab2Btn)
+Instance.new("UICorner", Tab2Btn).CornerRadius = UDim.new(0, 7)
 
 local Tab3Btn = Instance.new("TextButton")
-Tab3Btn.BackgroundColor3 = Color3.fromRGB(40, 44, 60)
+Tab3Btn.Size = UDim2.new(0.242, 0, 1, -8)
+Tab3Btn.Position = UDim2.new(0.506, 0, 0, 4)
+Tab3Btn.BackgroundColor3 = Color3.fromRGB(40, 42, 56)
 Tab3Btn.TextColor3 = Color3.fromRGB(205, 210, 224)
 Tab3Btn.TextSize = 9
 Tab3Btn.Font = Enum.Font.GothamBold
 Tab3Btn.Text = "⚙️ Settings"
-Tab3Btn.ClipsDescendants = true
 Tab3Btn.ZIndex = 16
 Tab3Btn.Parent = BottomTabBar
-local glass3 = applyBottomTabLiquidGlass(Tab3Btn)
+Instance.new("UICorner", Tab3Btn).CornerRadius = UDim.new(0, 7)
 
--- Tab 4 mặc định ẨN (Visible = false). Chỉ hiện khi key đăng nhập là Admin (isAdmin == true)
 local Tab4Btn = Instance.new("TextButton")
-Tab4Btn.BackgroundColor3 = Color3.fromRGB(40, 44, 60)
+Tab4Btn.Size = UDim2.new(0.242, 0, 1, -8)
+Tab4Btn.Position = UDim2.new(0.754, 0, 0, 4)
+Tab4Btn.BackgroundColor3 = Color3.fromRGB(40, 42, 56)
 Tab4Btn.TextColor3 = Color3.fromRGB(205, 210, 224)
 Tab4Btn.TextSize = 9
 Tab4Btn.Font = Enum.Font.GothamBold
-Tab4Btn.Text = "🛡️ Admin"
-Tab4Btn.ClipsDescendants = true
-Tab4Btn.Visible = false
+Tab4Btn.Text = "📝 Ghi chú"
 Tab4Btn.ZIndex = 16
 Tab4Btn.Parent = BottomTabBar
-local glass4 = applyBottomTabLiquidGlass(Tab4Btn)
-
-local tabGlassGrads = {glass1, glass2, glass3, glass4}
-
-local function layoutTabsByRole()
-    local showAdmin = isCurrentUserAdmin()
-    Tab4Btn.Visible = showAdmin
-    if showAdmin then
-        Tab1Btn.Size = UDim2.new(0.242, 0, 1, -8)
-        Tab1Btn.Position = UDim2.new(0.01, 0, 0, 4)
-
-        Tab2Btn.Size = UDim2.new(0.242, 0, 1, -8)
-        Tab2Btn.Position = UDim2.new(0.258, 0, 0, 4)
-
-        Tab3Btn.Size = UDim2.new(0.242, 0, 1, -8)
-        Tab3Btn.Position = UDim2.new(0.506, 0, 0, 4)
-
-        Tab4Btn.Size = UDim2.new(0.242, 0, 1, -8)
-        Tab4Btn.Position = UDim2.new(0.754, 0, 0, 4)
-    else
-        Tab1Btn.Size = UDim2.new(0.32, 0, 1, -8)
-        Tab1Btn.Position = UDim2.new(0.012, 0, 0, 4)
-
-        Tab2Btn.Size = UDim2.new(0.32, 0, 1, -8)
-        Tab2Btn.Position = UDim2.new(0.34, 0, 0, 4)
-
-        Tab3Btn.Size = UDim2.new(0.32, 0, 1, -8)
-        Tab3Btn.Position = UDim2.new(0.668, 0, 0, 4)
-    end
-end
-
-layoutTabsByRole()
+Instance.new("UICorner", Tab4Btn).CornerRadius = UDim.new(0, 7)
 
 -- ==========================================
 -- DYNAMIC ISLAND TRÊN ĐẦU MÀN HÌNH
@@ -637,184 +562,7 @@ IntroSubLabel.TextXAlignment = Enum.TextXAlignment.Left
 IntroSubLabel.ZIndex = 91
 IntroSubLabel.Parent = IntroRectFrame
 
--- ==========================================
--- KHUNG NHẬP KEY CÓ HIỆU ỨNG TUYẾT RƠI
--- ==========================================
-local KeyPanel = Instance.new("Frame")
-KeyPanel.Name = "KeySystemPanel"
-KeyPanel.AnchorPoint = Vector2.new(0.5, 0.5)
-KeyPanel.Size = UDim2.new(0, 336, 0, 212)
-KeyPanel.Position = UDim2.new(0.5, 0, 0.5, 10)
-KeyPanel.BackgroundColor3 = Color3.fromRGB(16, 20, 34)
-KeyPanel.BorderSizePixel = 0
-KeyPanel.ClipsDescendants = true
-KeyPanel.Active = true
-KeyPanel.Draggable = true
-KeyPanel.Visible = false
-KeyPanel.ZIndex = 70
-KeyPanel.Parent = ScreenGui
-Instance.new("UICorner", KeyPanel).CornerRadius = UDim.new(0, 18)
-
-local KeyStroke = Instance.new("UIStroke")
-KeyStroke.Color = Color3.fromRGB(126, 232, 192)
-KeyStroke.Thickness = 1.6
-KeyStroke.Parent = KeyPanel
-
-local FxLayer = Instance.new("Frame")
-FxLayer.Size = UDim2.new(1, 0, 1, 0)
-FxLayer.BackgroundTransparency = 1
-FxLayer.ZIndex = 71
-FxLayer.Parent = KeyPanel
-
-local snowFlakes = {}
-for i = 1, 24 do
-    local flake = Instance.new("Frame")
-    local sz = (i % 3 == 0) and 5 or ((i % 2 == 0) and 4 or 3)
-    flake.Size = UDim2.new(0, sz, 0, sz)
-    flake.Position = UDim2.new((i * 0.041) % 1, 0, (i * 0.13) % 1, 0)
-    flake.BackgroundColor3 = (i % 4 == 0) and Color3.fromRGB(150, 225, 255) or Color3.fromRGB(245, 250, 255)
-    flake.BackgroundTransparency = 0.25 + (i % 4) * 0.15
-    flake.BorderSizePixel = 0
-    flake.ZIndex = 71
-    flake.Parent = FxLayer
-    Instance.new("UICorner", flake).CornerRadius = UDim.new(1, 0)
-    table.insert(snowFlakes, {
-        obj = flake,
-        xBase = (i * 0.041) % 1,
-        yPos = (i * 0.13) % 1,
-        speedY = 0.14 + (i % 5) * 0.045,
-        swayAmp = 0.012 + (i % 3) * 0.006,
-        swayFreq = 1.5 + (i % 4) * 0.5,
-        phase = i * 0.7
-    })
-end
-
-local KeyTitle = Instance.new("TextLabel")
-KeyTitle.Size = UDim2.new(1, -24, 0, 28)
-KeyTitle.Position = UDim2.new(0, 12, 0, 14)
-KeyTitle.BackgroundTransparency = 1
-KeyTitle.Text = "❄️ NHẬP KEY KÍCH HOẠT"
-KeyTitle.TextColor3 = Color3.fromRGB(244, 240, 232)
-KeyTitle.TextSize = 14
-KeyTitle.Font = Enum.Font.GothamBold
-KeyTitle.ZIndex = 73
-KeyTitle.Parent = KeyPanel
-
-local KeyInputBox = Instance.new("TextBox")
-KeyInputBox.Size = UDim2.new(1, -32, 0, 38)
-KeyInputBox.Position = UDim2.new(0, 16, 0, 52)
-KeyInputBox.BackgroundColor3 = Color3.fromRGB(28, 34, 54)
-KeyInputBox.BackgroundTransparency = 0.15
-KeyInputBox.TextColor3 = Color3.fromRGB(255, 255, 255)
-KeyInputBox.PlaceholderColor3 = Color3.fromRGB(145, 160, 190)
-KeyInputBox.PlaceholderText = "Nhập key..."
-KeyInputBox.Text = ""
-KeyInputBox.TextSize = 12
-KeyInputBox.Font = Enum.Font.GothamBold
-KeyInputBox.ClearTextOnFocus = false
-KeyInputBox.ZIndex = 73
-KeyInputBox.Parent = KeyPanel
-Instance.new("UICorner", KeyInputBox).CornerRadius = UDim.new(0, 10)
-local KeyBoxStroke = Instance.new("UIStroke")
-KeyBoxStroke.Color = Color3.fromRGB(90, 165, 255)
-KeyBoxStroke.Thickness = 1.2
-KeyBoxStroke.Parent = KeyInputBox
-
-local KeyStatusLabel = Instance.new("TextLabel")
-KeyStatusLabel.Size = UDim2.new(1, -32, 0, 22)
-KeyStatusLabel.Position = UDim2.new(0, 16, 0, 96)
-KeyStatusLabel.BackgroundTransparency = 1
-KeyStatusLabel.Text = ""
-KeyStatusLabel.TextColor3 = Color3.fromRGB(255, 125, 140)
-KeyStatusLabel.TextSize = 10
-KeyStatusLabel.Font = Enum.Font.GothamBold
-KeyStatusLabel.ZIndex = 73
-KeyStatusLabel.Parent = KeyPanel
-
-local SubmitKeyBtn = Instance.new("TextButton")
-SubmitKeyBtn.Size = UDim2.new(0.62, -20, 0, 38)
-SubmitKeyBtn.Position = UDim2.new(0, 16, 0, 124)
-SubmitKeyBtn.BackgroundColor3 = Color3.fromRGB(126, 232, 192)
-SubmitKeyBtn.TextColor3 = Color3.fromRGB(14, 18, 28)
-SubmitKeyBtn.Text = "✨ Xác nhận Key"
-SubmitKeyBtn.TextSize = 12
-SubmitKeyBtn.Font = Enum.Font.GothamBold
-SubmitKeyBtn.ZIndex = 73
-SubmitKeyBtn.Parent = KeyPanel
-Instance.new("UICorner", SubmitKeyBtn).CornerRadius = UDim.new(0, 10)
-
-local FxToggleBtn = Instance.new("TextButton")
-FxToggleBtn.Size = UDim2.new(0.38, -16, 0, 38)
-FxToggleBtn.Position = UDim2.new(0.62, 4, 0, 124)
-FxToggleBtn.BackgroundColor3 = Color3.fromRGB(26, 32, 50)
-FxToggleBtn.BackgroundTransparency = 0.2
-FxToggleBtn.TextColor3 = Color3.fromRGB(165, 220, 255)
-FxToggleBtn.Text = "❄️ Tuyết: BẬT"
-FxToggleBtn.TextSize = 10
-FxToggleBtn.Font = Enum.Font.GothamBold
-FxToggleBtn.ZIndex = 73
-FxToggleBtn.Parent = KeyPanel
-Instance.new("UICorner", FxToggleBtn).CornerRadius = UDim.new(0, 10)
-
-local snowEnabled = true
-onButtonClicked(FxToggleBtn, function()
-    snowEnabled = not snowEnabled
-    FxLayer.Visible = snowEnabled
-    FxToggleBtn.Text = snowEnabled and "❄️ Tuyết: BẬT" or "❄️ Tuyết: TẮT"
-end)
-
-local function lockToKeyScreen(reasonText)
-    isKeyUnlocked = false
-    ActiveKeyName = nil
-    layoutTabsByRole()
-    MainFrame.Visible = false
-    ToggleIconBtn.Visible = false
-    KeyPanel.Visible = true
-    KeyInputBox.Text = ""
-    KeyStatusLabel.TextColor3 = Color3.fromRGB(255, 125, 140)
-    KeyStatusLabel.Text = reasonText or "Key không còn hiệu lực!"
-end
-
-local refreshAdminView
 local openTab
-
-local function unlockScriptWithKey(k)
-    ActiveKeyName = k
-    if KeyStore[k] then
-        if not KeyStore[k].deviceInfo then
-            KeyStore[k].deviceInfo = getDeviceSummary()
-        end
-        if not KeyStore[k].usedAt then
-            KeyStore[k].usedAt = getVnTimeString()
-        end
-    end
-    layoutTabsByRole()
-    if openTab then
-        openTab(1)
-    end
-    isKeyUnlocked = true
-    KeyPanel.Visible = false
-    ToggleIconBtn.Visible = true
-    MainFrame.Visible = true
-    isMenuVisible = true
-    if refreshAdminView and isCurrentUserAdmin() then
-        refreshAdminView()
-    end
-end
-
-onButtonClicked(SubmitKeyBtn, function()
-    local entered = string.upper((KeyInputBox.Text or ""):gsub("^%s+", ""):gsub("%s+$", ""))
-    local ok, msg = isKeyValid(entered)
-    if ok then
-        KeyStatusLabel.TextColor3 = Color3.fromRGB(126, 232, 192)
-        KeyStatusLabel.Text = "Key hợp lệ! Đang mở menu..."
-        task.wait(0.2)
-        unlockScriptWithKey(entered)
-    else
-        KeyStatusLabel.TextColor3 = Color3.fromRGB(255, 125, 140)
-        KeyStatusLabel.Text = msg
-    end
-end)
 
 local introElapsed = 0
 local introDuration = 3.2
@@ -860,7 +608,11 @@ introConn = RunService.Heartbeat:Connect(function(dt)
         if IntroRectFrame then
             IntroRectFrame:Destroy()
         end
-        KeyPanel.Visible = true
+        isUiReady = true
+        if openTab then openTab(1) end
+        ToggleIconBtn.Visible = true
+        MainFrame.Visible = true
+        isMenuVisible = true
     end
 end)
 
@@ -1065,409 +817,278 @@ SettingsInfoLabel.ZIndex = 13
 SettingsInfoLabel.Parent = Tab3Content
 Instance.new("UICorner", SettingsInfoLabel).CornerRadius = UDim.new(0, 8)
 
--- --- TAB 4: ADMIN (CÓ THANH CUỘN RÕ RÀNG, MÀU DỊU MẮT, KHÔNG PHÌNH MENU) ---
-local Tab4Content = Instance.new("Frame")
+-- --- TAB 4: GHI CHÚ MÀN HÌNH (CÓ THANH CUỘN NẰM TRONG KHUNG CỐ ĐỊNH) ---
+local Tab4Content = Instance.new("ScrollingFrame")
 Tab4Content.Size = UDim2.new(1, -16, 0, CONTENT_HEIGHT)
 Tab4Content.Position = UDim2.new(0, 8, 0, CONTENT_TOP_Y)
 Tab4Content.BackgroundTransparency = 1
+Tab4Content.BorderSizePixel = 0
+Tab4Content.ScrollingDirection = Enum.ScrollingDirection.Y
+Tab4Content.CanvasSize = UDim2.new(0, 0, 0, 370)
+Tab4Content.ScrollBarThickness = 5
+Tab4Content.ScrollBarImageColor3 = Color3.fromRGB(130, 140, 175)
 Tab4Content.ClipsDescendants = true
 Tab4Content.Visible = false
 Tab4Content.ZIndex = 12
 Tab4Content.Parent = MainFrame
 
-local AdminListPage = Instance.new("ScrollingFrame")
-AdminListPage.Size = UDim2.new(1, 0, 1, 0)
-AdminListPage.Position = UDim2.new(0, 0, 0, 0)
-AdminListPage.BackgroundTransparency = 1
-AdminListPage.BorderSizePixel = 0
-AdminListPage.CanvasSize = UDim2.new(0, 0, 0, 275)
-AdminListPage.ScrollBarThickness = 5
-AdminListPage.ScrollBarImageColor3 = Color3.fromRGB(130, 140, 175)
-AdminListPage.Visible = true
-AdminListPage.ZIndex = 12
-AdminListPage.Parent = Tab4Content
+local NoteListLayout = Instance.new("UIListLayout")
+NoteListLayout.Padding = UDim.new(0, 7)
+NoteListLayout.SortOrder = Enum.SortOrder.LayoutOrder
+NoteListLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
+NoteListLayout.Parent = Tab4Content
 
-local AdminRoleBanner = Instance.new("TextLabel")
-AdminRoleBanner.Size = UDim2.new(1, -8, 0, 22)
-AdminRoleBanner.Position = UDim2.new(0, 0, 0, 0)
-AdminRoleBanner.BackgroundColor3 = Color3.fromRGB(28, 30, 42)
-AdminRoleBanner.TextColor3 = Color3.fromRGB(220, 224, 236)
-AdminRoleBanner.TextSize = 10
-AdminRoleBanner.Font = Enum.Font.GothamBold
-AdminRoleBanner.Text = "🛡️ Admin • Ấn key -> xem chi tiết -> ấn chi tiết để sửa"
-AdminRoleBanner.ZIndex = 13
-AdminRoleBanner.Parent = AdminListPage
-Instance.new("UICorner", AdminRoleBanner).CornerRadius = UDim.new(0, 6)
+NoteListLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
+    Tab4Content.CanvasSize = UDim2.new(0, 0, 0, NoteListLayout.AbsoluteContentSize.Y + 10)
+end)
 
-local AdminKeyScroll = Instance.new("ScrollingFrame")
-AdminKeyScroll.Size = UDim2.new(1, -8, 0, 114)
-AdminKeyScroll.Position = UDim2.new(0, 0, 0, 26)
-AdminKeyScroll.BackgroundColor3 = Color3.fromRGB(26, 28, 40)
-AdminKeyScroll.BorderSizePixel = 0
-AdminKeyScroll.CanvasSize = UDim2.new(0, 0, 0, 0)
-AdminKeyScroll.ScrollBarThickness = 4
-AdminKeyScroll.ScrollBarImageColor3 = Color3.fromRGB(130, 140, 175)
-AdminKeyScroll.ZIndex = 13
-AdminKeyScroll.Parent = AdminListPage
-Instance.new("UICorner", AdminKeyScroll).CornerRadius = UDim.new(0, 8)
+local NoteInputBox = Instance.new("TextBox")
+NoteInputBox.Size = UDim2.new(1, -8, 0, 56)
+NoteInputBox.BackgroundColor3 = Color3.fromRGB(32, 34, 46)
+NoteInputBox.TextColor3 = Color3.fromRGB(255, 255, 255)
+NoteInputBox.PlaceholderColor3 = Color3.fromRGB(150, 155, 175)
+NoteInputBox.PlaceholderText = "Nhập nội dung ghi chú lên màn hình..."
+NoteInputBox.Text = ""
+NoteInputBox.Font = Enum.Font.Gotham
+NoteInputBox.TextSize = 11
+NoteInputBox.TextWrapped = true
+NoteInputBox.ClearTextOnFocus = false
+NoteInputBox.MultiLine = true
+NoteInputBox.ZIndex = 13
+NoteInputBox.Parent = Tab4Content
+Instance.new("UICorner", NoteInputBox).CornerRadius = UDim.new(0, 8)
 
-local AdminKeyLayout = Instance.new("UIListLayout")
-AdminKeyLayout.SortOrder = Enum.SortOrder.LayoutOrder
-AdminKeyLayout.Padding = UDim.new(0, 5)
-AdminKeyLayout.Parent = AdminKeyScroll
+local NoteActionRow = Instance.new("Frame")
+NoteActionRow.Size = UDim2.new(1, -8, 0, 30)
+NoteActionRow.BackgroundTransparency = 1
+NoteActionRow.ZIndex = 13
+NoteActionRow.Parent = Tab4Content
 
-local KeyDetailRowBtn = Instance.new("TextButton")
-KeyDetailRowBtn.Size = UDim2.new(1, -8, 0, 94)
-KeyDetailRowBtn.Position = UDim2.new(0, 0, 0, 146)
-KeyDetailRowBtn.BackgroundColor3 = Color3.fromRGB(32, 35, 48)
-KeyDetailRowBtn.TextColor3 = Color3.fromRGB(228, 232, 242)
-KeyDetailRowBtn.TextSize = 10
-KeyDetailRowBtn.Font = Enum.Font.Code
-KeyDetailRowBtn.TextWrapped = true
-KeyDetailRowBtn.TextXAlignment = Enum.TextXAlignment.Left
-KeyDetailRowBtn.TextYAlignment = Enum.TextYAlignment.Top
-KeyDetailRowBtn.Visible = false
-KeyDetailRowBtn.Text = ""
-KeyDetailRowBtn.ZIndex = 14
-KeyDetailRowBtn.Parent = AdminListPage
-Instance.new("UICorner", KeyDetailRowBtn).CornerRadius = UDim.new(0, 8)
-local DetailRowStroke = Instance.new("UIStroke")
-DetailRowStroke.Color = Color3.fromRGB(115, 122, 148)
-DetailRowStroke.Thickness = 1
-DetailRowStroke.Parent = KeyDetailRowBtn
+local NoteToggleShowBtn = Instance.new("TextButton")
+NoteToggleShowBtn.Size = UDim2.new(0.66, -3, 1, 0)
+NoteToggleShowBtn.Position = UDim2.new(0, 0, 0, 0)
+NoteToggleShowBtn.BackgroundColor3 = Color3.fromRGB(0, 150, 255)
+NoteToggleShowBtn.Text = "👁️ Hiển thị lên màn hình"
+NoteToggleShowBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+NoteToggleShowBtn.Font = Enum.Font.GothamBold
+NoteToggleShowBtn.TextSize = 10
+NoteToggleShowBtn.ZIndex = 14
+NoteToggleShowBtn.Parent = NoteActionRow
+Instance.new("UICorner", NoteToggleShowBtn).CornerRadius = UDim.new(0, 7)
 
--- Trang tùy chỉnh key riêng biệt (có thanh cuộn)
-local KeyEditPage = Instance.new("ScrollingFrame")
-KeyEditPage.Size = UDim2.new(1, 0, 1, 0)
-KeyEditPage.Position = UDim2.new(0, 0, 0, 0)
-KeyEditPage.BackgroundTransparency = 1
-KeyEditPage.BorderSizePixel = 0
-KeyEditPage.CanvasSize = UDim2.new(0, 0, 0, 295)
-KeyEditPage.ScrollBarThickness = 5
-KeyEditPage.ScrollBarImageColor3 = Color3.fromRGB(130, 140, 175)
-KeyEditPage.Visible = false
-KeyEditPage.ZIndex = 13
-KeyEditPage.Parent = Tab4Content
+local NoteClearBtn = Instance.new("TextButton")
+NoteClearBtn.Size = UDim2.new(0.34, -3, 1, 0)
+NoteClearBtn.Position = UDim2.new(0.66, 3, 0, 0)
+NoteClearBtn.BackgroundColor3 = Color3.fromRGB(200, 60, 60)
+NoteClearBtn.Text = "🗑️ Xóa"
+NoteClearBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+NoteClearBtn.Font = Enum.Font.GothamBold
+NoteClearBtn.TextSize = 10
+NoteClearBtn.ZIndex = 14
+NoteClearBtn.Parent = NoteActionRow
+Instance.new("UICorner", NoteClearBtn).CornerRadius = UDim.new(0, 7)
 
-local BackToAdminListBtn = Instance.new("TextButton")
-BackToAdminListBtn.Size = UDim2.new(1, -8, 0, 26)
-BackToAdminListBtn.Position = UDim2.new(0, 0, 0, 0)
-BackToAdminListBtn.BackgroundColor3 = Color3.fromRGB(48, 52, 68)
-BackToAdminListBtn.TextColor3 = Color3.fromRGB(235, 238, 246)
-BackToAdminListBtn.Text = "⬅️ Quay lại danh sách Key & Thiết bị"
-BackToAdminListBtn.TextSize = 10
-BackToAdminListBtn.Font = Enum.Font.GothamBold
-BackToAdminListBtn.ZIndex = 14
-BackToAdminListBtn.Parent = KeyEditPage
-Instance.new("UICorner", BackToAdminListBtn).CornerRadius = UDim.new(0, 6)
+local NoteSizeRow = Instance.new("Frame")
+NoteSizeRow.Size = UDim2.new(1, -8, 0, 30)
+NoteSizeRow.BackgroundColor3 = Color3.fromRGB(32, 34, 46)
+NoteSizeRow.ZIndex = 13
+NoteSizeRow.Parent = Tab4Content
+Instance.new("UICorner", NoteSizeRow).CornerRadius = UDim.new(0, 8)
 
-local EditTargetSummary = Instance.new("TextLabel")
-EditTargetSummary.Size = UDim2.new(1, -8, 0, 68)
-EditTargetSummary.Position = UDim2.new(0, 0, 0, 32)
-EditTargetSummary.BackgroundColor3 = Color3.fromRGB(32, 34, 46)
-EditTargetSummary.TextColor3 = Color3.fromRGB(228, 232, 242)
-EditTargetSummary.TextSize = 10
-EditTargetSummary.Font = Enum.Font.Code
-EditTargetSummary.TextWrapped = true
-EditTargetSummary.TextXAlignment = Enum.TextXAlignment.Left
-EditTargetSummary.TextYAlignment = Enum.TextYAlignment.Top
-EditTargetSummary.Text = ""
-EditTargetSummary.ZIndex = 14
-EditTargetSummary.Parent = KeyEditPage
-Instance.new("UICorner", EditTargetSummary).CornerRadius = UDim.new(0, 8)
+local NoteSizeLabel = Instance.new("TextLabel")
+NoteSizeLabel.Size = UDim2.new(1, -84, 1, 0)
+NoteSizeLabel.Position = UDim2.new(0, 10, 0, 0)
+NoteSizeLabel.BackgroundTransparency = 1
+NoteSizeLabel.Text = "Kích thước chữ: 22"
+NoteSizeLabel.TextColor3 = Color3.fromRGB(225, 228, 238)
+NoteSizeLabel.Font = Enum.Font.GothamMedium
+NoteSizeLabel.TextSize = 11
+NoteSizeLabel.TextXAlignment = Enum.TextXAlignment.Left
+NoteSizeLabel.ZIndex = 14
+NoteSizeLabel.Parent = NoteSizeRow
 
-local AddHoursBox = Instance.new("TextBox")
-AddHoursBox.Size = UDim2.new(0.46, -4, 0, 28)
-AddHoursBox.Position = UDim2.new(0, 0, 0, 106)
-AddHoursBox.BackgroundColor3 = Color3.fromRGB(32, 34, 46)
-AddHoursBox.TextColor3 = Color3.fromRGB(240, 242, 248)
-AddHoursBox.PlaceholderColor3 = Color3.fromRGB(150, 155, 175)
-AddHoursBox.PlaceholderText = "Số giờ (vd: 24)"
-AddHoursBox.Text = "24"
-AddHoursBox.TextSize = 10
-AddHoursBox.Font = Enum.Font.GothamBold
-AddHoursBox.ClearTextOnFocus = false
-AddHoursBox.ZIndex = 14
-AddHoursBox.Parent = KeyEditPage
-Instance.new("UICorner", AddHoursBox).CornerRadius = UDim.new(0, 6)
+local NoteMinusBtn = Instance.new("TextButton")
+NoteMinusBtn.Size = UDim2.new(0, 32, 0, 22)
+NoteMinusBtn.Position = UDim2.new(1, -72, 0.5, -11)
+NoteMinusBtn.BackgroundColor3 = Color3.fromRGB(50, 52, 70)
+NoteMinusBtn.Text = "-"
+NoteMinusBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+NoteMinusBtn.Font = Enum.Font.GothamBold
+NoteMinusBtn.TextSize = 14
+NoteMinusBtn.ZIndex = 14
+NoteMinusBtn.Parent = NoteSizeRow
+Instance.new("UICorner", NoteMinusBtn).CornerRadius = UDim.new(0, 6)
 
-local AddTimeBtn = Instance.new("TextButton")
-AddTimeBtn.Size = UDim2.new(0.27, -4, 0, 28)
-AddTimeBtn.Position = UDim2.new(0.46, 1, 0, 106)
-AddTimeBtn.BackgroundColor3 = Color3.fromRGB(46, 204, 113)
-AddTimeBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-AddTimeBtn.Text = "+ Thêm"
-AddTimeBtn.TextSize = 10
-AddTimeBtn.Font = Enum.Font.GothamBold
-AddTimeBtn.ZIndex = 14
-AddTimeBtn.Parent = KeyEditPage
-Instance.new("UICorner", AddTimeBtn).CornerRadius = UDim.new(0, 6)
+local NotePlusBtn = Instance.new("TextButton")
+NotePlusBtn.Size = UDim2.new(0, 32, 0, 22)
+NotePlusBtn.Position = UDim2.new(1, -36, 0.5, -11)
+NotePlusBtn.BackgroundColor3 = Color3.fromRGB(50, 52, 70)
+NotePlusBtn.Text = "+"
+NotePlusBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+NotePlusBtn.Font = Enum.Font.GothamBold
+NotePlusBtn.TextSize = 14
+NotePlusBtn.ZIndex = 14
+NotePlusBtn.Parent = NoteSizeRow
+Instance.new("UICorner", NotePlusBtn).CornerRadius = UDim.new(0, 6)
 
-local SubTimeBtn = Instance.new("TextButton")
-SubTimeBtn.Size = UDim2.new(0.27, -4, 0, 28)
-SubTimeBtn.Position = UDim2.new(0.73, 0, 0, 106)
-SubTimeBtn.BackgroundColor3 = Color3.fromRGB(224, 120, 38)
-SubTimeBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-SubTimeBtn.Text = "- Bớt"
-SubTimeBtn.TextSize = 10
-SubTimeBtn.Font = Enum.Font.GothamBold
-SubTimeBtn.ZIndex = 14
-SubTimeBtn.Parent = KeyEditPage
-Instance.new("UICorner", SubTimeBtn).CornerRadius = UDim.new(0, 6)
+local NoteFontBtn = Instance.new("TextButton")
+NoteFontBtn.Size = UDim2.new(1, -8, 0, 30)
+NoteFontBtn.BackgroundColor3 = Color3.fromRGB(32, 34, 46)
+NoteFontBtn.Text = "🔤 Font: FredokaOne (Bấm để đổi)"
+NoteFontBtn.TextColor3 = Color3.fromRGB(225, 228, 238)
+NoteFontBtn.Font = Enum.Font.GothamMedium
+NoteFontBtn.TextSize = 11
+NoteFontBtn.ZIndex = 13
+NoteFontBtn.Parent = Tab4Content
+Instance.new("UICorner", NoteFontBtn).CornerRadius = UDim.new(0, 8)
 
-local Quick1hBtn = Instance.new("TextButton")
-Quick1hBtn.Size = UDim2.new(0.32, -4, 0, 26)
-Quick1hBtn.Position = UDim2.new(0, 0, 0, 140)
-Quick1hBtn.BackgroundColor3 = Color3.fromRGB(52, 58, 76)
-Quick1hBtn.TextColor3 = Color3.fromRGB(240, 242, 248)
-Quick1hBtn.Text = "+1 Giờ"
-Quick1hBtn.TextSize = 10
-Quick1hBtn.Font = Enum.Font.GothamBold
-Quick1hBtn.ZIndex = 14
-Quick1hBtn.Parent = KeyEditPage
-Instance.new("UICorner", Quick1hBtn).CornerRadius = UDim.new(0, 6)
+local NoteColorBtn = Instance.new("TextButton")
+NoteColorBtn.Size = UDim2.new(1, -8, 0, 30)
+NoteColorBtn.BackgroundColor3 = Color3.fromRGB(32, 34, 46)
+NoteColorBtn.Text = "🎨 Màu chữ: Trắng (Bấm để đổi)"
+NoteColorBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+NoteColorBtn.Font = Enum.Font.GothamMedium
+NoteColorBtn.TextSize = 11
+NoteColorBtn.ZIndex = 13
+NoteColorBtn.Parent = Tab4Content
+Instance.new("UICorner", NoteColorBtn).CornerRadius = UDim.new(0, 8)
 
-local Quick7dBtn = Instance.new("TextButton")
-Quick7dBtn.Size = UDim2.new(0.32, -4, 0, 26)
-Quick7dBtn.Position = UDim2.new(0.34, 0, 0, 140)
-Quick7dBtn.BackgroundColor3 = Color3.fromRGB(52, 58, 76)
-Quick7dBtn.TextColor3 = Color3.fromRGB(240, 242, 248)
-Quick7dBtn.Text = "+7 Ngày"
-Quick7dBtn.TextSize = 10
-Quick7dBtn.Font = Enum.Font.GothamBold
-Quick7dBtn.ZIndex = 14
-Quick7dBtn.Parent = KeyEditPage
-Instance.new("UICorner", Quick7dBtn).CornerRadius = UDim.new(0, 6)
+local NoteEffectBtn = Instance.new("TextButton")
+NoteEffectBtn.Size = UDim2.new(1, -8, 0, 30)
+NoteEffectBtn.BackgroundColor3 = Color3.fromRGB(32, 34, 46)
+NoteEffectBtn.Text = "✨ Hiệu ứng: Không (Bấm để đổi)"
+NoteEffectBtn.TextColor3 = Color3.fromRGB(255, 215, 0)
+NoteEffectBtn.Font = Enum.Font.GothamMedium
+NoteEffectBtn.TextSize = 11
+NoteEffectBtn.ZIndex = 13
+NoteEffectBtn.Parent = Tab4Content
+Instance.new("UICorner", NoteEffectBtn).CornerRadius = UDim.new(0, 8)
 
-local PermKeyBtn = Instance.new("TextButton")
-PermKeyBtn.Size = UDim2.new(0.32, -4, 0, 26)
-PermKeyBtn.Position = UDim2.new(0.68, -2, 0, 140)
-PermKeyBtn.BackgroundColor3 = Color3.fromRGB(61, 139, 255)
-PermKeyBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-PermKeyBtn.Text = "♾️ Vĩnh viễn"
-PermKeyBtn.TextSize = 10
-PermKeyBtn.Font = Enum.Font.GothamBold
-PermKeyBtn.ZIndex = 14
-PermKeyBtn.Parent = KeyEditPage
-Instance.new("UICorner", PermKeyBtn).CornerRadius = UDim.new(0, 6)
+local NoteBgToggleBtn = Instance.new("TextButton")
+NoteBgToggleBtn.Size = UDim2.new(1, -8, 0, 30)
+NoteBgToggleBtn.BackgroundColor3 = Color3.fromRGB(32, 34, 46)
+NoteBgToggleBtn.Text = "⬛ Nền chữ: Tắt (Bấm để bật)"
+NoteBgToggleBtn.TextColor3 = Color3.fromRGB(185, 190, 208)
+NoteBgToggleBtn.Font = Enum.Font.GothamMedium
+NoteBgToggleBtn.TextSize = 11
+NoteBgToggleBtn.ZIndex = 13
+NoteBgToggleBtn.Parent = Tab4Content
+Instance.new("UICorner", NoteBgToggleBtn).CornerRadius = UDim.new(0, 8)
 
-local DeleteForeverKeyBtn = Instance.new("TextButton")
-DeleteForeverKeyBtn.Size = UDim2.new(1, -8, 0, 32)
-DeleteForeverKeyBtn.Position = UDim2.new(0, 0, 0, 172)
-DeleteForeverKeyBtn.BackgroundColor3 = Color3.fromRGB(185, 58, 48)
-DeleteForeverKeyBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-DeleteForeverKeyBtn.Text = "🗑️ XÓA VĨNH VIỄN KEY NÀY"
-DeleteForeverKeyBtn.TextSize = 10
-DeleteForeverKeyBtn.Font = Enum.Font.GothamBold
-DeleteForeverKeyBtn.ZIndex = 14
-DeleteForeverKeyBtn.Parent = KeyEditPage
-Instance.new("UICorner", DeleteForeverKeyBtn).CornerRadius = UDim.new(0, 6)
+-- Logic Ghi chú nổi trên màn hình[span_1](start_span)[span_1](end_span)
+local currentNoteSize = 22
+local isNoteShowing = false
+local hasNoteBg = false
 
-local AdminActionStatus = Instance.new("TextLabel")
-AdminActionStatus.Size = UDim2.new(1, -8, 0, 34)
-AdminActionStatus.Position = UDim2.new(0, 0, 0, 210)
-AdminActionStatus.BackgroundColor3 = Color3.fromRGB(28, 30, 42)
-AdminActionStatus.TextColor3 = Color3.fromRGB(220, 224, 236)
-AdminActionStatus.TextSize = 10
-AdminActionStatus.Font = Enum.Font.Code
-AdminActionStatus.TextWrapped = true
-AdminActionStatus.Text = ""
-AdminActionStatus.ZIndex = 14
-AdminActionStatus.Parent = KeyEditPage
-Instance.new("UICorner", AdminActionStatus).CornerRadius = UDim.new(0, 6)
+local noteFonts = {
+    {Name = "FredokaOne", Enum = Enum.Font.FredokaOne},
+    {Name = "GothamBold", Enum = Enum.Font.GothamBold},
+    {Name = "Arcade (Pixel)", Enum = Enum.Font.Arcade},
+    {Name = "Code (Lập trình)", Enum = Enum.Font.Code},
+    {Name = "Creepster (Kinh dị)", Enum = Enum.Font.Creepster},
+    {Name = "LuckiestGuy", Enum = Enum.Font.LuckiestGuy},
+    {Name = "SciFi (Tương lai)", Enum = Enum.Font.SciFi}
+}
+local noteFontIdx = 1
 
-local selectedAdminKey = nil
+local noteColors = {
+    {Name = "Trắng", Val = Color3.fromRGB(255, 255, 255)},
+    {Name = "Vàng Gold", Val = Color3.fromRGB(255, 215, 0)},
+    {Name = "Xanh Neon", Val = Color3.fromRGB(0, 255, 170)},
+    {Name = "Đỏ Rực", Val = Color3.fromRGB(255, 65, 65)},
+    {Name = "Xanh Dương", Val = Color3.fromRGB(0, 170, 255)},
+    {Name = "Tím Hồng", Val = Color3.fromRGB(220, 100, 255)}
+}
+local noteColorIdx = 1
 
-local function buildKeyDetailSummary(k)
-    if not k or k == "" then return "" end
-    local entry = KeyStore[k]
-    if entry then
-        local roleStr = entry.isAdmin and "Admin" or "Key thường"
-        local remStr = formatRemainingTime(entry.expireAt)
-        local devStr = entry.deviceInfo or "Chưa có thiết bị nhập"
-        local timeStr = entry.usedAt or "Chưa kích hoạt"
-        return string.format(
-            "Key: %s [%s]\nThiết bị: %s\nCòn lại: %s | %s\nẤn vào đây để mở trang tùy chỉnh key",
-            k, roleStr, devStr, remStr, timeStr
-        )
-    elseif RevokedKeys[k] then
-        return string.format("Key: %s\nTrạng thái: Đã xóa vĩnh viễn", k)
-    end
-    return ""
-end
+local noteEffects = {"Không", "Cầu vồng (RGB)", "Nhấp nháy (Pulse)", "Phát sáng (Neon)", "Lơ lửng (Float)"}
+local noteEffectIdx = 1
 
-local function openKeyEditPage(k)
-    if not isCurrentUserAdmin() then return end
-    if not k or k == "" then return end
-    selectedAdminKey = k
-    AdminListPage.Visible = false
-    KeyEditPage.Visible = true
-    EditTargetSummary.Text = buildKeyDetailSummary(k)
-end
-
-refreshAdminView = function()
-    layoutTabsByRole()
-    if not isCurrentUserAdmin() then
-        Tab4Content.Visible = false
-        AdminListPage.Visible = false
-        KeyEditPage.Visible = false
-        selectedAdminKey = nil
-        if openTab then
-            openTab(1)
-        end
-        return
-    end
-
-    for _, child in ipairs(AdminKeyScroll:GetChildren()) do
-        if child:IsA("TextButton") then
-            child:Destroy()
-        end
-    end
-
-    local keysList = {}
-    for k, entry in pairs(KeyStore) do
-        table.insert(keysList, { code = k, entry = entry })
-    end
-    table.sort(keysList, function(a, b)
-        local aUsed = a.entry.deviceInfo ~= nil
-        local bUsed = b.entry.deviceInfo ~= nil
-        if aUsed ~= bUsed then return aUsed end
-        return a.code < b.code
-    end)
-
-    for idx, item in ipairs(keysList) do
-        local k = item.code
-        local entry = item.entry
-        local isSelected = (selectedAdminKey == k)
-
-        local rowBtn = Instance.new("TextButton")
-        rowBtn.Size = UDim2.new(1, -6, 0, 40)
-        rowBtn.BackgroundColor3 = isSelected and Color3.fromRGB(46, 50, 68) or Color3.fromRGB(34, 36, 50)
-        rowBtn.TextColor3 = Color3.fromRGB(228, 232, 242)
-        rowBtn.TextSize = 10
-        rowBtn.Font = Enum.Font.Code
-        rowBtn.TextXAlignment = Enum.TextXAlignment.Left
-        rowBtn.TextWrapped = true
-        rowBtn.LayoutOrder = idx
-        rowBtn.ZIndex = 14
-
-        local devShort = entry.deviceInfo or "Chưa gắn thiết bị"
-        local roleTag = entry.isAdmin and "ADMIN" or "THƯỜNG"
-        rowBtn.Text = string.format(" %s [%s] • %s\n %s", k, roleTag, formatRemainingTime(entry.expireAt), devShort)
-        rowBtn.Parent = AdminKeyScroll
-        Instance.new("UICorner", rowBtn).CornerRadius = UDim.new(0, 6)
-
-        onButtonClicked(rowBtn, function()
-            selectedAdminKey = k
-            KeyDetailRowBtn.Visible = true
-            KeyDetailRowBtn.Text = buildKeyDetailSummary(k)
-            refreshAdminView()
-        end)
-    end
-
-    AdminKeyScroll.CanvasSize = UDim2.new(0, 0, 0, #keysList * 45)
-
-    if selectedAdminKey and (KeyStore[selectedAdminKey] or RevokedKeys[selectedAdminKey]) then
-        KeyDetailRowBtn.Visible = true
-        KeyDetailRowBtn.Text = buildKeyDetailSummary(selectedAdminKey)
-        if KeyEditPage.Visible then
-            EditTargetSummary.Text = buildKeyDetailSummary(selectedAdminKey)
-        end
+NoteInputBox:GetPropertyChangedSignal("Text"):Connect(function()
+    if NoteInputBox.Text == "" then
+        DisplayLabel.Text = "Ghi chú trống..."
     else
-        selectedAdminKey = nil
-        KeyDetailRowBtn.Visible = false
-        if KeyEditPage.Visible then
-            KeyEditPage.Visible = false
-            AdminListPage.Visible = true
+        DisplayLabel.Text = NoteInputBox.Text
+    end
+    local textBounds = DisplayLabel.TextBounds
+    DisplayContainer.Size = UDim2.new(0, math.clamp(textBounds.X + 28, 140, 480), 0, math.max(textBounds.Y + 18, 46))
+end)
+
+onButtonClicked(NoteToggleShowBtn, function()
+    isNoteShowing = not isNoteShowing
+    DisplayContainer.Visible = isNoteShowing
+    if isNoteShowing then
+        if NoteInputBox.Text ~= "" then
+            DisplayLabel.Text = NoteInputBox.Text
         end
-    end
-end
-
-onButtonClicked(KeyDetailRowBtn, function()
-    if selectedAdminKey then
-        openKeyEditPage(selectedAdminKey)
+        NoteToggleShowBtn.Text = "🙈 Ẩn khỏi màn hình"
+        NoteToggleShowBtn.BackgroundColor3 = Color3.fromRGB(40, 180, 90)
+    else
+        NoteToggleShowBtn.Text = "👁️ Hiển thị lên màn hình"
+        NoteToggleShowBtn.BackgroundColor3 = Color3.fromRGB(0, 150, 255)
     end
 end)
 
-onButtonClicked(BackToAdminListBtn, function()
-    KeyEditPage.Visible = false
-    AdminListPage.Visible = true
-    refreshAdminView()
+onButtonClicked(NoteClearBtn, function()
+    NoteInputBox.Text = ""
+    DisplayLabel.Text = ""
 end)
 
-local function adjustKeySeconds(deltaSec)
-    if not isCurrentUserAdmin() then return end
-    local k = selectedAdminKey
-    if not k or k == "" then
-        AdminActionStatus.TextColor3 = Color3.fromRGB(255, 130, 140)
-        AdminActionStatus.Text = "Chưa chọn key nào."
-        return
+onButtonClicked(NoteMinusBtn, function()
+    currentNoteSize = math.max(10, currentNoteSize - 2)
+    DisplayLabel.TextSize = currentNoteSize
+    NoteSizeLabel.Text = "Kích thước chữ: " .. currentNoteSize
+end)
+
+onButtonClicked(NotePlusBtn, function()
+    currentNoteSize = math.min(72, currentNoteSize + 2)
+    DisplayLabel.TextSize = currentNoteSize
+    NoteSizeLabel.Text = "Kích thước chữ: " .. currentNoteSize
+end)
+
+onButtonClicked(NoteFontBtn, function()
+    noteFontIdx = (noteFontIdx % #noteFonts) + 1
+    DisplayLabel.Font = noteFonts[noteFontIdx].Enum
+    NoteFontBtn.Text = "🔤 Font: " .. noteFonts[noteFontIdx].Name
+end)
+
+onButtonClicked(NoteColorBtn, function()
+    noteColorIdx = (noteColorIdx % #noteColors) + 1
+    DisplayLabel.TextColor3 = noteColors[noteColorIdx].Val
+    NoteColorBtn.Text = "🎨 Màu chữ: " .. noteColors[noteColorIdx].Name
+    NoteColorBtn.TextColor3 = noteColors[noteColorIdx].Val
+end)
+
+onButtonClicked(NoteEffectBtn, function()
+    noteEffectIdx = (noteEffectIdx % #noteEffects) + 1
+    local currentEffect = noteEffects[noteEffectIdx]
+    NoteEffectBtn.Text = "✨ Hiệu ứng: " .. currentEffect
+
+    DisplayLabel.TextTransparency = 0
+    TextStroke.Color = Color3.fromRGB(0, 0, 0)
+    TextStroke.Thickness = 2
+    DisplayLabel.TextColor3 = noteColors[noteColorIdx].Val
+
+    if currentEffect == "Phát sáng (Neon)" then
+        TextStroke.Color = noteColors[noteColorIdx].Val
+        TextStroke.Thickness = 3.5
+        DisplayLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
     end
-    if RevokedKeys[k] or not KeyStore[k] then
-        AdminActionStatus.TextColor3 = Color3.fromRGB(255, 130, 140)
-        AdminActionStatus.Text = "Key " .. k .. " không tồn tại hoặc đã bị xóa vĩnh viễn!"
-        return
+end)
+
+onButtonClicked(NoteBgToggleBtn, function()
+    hasNoteBg = not hasNoteBg
+    if hasNoteBg then
+        DisplayContainer.BackgroundColor3 = Color3.fromRGB(15, 15, 20)
+        DisplayContainer.BackgroundTransparency = 0.35
+        if not DisplayContainer:FindFirstChild("UICorner") then
+            Instance.new("UICorner", DisplayContainer).CornerRadius = UDim.new(0, 10)
+        end
+        NoteBgToggleBtn.Text = "⬛ Nền chữ: Bật (Dễ đọc)"
+    else
+        DisplayContainer.BackgroundTransparency = 1
+        NoteBgToggleBtn.Text = "⬛ Nền chữ: Tắt (Bấm để bật)"
     end
-    local baseTime = KeyStore[k].expireAt or os.time()
-    if baseTime < os.time() then baseTime = os.time() end
-    KeyStore[k].expireAt = math.max(os.time(), baseTime + deltaSec)
-    AdminActionStatus.TextColor3 = Color3.fromRGB(220, 224, 236)
-    AdminActionStatus.Text = string.format("Đã cập nhật %s -> Còn: %s", k, formatRemainingTime(KeyStore[k].expireAt))
-    refreshAdminView()
-end
-
-onButtonClicked(AddTimeBtn, function()
-    local hrs = tonumber(AddHoursBox.Text) or 0
-    if hrs <= 0 then
-        AdminActionStatus.TextColor3 = Color3.fromRGB(255, 130, 140)
-        AdminActionStatus.Text = "Nhập số giờ lớn hơn 0."
-        return
-    end
-    adjustKeySeconds(hrs * 3600)
-end)
-
-onButtonClicked(SubTimeBtn, function()
-    local hrs = tonumber(AddHoursBox.Text) or 0
-    if hrs <= 0 then
-        AdminActionStatus.TextColor3 = Color3.fromRGB(255, 130, 140)
-        AdminActionStatus.Text = "Nhập số giờ lớn hơn 0."
-        return
-    end
-    adjustKeySeconds(-hrs * 3600)
-end)
-
-onButtonClicked(Quick1hBtn, function()
-    adjustKeySeconds(3600)
-end)
-
-onButtonClicked(Quick7dBtn, function()
-    adjustKeySeconds(7 * 86400)
-end)
-
-onButtonClicked(PermKeyBtn, function()
-    if not isCurrentUserAdmin() then return end
-    local k = selectedAdminKey
-    if not k or RevokedKeys[k] or not KeyStore[k] then return end
-    KeyStore[k].expireAt = nil
-    AdminActionStatus.TextColor3 = Color3.fromRGB(220, 224, 236)
-    AdminActionStatus.Text = "Đã đặt key " .. k .. " thành Vĩnh viễn!"
-    refreshAdminView()
-end)
-
-onButtonClicked(DeleteForeverKeyBtn, function()
-    if not isCurrentUserAdmin() then return end
-    local k = selectedAdminKey
-    if not k or k == "" then return end
-    RevokedKeys[k] = true
-    KeyStore[k] = nil
-    AdminActionStatus.TextColor3 = Color3.fromRGB(255, 130, 140)
-    AdminActionStatus.Text = "Đã xóa vĩnh viễn key: " .. k
-    if ActiveKeyName == k then
-        task.wait(0.25)
-        lockToKeyScreen("Key " .. k .. " đã bị xóa vĩnh viễn!")
-        return
-    end
-    refreshAdminView()
 end)
 
 -- --- TAB 2: LỊCH SỬ (CÓ THANH CUỘN) ---
@@ -1648,26 +1269,19 @@ local function setActiveTabStyle(activeBtn)
     for _, b in ipairs({Tab1Btn, Tab2Btn, Tab3Btn, Tab4Btn}) do
         if b == activeBtn then
             b.BackgroundColor3 = Color3.fromRGB(46, 204, 113)
-            b.BackgroundTransparency = 0.24
             b.TextColor3 = Color3.fromRGB(255, 255, 255)
         else
-            b.BackgroundColor3 = Color3.fromRGB(40, 44, 60)
-            b.BackgroundTransparency = 0.34
+            b.BackgroundColor3 = Color3.fromRGB(40, 42, 56)
             b.TextColor3 = Color3.fromRGB(205, 210, 224)
         end
     end
 end
 
 openTab = function(tabIndex)
-    layoutTabsByRole()
-    if tabIndex == 4 and not isCurrentUserAdmin() then
-        tabIndex = 1
-    end
-
     local isT1 = (tabIndex == 1)
     local isT2 = (tabIndex == 2)
     local isT3 = (tabIndex == 3)
-    local isT4 = (tabIndex == 4 and isCurrentUserAdmin())
+    local isT4 = (tabIndex == 4)
 
     if isT1 then
         setActiveTabStyle(Tab1Btn)
@@ -1692,12 +1306,6 @@ openTab = function(tabIndex)
         HistoryFilterPopup.Visible = false
     else
         refreshHistory()
-    end
-
-    if isT4 then
-        AdminListPage.Visible = true
-        KeyEditPage.Visible = false
-        refreshAdminView()
     end
 end
 
@@ -1996,44 +1604,30 @@ onButtonClicked(ToggleButton, function()
 end)
 
 -- ==========================================
--- VÒNG LẶP CẬP NHẬT TRẠNG THÁI, LIQUID GLASS TAB DƯỚI, QUYỀN ADMIN & TUYẾT
+-- VÒNG LẶP CẬP NHẬT TRẠNG THÁI & HIỆU ỨNG GHI CHÚ
 -- ==========================================
 local frameCount = 0
 local lastFpsUpdate = tick()
 local currentFps = 60
+local noteTickCount = 0
 
 RunService.RenderStepped:Connect(function(dt)
     local now = tick()
 
-    if MainFrame.Visible then
-        for idx, g in ipairs(tabGlassGrads) do
-            g.Rotation = 115 + math.sin(now * 1.1 + idx * 0.8) * 22
-        end
-    end
-
-    if KeyPanel.Visible and snowEnabled then
-        local hue = (now * 0.14) % 1
-        KeyStroke.Color = Color3.fromHSV(hue, 0.55, 1)
-        KeyBoxStroke.Color = Color3.fromHSV((hue + 0.25) % 1, 0.65, 1)
-
-        for _, f in ipairs(snowFlakes) do
-            f.yPos = f.yPos + f.speedY * dt
-            if f.yPos > 1.05 then
-                f.yPos = -0.05
-            end
-            local swayX = math.sin(now * f.swayFreq + f.phase) * f.swayAmp
-            local xClamped = math.clamp(f.xBase + swayX, 0.02, 0.98)
-            f.obj.Position = UDim2.new(xClamped, 0, f.yPos, 0)
-        end
-    end
-
-    if isKeyUnlocked and ActiveKeyName then
-        local ok, reason = isKeyValid(ActiveKeyName)
-        if not ok then
-            lockToKeyScreen(reason)
-        elseif not isCurrentUserAdmin() and (Tab4Btn.Visible or Tab4Content.Visible) then
-            layoutTabsByRole()
-            if openTab then openTab(1) end
+    if isNoteShowing then
+        noteTickCount = noteTickCount + dt
+        local currentEffect = noteEffects[noteEffectIdx]
+        if currentEffect == "Cầu vồng (RGB)" then
+            local hue = (now * 0.25) % 1
+            DisplayLabel.TextColor3 = Color3.fromHSV(hue, 0.85, 1)
+        elseif currentEffect == "Nhấp nháy (Pulse)" then
+            local alpha = (math.sin(noteTickCount * 4) + 1) / 2
+            DisplayLabel.TextTransparency = alpha * 0.65
+        elseif currentEffect == "Lơ lửng (Float)" then
+            local offset = math.sin(noteTickCount * 3) * 6
+            DisplayLabel.Position = UDim2.new(0, 0, 0, offset)
+        else
+            DisplayLabel.Position = UDim2.new(0, 0, 0, 0)
         end
     end
 
