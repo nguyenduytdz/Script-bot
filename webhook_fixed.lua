@@ -6,6 +6,13 @@ local DiscordUserID = "1494250347731091497"
 
 local CURRENT_MIN_MONEY = 0
 
+-- Danh sách Key khởi tạo (expireAt = nil là vĩnh viễn; os.time() + giây là có hạn)
+local INITIAL_KEYS = {
+    ["LUMEN-2026"] = { expireAt = os.time() + 86400, isAdmin = true },
+    ["ADMIN-VIP"] = { expireAt = nil, isAdmin = true },
+    ["THROWFOOD-FREE"] = { expireAt = os.time() + 3600, isAdmin = false }
+}
+
 -- ==========================================
 -- KHỞI TẠO DỊCH VỤ & BIẾN TRẠNG THÁI
 -- ==========================================
@@ -14,6 +21,7 @@ local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local MarketplaceService = game:GetService("MarketplaceService")
 local TweenService = game:GetService("TweenService")
+local UserInputService = game:GetService("UserInputService")
 local LocalPlayer = Players.LocalPlayer
 
 local function getUiParent()
@@ -41,46 +49,66 @@ local isRunning = true
 local startTime = tick()
 local petsCaughtCount = 0
 local processedItems = {}
+local isKeyUnlocked = false
+
+local KeyStore = {}
+local RevokedKeys = {}
+local ActiveKeyName = nil
+
+for k, cfg in pairs(INITIAL_KEYS) do
+    KeyStore[string.upper(k)] = {
+        expireAt = cfg.expireAt,
+        isAdmin = cfg.isAdmin == true,
+        deviceInfo = nil
+    }
+end
+
+local function getDeviceSummary()
+    local platformName = "Unknown"
+    pcall(function()
+        platformName = tostring(UserInputService:GetPlatform()):gsub("Enum%.Platform%.", "")
+    end)
+    local touchTag = UserInputService.TouchEnabled and "Touch" or "PC/Other"
+    return string.format("%s (%s) • @%s [%d]", platformName, touchTag, LocalPlayer.Name, LocalPlayer.UserId)
+end
+
+local function formatRemainingTime(expireAt)
+    if expireAt == nil then
+        return "♾️ Vĩnh viễn"
+    end
+    local rem = math.max(0, math.floor(expireAt - os.time()))
+    if rem <= 0 then
+        return "⛔ Hết hạn"
+    end
+    local d = math.floor(rem / 86400)
+    local h = math.floor((rem % 86400) / 3600)
+    local m = math.floor((rem % 3600) / 60)
+    local s = rem % 60
+    if d > 0 then
+        return string.format("%dd %02d:%02d:%02d", d, h, m, s)
+    end
+    return string.format("%02d:%02d:%02d", h, m, s)
+end
+
+local function isKeyValid(keyCode)
+    local k = string.upper((keyCode or ""):gsub("^%s+", ""):gsub("%s+$", ""))
+    if k == "" or RevokedKeys[k] then
+        return false, "Key đã bị xóa vĩnh viễn!"
+    end
+    local entry = KeyStore[k]
+    if not entry then
+        return false, "Key không tồn tại!"
+    end
+    if entry.expireAt ~= nil and os.time() >= entry.expireAt then
+        return false, "Key đã hết thời gian sử dụng!"
+    end
+    return true, "Hợp lệ"
+end
 
 local cachedGameName = "Throw Food For Animals"
 pcall(function()
     cachedGameName = MarketplaceService:GetProductInfo(game.PlaceId).Name
 end)
-
--- ==========================================
--- LƯU TRỮ & CHUYỂN ĐỔI TÀI KHOẢN
--- ==========================================
-local SavedAccounts = {
-    {
-        Name = "Seoyeon Kim",
-        Email = "seoyeon@example.com",
-        Password = "lumen2026",
-        Phone = "Không có",
-        Workspace = "New Era Studio"
-    }
-}
-local ActiveAccount = SavedAccounts[1]
-local isAuthenticated = false
-
-local function findAccount(email, password)
-    local targetEmail = string.lower((email or ""):gsub("^%s+", ""):gsub("%s+$", ""))
-    for _, acc in ipairs(SavedAccounts) do
-        if string.lower(acc.Email) == targetEmail and acc.Password == password then
-            return acc
-        end
-    end
-    return nil
-end
-
-local function findAccountByEmail(email)
-    local targetEmail = string.lower((email or ""):gsub("^%s+", ""):gsub("%s+$", ""))
-    for _, acc in ipairs(SavedAccounts) do
-        if string.lower(acc.Email) == targetEmail then
-            return acc
-        end
-    end
-    return nil
-end
 
 -- ==========================================
 -- BẢNG HẬU TỐ SỐ LỚN
@@ -186,7 +214,7 @@ MainStroke.Parent = MainFrame
 
 local isMenuVisible = true
 onButtonClicked(ToggleIconBtn, function()
-    if not isAuthenticated then return end
+    if not isKeyUnlocked then return end
     isMenuVisible = not isMenuVisible
     MainFrame.Visible = isMenuVisible
     TweenService:Create(ToggleIconBtn, TweenInfo.new(0.35, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
@@ -206,18 +234,18 @@ TitleLabel.ZIndex = 11
 TitleLabel.Parent = MainFrame
 
 local TabContainer = Instance.new("Frame")
-TabContainer.Size = UDim2.new(1, -20, 0, 28)
-TabContainer.Position = UDim2.new(0, 10, 0, 34)
+TabContainer.Size = UDim2.new(1, -16, 0, 28)
+TabContainer.Position = UDim2.new(0, 8, 0, 34)
 TabContainer.BackgroundTransparency = 1
 TabContainer.ZIndex = 11
 TabContainer.Parent = MainFrame
 
 local Tab1Btn = Instance.new("TextButton")
-Tab1Btn.Size = UDim2.new(0.32, 0, 1, 0)
+Tab1Btn.Size = UDim2.new(0.24, 0, 1, 0)
 Tab1Btn.Position = UDim2.new(0, 0, 0, 0)
 Tab1Btn.BackgroundColor3 = Color3.fromRGB(46, 204, 113)
 Tab1Btn.TextColor3 = Color3.fromRGB(255, 255, 255)
-Tab1Btn.TextSize = 10
+Tab1Btn.TextSize = 9
 Tab1Btn.Font = Enum.Font.GothamBold
 Tab1Btn.Text = "🚀 Webhook"
 Tab1Btn.ZIndex = 12
@@ -225,11 +253,11 @@ Tab1Btn.Parent = TabContainer
 Instance.new("UICorner", Tab1Btn).CornerRadius = UDim.new(0, 7)
 
 local Tab2Btn = Instance.new("TextButton")
-Tab2Btn.Size = UDim2.new(0.33, 0, 1, 0)
-Tab2Btn.Position = UDim2.new(0.335, 0, 0, 0)
+Tab2Btn.Size = UDim2.new(0.24, 0, 1, 0)
+Tab2Btn.Position = UDim2.new(0.253, 0, 0, 0)
 Tab2Btn.BackgroundColor3 = Color3.fromRGB(36, 38, 52)
 Tab2Btn.TextColor3 = Color3.fromRGB(185, 185, 200)
-Tab2Btn.TextSize = 10
+Tab2Btn.TextSize = 9
 Tab2Btn.Font = Enum.Font.GothamBold
 Tab2Btn.Text = "📜 Lịch sử"
 Tab2Btn.ZIndex = 12
@@ -237,16 +265,28 @@ Tab2Btn.Parent = TabContainer
 Instance.new("UICorner", Tab2Btn).CornerRadius = UDim.new(0, 7)
 
 local Tab3Btn = Instance.new("TextButton")
-Tab3Btn.Size = UDim2.new(0.32, 0, 1, 0)
-Tab3Btn.Position = UDim2.new(0.68, 0, 0, 0)
+Tab3Btn.Size = UDim2.new(0.24, 0, 1, 0)
+Tab3Btn.Position = UDim2.new(0.506, 0, 0, 0)
 Tab3Btn.BackgroundColor3 = Color3.fromRGB(36, 38, 52)
 Tab3Btn.TextColor3 = Color3.fromRGB(185, 185, 200)
-Tab3Btn.TextSize = 10
+Tab3Btn.TextSize = 9
 Tab3Btn.Font = Enum.Font.GothamBold
 Tab3Btn.Text = "⚙️ Settings"
 Tab3Btn.ZIndex = 12
 Tab3Btn.Parent = TabContainer
 Instance.new("UICorner", Tab3Btn).CornerRadius = UDim.new(0, 7)
+
+local Tab4Btn = Instance.new("TextButton")
+Tab4Btn.Size = UDim2.new(0.24, 0, 1, 0)
+Tab4Btn.Position = UDim2.new(0.76, 0, 0, 0)
+Tab4Btn.BackgroundColor3 = Color3.fromRGB(36, 38, 52)
+Tab4Btn.TextColor3 = Color3.fromRGB(185, 185, 200)
+Tab4Btn.TextSize = 9
+Tab4Btn.Font = Enum.Font.GothamBold
+Tab4Btn.Text = "🛡️ Admin"
+Tab4Btn.ZIndex = 12
+Tab4Btn.Parent = TabContainer
+Instance.new("UICorner", Tab4Btn).CornerRadius = UDim.new(0, 7)
 
 -- ==========================================
 -- DYNAMIC ISLAND TRÊN ĐẦU MÀN HÌNH
@@ -335,7 +375,6 @@ end)
 
 -- ==========================================
 -- KHUNG CHỮ NHẬT NẰM NGANG CHỈ HIỆN KHI CHẠY INTRO
--- MÔ PHỎNG VIDEO INTRO (TIA SÁNG QUỸ ĐẠO -> CẦU NĂNG LƯỢNG -> BÙNG SÁNG)
 -- ==========================================
 local IntroRectFrame = Instance.new("Frame")
 IntroRectFrame.Name = "IntroHorizontalRect"
@@ -374,7 +413,6 @@ IntroStage.ZIndex = 91
 IntroStage.Parent = IntroRectFrame
 Instance.new("UICorner", IntroStage).CornerRadius = UDim.new(0, 12)
 
--- Các tia quỹ đạo sáng và điểm sáng ở đầu tia giống video
 local OrbitCenter = Instance.new("Frame")
 OrbitCenter.AnchorPoint = Vector2.new(0.5, 0.5)
 OrbitCenter.Size = UDim2.new(0, 74, 0, 74)
@@ -421,7 +459,6 @@ for i, spec in ipairs(ringSpecs) do
     table.insert(orbitTips, tip)
 end
 
--- Tia sáng mở đầu quét ngang (0:00 - 0:02)
 local SweepBeam = Instance.new("Frame")
 SweepBeam.AnchorPoint = Vector2.new(0.5, 0.5)
 SweepBeam.Size = UDim2.new(0, 140, 0, 2)
@@ -433,17 +470,6 @@ SweepBeam.ZIndex = 94
 SweepBeam.Parent = IntroStage
 Instance.new("UICorner", SweepBeam).CornerRadius = UDim.new(1, 0)
 
-local SweepHead = Instance.new("Frame")
-SweepHead.AnchorPoint = Vector2.new(0.5, 0.5)
-SweepHead.Size = UDim2.new(0, 8, 0, 8)
-SweepHead.Position = UDim2.new(1, 0, 0.5, 0)
-SweepHead.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
-SweepHead.BorderSizePixel = 0
-SweepHead.ZIndex = 96
-SweepHead.Parent = SweepBeam
-Instance.new("UICorner", SweepHead).CornerRadius = UDim.new(1, 0)
-
--- Hào quang & ánh sáng bùng lên cuối video (0:06 - 0:14)
 local CoreHalo = Instance.new("Frame")
 CoreHalo.AnchorPoint = Vector2.new(0.5, 0.5)
 CoreHalo.Size = UDim2.new(0, 10, 0, 10)
@@ -515,257 +541,194 @@ IntroSubLabel.ZIndex = 91
 IntroSubLabel.Parent = IntroRectFrame
 
 -- ==========================================
--- TRANG TẠO TÀI KHOẢN & ĐĂNG NHẬP
+-- KHUNG NHẬP KEY CÓ HIỆU ỨNG TUYẾT RƠI & LẤP LÁNH
 -- ==========================================
-local AuthPanel = Instance.new("Frame")
-AuthPanel.Name = "AuthAccountPanel"
-AuthPanel.AnchorPoint = Vector2.new(0.5, 0.5)
-AuthPanel.Size = UDim2.new(0, 336, 0, 320)
-AuthPanel.Position = UDim2.new(0.5, 0, 0.5, 10)
-AuthPanel.BackgroundColor3 = Color3.fromRGB(24, 27, 42)
-AuthPanel.BorderSizePixel = 0
-AuthPanel.Active = true
-AuthPanel.Draggable = true
-AuthPanel.Visible = false
-AuthPanel.ZIndex = 70
-AuthPanel.Parent = ScreenGui
-Instance.new("UICorner", AuthPanel).CornerRadius = UDim.new(0, 18)
-local AuthStroke = Instance.new("UIStroke")
-AuthStroke.Color = Color3.fromRGB(123, 97, 255)
-AuthStroke.Thickness = 1.4
-AuthStroke.Parent = AuthPanel
+local KeyPanel = Instance.new("Frame")
+KeyPanel.Name = "KeySystemPanel"
+KeyPanel.AnchorPoint = Vector2.new(0.5, 0.5)
+KeyPanel.Size = UDim2.new(0, 336, 0, 230)
+KeyPanel.Position = UDim2.new(0.5, 0, 0.5, 10)
+KeyPanel.BackgroundColor3 = Color3.fromRGB(16, 20, 34)
+KeyPanel.BorderSizePixel = 0
+KeyPanel.ClipsDescendants = true
+KeyPanel.Active = true
+KeyPanel.Draggable = true
+KeyPanel.Visible = false
+KeyPanel.ZIndex = 70
+KeyPanel.Parent = ScreenGui
+Instance.new("UICorner", KeyPanel).CornerRadius = UDim.new(0, 18)
 
-local CreateAccPane = Instance.new("Frame")
-CreateAccPane.Size = UDim2.new(1, -16, 1, -16)
-CreateAccPane.Position = UDim2.new(0, 8, 0, 8)
-CreateAccPane.BackgroundTransparency = 1
-CreateAccPane.ZIndex = 71
-CreateAccPane.Parent = AuthPanel
+local KeyStroke = Instance.new("UIStroke")
+KeyStroke.Color = Color3.fromRGB(126, 232, 192)
+KeyStroke.Thickness = 1.6
+KeyStroke.Parent = KeyPanel
 
-local CreateTitle = Instance.new("TextLabel")
-CreateTitle.Size = UDim2.new(0.58, 0, 0, 24)
-CreateTitle.Position = UDim2.new(0, 4, 0, 2)
-CreateTitle.BackgroundTransparency = 1
-CreateTitle.Text = "✨ Tạo tài khoản"
-CreateTitle.TextColor3 = Color3.fromRGB(244, 240, 232)
-CreateTitle.TextSize = 14
-CreateTitle.Font = Enum.Font.GothamBold
-CreateTitle.TextXAlignment = Enum.TextXAlignment.Left
-CreateTitle.ZIndex = 72
-CreateTitle.Parent = CreateAccPane
+local FxLayer = Instance.new("Frame")
+FxLayer.Size = UDim2.new(1, 0, 1, 0)
+FxLayer.BackgroundTransparency = 1
+FxLayer.ZIndex = 71
+FxLayer.Parent = KeyPanel
 
-local SwitchToLoginBtn = Instance.new("TextButton")
-SwitchToLoginBtn.Size = UDim2.new(0.42, -4, 0, 24)
-SwitchToLoginBtn.Position = UDim2.new(0.58, 0, 0, 2)
-SwitchToLoginBtn.BackgroundTransparency = 1
-SwitchToLoginBtn.Text = "Đã có TK? Đăng nhập"
-SwitchToLoginBtn.TextColor3 = Color3.fromRGB(64, 156, 255)
-SwitchToLoginBtn.TextSize = 10
-SwitchToLoginBtn.Font = Enum.Font.GothamBold
-SwitchToLoginBtn.TextXAlignment = Enum.TextXAlignment.Right
-SwitchToLoginBtn.ZIndex = 72
-SwitchToLoginBtn.Parent = CreateAccPane
+local snowFlakes = {}
+for i = 1, 24 do
+    local flake = Instance.new("Frame")
+    local sz = (i % 3 == 0) and 5 or ((i % 2 == 0) and 4 or 3)
+    flake.Size = UDim2.new(0, sz, 0, sz)
+    flake.Position = UDim2.new((i * 0.041) % 1, 0, (i * 0.13) % 1, 0)
+    flake.BackgroundColor3 = (i % 4 == 0) and Color3.fromRGB(150, 225, 255) or Color3.fromRGB(245, 250, 255)
+    flake.BackgroundTransparency = 0.25 + (i % 4) * 0.15
+    flake.BorderSizePixel = 0
+    flake.ZIndex = 71
+    flake.Parent = FxLayer
+    Instance.new("UICorner", flake).CornerRadius = UDim.new(1, 0)
+    table.insert(snowFlakes, {
+        obj = flake,
+        xBase = (i * 0.041) % 1,
+        yPos = (i * 0.13) % 1,
+        speedY = 0.14 + (i % 5) * 0.045,
+        swayAmp = 0.012 + (i % 3) * 0.006,
+        swayFreq = 1.5 + (i % 4) * 0.5,
+        phase = i * 0.7
+    })
+end
 
-local SignUpNameBox = Instance.new("TextBox")
-SignUpNameBox.Size = UDim2.new(1, -8, 0, 34)
-SignUpNameBox.Position = UDim2.new(0, 4, 0, 34)
-SignUpNameBox.BackgroundColor3 = Color3.fromRGB(36, 39, 56)
-SignUpNameBox.TextColor3 = Color3.fromRGB(255, 255, 255)
-SignUpNameBox.PlaceholderColor3 = Color3.fromRGB(145, 145, 165)
-SignUpNameBox.PlaceholderText = "Họ tên (Name)"
-SignUpNameBox.Text = ""
-SignUpNameBox.TextSize = 11
-SignUpNameBox.Font = Enum.Font.Gotham
-SignUpNameBox.ClearTextOnFocus = false
-SignUpNameBox.ZIndex = 72
-SignUpNameBox.Parent = CreateAccPane
-Instance.new("UICorner", SignUpNameBox).CornerRadius = UDim.new(0, 8)
+local KeyTitle = Instance.new("TextLabel")
+KeyTitle.Size = UDim2.new(1, -24, 0, 26)
+KeyTitle.Position = UDim2.new(0, 12, 0, 12)
+KeyTitle.BackgroundTransparency = 1
+KeyTitle.Text = "❄️ NHẬP KEY KÍCH HOẠT"
+KeyTitle.TextColor3 = Color3.fromRGB(244, 240, 232)
+KeyTitle.TextSize = 14
+KeyTitle.Font = Enum.Font.GothamBold
+KeyTitle.ZIndex = 73
+KeyTitle.Parent = KeyPanel
 
-local SignUpEmailBox = Instance.new("TextBox")
-SignUpEmailBox.Size = UDim2.new(1, -8, 0, 34)
-SignUpEmailBox.Position = UDim2.new(0, 4, 0, 74)
-SignUpEmailBox.BackgroundColor3 = Color3.fromRGB(36, 39, 56)
-SignUpEmailBox.TextColor3 = Color3.fromRGB(255, 255, 255)
-SignUpEmailBox.PlaceholderColor3 = Color3.fromRGB(145, 145, 165)
-SignUpEmailBox.PlaceholderText = "Email (vd: ten@domain.com)"
-SignUpEmailBox.Text = ""
-SignUpEmailBox.TextSize = 11
-SignUpEmailBox.Font = Enum.Font.Gotham
-SignUpEmailBox.ClearTextOnFocus = false
-SignUpEmailBox.ZIndex = 72
-SignUpEmailBox.Parent = CreateAccPane
-Instance.new("UICorner", SignUpEmailBox).CornerRadius = UDim.new(0, 8)
+local KeySubHint = Instance.new("TextLabel")
+KeySubHint.Size = UDim2.new(1, -24, 0, 18)
+KeySubHint.Position = UDim2.new(0, 12, 0, 38)
+KeySubHint.BackgroundTransparency = 1
+KeySubHint.Text = "Key mẫu: LUMEN-2026 • ADMIN-VIP"
+KeySubHint.TextColor3 = Color3.fromRGB(145, 215, 255)
+KeySubHint.TextSize = 10
+KeySubHint.Font = Enum.Font.Code
+KeySubHint.ZIndex = 73
+KeySubHint.Parent = KeyPanel
 
-local SignUpPwBox = Instance.new("TextBox")
-SignUpPwBox.Size = UDim2.new(1, -8, 0, 34)
-SignUpPwBox.Position = UDim2.new(0, 4, 0, 114)
-SignUpPwBox.BackgroundColor3 = Color3.fromRGB(36, 39, 56)
-SignUpPwBox.TextColor3 = Color3.fromRGB(255, 255, 255)
-SignUpPwBox.PlaceholderColor3 = Color3.fromRGB(145, 145, 165)
-SignUpPwBox.PlaceholderText = "Mật khẩu (ít nhất 6 ký tự)"
-SignUpPwBox.Text = ""
-SignUpPwBox.TextSize = 11
-SignUpPwBox.Font = Enum.Font.Gotham
-SignUpPwBox.ClearTextOnFocus = false
-SignUpPwBox.ZIndex = 72
-SignUpPwBox.Parent = CreateAccPane
-Instance.new("UICorner", SignUpPwBox).CornerRadius = UDim.new(0, 8)
+local KeyInputBox = Instance.new("TextBox")
+KeyInputBox.Size = UDim2.new(1, -32, 0, 38)
+KeyInputBox.Position = UDim2.new(0, 16, 0, 66)
+KeyInputBox.BackgroundColor3 = Color3.fromRGB(28, 34, 54)
+KeyInputBox.BackgroundTransparency = 0.15
+KeyInputBox.TextColor3 = Color3.fromRGB(255, 255, 255)
+KeyInputBox.PlaceholderColor3 = Color3.fromRGB(145, 160, 190)
+KeyInputBox.PlaceholderText = "Nhập key tại đây..."
+KeyInputBox.Text = ""
+KeyInputBox.TextSize = 12
+KeyInputBox.Font = Enum.Font.GothamBold
+KeyInputBox.ClearTextOnFocus = false
+KeyInputBox.ZIndex = 73
+KeyInputBox.Parent = KeyPanel
+Instance.new("UICorner", KeyInputBox).CornerRadius = UDim.new(0, 10)
+local KeyBoxStroke = Instance.new("UIStroke")
+KeyBoxStroke.Color = Color3.fromRGB(90, 165, 255)
+KeyBoxStroke.Thickness = 1.2
+KeyBoxStroke.Parent = KeyInputBox
 
-local SignUpPhoneBox = Instance.new("TextBox")
-SignUpPhoneBox.Size = UDim2.new(1, -8, 0, 34)
-SignUpPhoneBox.Position = UDim2.new(0, 4, 0, 154)
-SignUpPhoneBox.BackgroundColor3 = Color3.fromRGB(36, 39, 56)
-SignUpPhoneBox.TextColor3 = Color3.fromRGB(255, 255, 255)
-SignUpPhoneBox.PlaceholderColor3 = Color3.fromRGB(145, 145, 165)
-SignUpPhoneBox.PlaceholderText = "Số điện thoại (tuỳ chọn)"
-SignUpPhoneBox.Text = ""
-SignUpPhoneBox.TextSize = 11
-SignUpPhoneBox.Font = Enum.Font.Gotham
-SignUpPhoneBox.ClearTextOnFocus = false
-SignUpPhoneBox.ZIndex = 72
-SignUpPhoneBox.Parent = CreateAccPane
-Instance.new("UICorner", SignUpPhoneBox).CornerRadius = UDim.new(0, 8)
+local KeyStatusLabel = Instance.new("TextLabel")
+KeyStatusLabel.Size = UDim2.new(1, -32, 0, 22)
+KeyStatusLabel.Position = UDim2.new(0, 16, 0, 110)
+KeyStatusLabel.BackgroundTransparency = 1
+KeyStatusLabel.Text = ""
+KeyStatusLabel.TextColor3 = Color3.fromRGB(255, 125, 140)
+KeyStatusLabel.TextSize = 10
+KeyStatusLabel.Font = Enum.Font.GothamBold
+KeyStatusLabel.ZIndex = 73
+KeyStatusLabel.Parent = KeyPanel
 
-local AgreeTermsBtn = Instance.new("TextButton")
-AgreeTermsBtn.Size = UDim2.new(1, -8, 0, 24)
-AgreeTermsBtn.Position = UDim2.new(0, 4, 0, 194)
-AgreeTermsBtn.BackgroundTransparency = 1
-AgreeTermsBtn.Text = "[✓] Lưu tài khoản vào danh sách & đồng ý"
-AgreeTermsBtn.TextColor3 = Color3.fromRGB(126, 232, 192)
-AgreeTermsBtn.TextSize = 10
-AgreeTermsBtn.Font = Enum.Font.GothamBold
-AgreeTermsBtn.TextXAlignment = Enum.TextXAlignment.Left
-AgreeTermsBtn.ZIndex = 72
-AgreeTermsBtn.Parent = CreateAccPane
+local SubmitKeyBtn = Instance.new("TextButton")
+SubmitKeyBtn.Size = UDim2.new(0.62, -20, 0, 38)
+SubmitKeyBtn.Position = UDim2.new(0, 16, 0, 140)
+SubmitKeyBtn.BackgroundColor3 = Color3.fromRGB(126, 232, 192)
+SubmitKeyBtn.TextColor3 = Color3.fromRGB(14, 18, 28)
+SubmitKeyBtn.Text = "✨ Xác nhận Key"
+SubmitKeyBtn.TextSize = 12
+SubmitKeyBtn.Font = Enum.Font.GothamBold
+SubmitKeyBtn.ZIndex = 73
+SubmitKeyBtn.Parent = KeyPanel
+Instance.new("UICorner", SubmitKeyBtn).CornerRadius = UDim.new(0, 10)
 
-local agreedTerms = true
-onButtonClicked(AgreeTermsBtn, function()
-    agreedTerms = not agreedTerms
-    AgreeTermsBtn.Text = agreedTerms and "[✓] Lưu tài khoản vào danh sách & đồng ý" or "[ ] Lưu tài khoản vào danh sách & đồng ý"
-    AgreeTermsBtn.TextColor3 = agreedTerms and Color3.fromRGB(126, 232, 192) or Color3.fromRGB(170, 170, 190)
+local CopySampleKeyBtn = Instance.new("TextButton")
+CopySampleKeyBtn.Size = UDim2.new(0.38, -16, 0, 38)
+CopySampleKeyBtn.Position = UDim2.new(0.62, 4, 0, 140)
+CopySampleKeyBtn.BackgroundColor3 = Color3.fromRGB(45, 58, 92)
+CopySampleKeyBtn.TextColor3 = Color3.fromRGB(220, 240, 255)
+CopySampleKeyBtn.Text = "🔑 Điền Key"
+CopySampleKeyBtn.TextSize = 11
+CopySampleKeyBtn.Font = Enum.Font.GothamBold
+CopySampleKeyBtn.ZIndex = 73
+CopySampleKeyBtn.Parent = KeyPanel
+Instance.new("UICorner", CopySampleKeyBtn).CornerRadius = UDim.new(0, 10)
+
+local FxToggleBtn = Instance.new("TextButton")
+FxToggleBtn.Size = UDim2.new(1, -32, 0, 26)
+FxToggleBtn.Position = UDim2.new(0, 16, 0, 188)
+FxToggleBtn.BackgroundColor3 = Color3.fromRGB(26, 32, 50)
+FxToggleBtn.BackgroundTransparency = 0.2
+FxToggleBtn.TextColor3 = Color3.fromRGB(165, 220, 255)
+FxToggleBtn.Text = "❄️ Hiệu ứng tuyết rơi: BẬT"
+FxToggleBtn.TextSize = 10
+FxToggleBtn.Font = Enum.Font.GothamBold
+FxToggleBtn.ZIndex = 73
+FxToggleBtn.Parent = KeyPanel
+Instance.new("UICorner", FxToggleBtn).CornerRadius = UDim.new(0, 8)
+
+local snowEnabled = true
+onButtonClicked(FxToggleBtn, function()
+    snowEnabled = not snowEnabled
+    FxLayer.Visible = snowEnabled
+    FxToggleBtn.Text = snowEnabled and "❄️ Hiệu ứng tuyết rơi: BẬT" or "❄️ Hiệu ứng tuyết rơi: TẮT"
 end)
 
-local SignUpErrLabel = Instance.new("TextLabel")
-SignUpErrLabel.Size = UDim2.new(1, -8, 0, 20)
-SignUpErrLabel.Position = UDim2.new(0, 4, 0, 222)
-SignUpErrLabel.BackgroundTransparency = 1
-SignUpErrLabel.Text = ""
-SignUpErrLabel.TextColor3 = Color3.fromRGB(255, 125, 140)
-SignUpErrLabel.TextSize = 10
-SignUpErrLabel.Font = Enum.Font.GothamBold
-SignUpErrLabel.TextXAlignment = Enum.TextXAlignment.Left
-SignUpErrLabel.ZIndex = 72
-SignUpErrLabel.Parent = CreateAccPane
-
-local SignUpSubmitBtn = Instance.new("TextButton")
-SignUpSubmitBtn.Size = UDim2.new(1, -8, 0, 38)
-SignUpSubmitBtn.Position = UDim2.new(0, 4, 0, 248)
-SignUpSubmitBtn.BackgroundColor3 = Color3.fromRGB(126, 232, 192)
-SignUpSubmitBtn.TextColor3 = Color3.fromRGB(15, 16, 24)
-SignUpSubmitBtn.Text = "Tạo tài khoản & Vào Script"
-SignUpSubmitBtn.TextSize = 12
-SignUpSubmitBtn.Font = Enum.Font.GothamBold
-SignUpSubmitBtn.ZIndex = 72
-SignUpSubmitBtn.Parent = CreateAccPane
-Instance.new("UICorner", SignUpSubmitBtn).CornerRadius = UDim.new(0, 10)
-
-local LoginPane = Instance.new("Frame")
-LoginPane.Size = UDim2.new(1, -16, 1, -16)
-LoginPane.Position = UDim2.new(0, 8, 0, 8)
-LoginPane.BackgroundTransparency = 1
-LoginPane.Visible = false
-LoginPane.ZIndex = 71
-LoginPane.Parent = AuthPanel
-
-local LoginTitle = Instance.new("TextLabel")
-LoginTitle.Size = UDim2.new(0.58, 0, 0, 24)
-LoginTitle.Position = UDim2.new(0, 4, 0, 4)
-LoginTitle.BackgroundTransparency = 1
-LoginTitle.Text = "🔑 Đăng nhập"
-LoginTitle.TextColor3 = Color3.fromRGB(244, 240, 232)
-LoginTitle.TextSize = 14
-LoginTitle.Font = Enum.Font.GothamBold
-LoginTitle.TextXAlignment = Enum.TextXAlignment.Left
-LoginTitle.ZIndex = 72
-LoginTitle.Parent = LoginPane
-
-local SwitchToCreateBtn = Instance.new("TextButton")
-SwitchToCreateBtn.Size = UDim2.new(0.42, -4, 0, 24)
-SwitchToCreateBtn.Position = UDim2.new(0.58, 0, 0, 4)
-SwitchToCreateBtn.BackgroundTransparency = 1
-SwitchToCreateBtn.Text = "Chưa có TK? Tạo mới"
-SwitchToCreateBtn.TextColor3 = Color3.fromRGB(64, 156, 255)
-SwitchToCreateBtn.TextSize = 10
-SwitchToCreateBtn.Font = Enum.Font.GothamBold
-SwitchToCreateBtn.TextXAlignment = Enum.TextXAlignment.Right
-SwitchToCreateBtn.ZIndex = 72
-SwitchToCreateBtn.Parent = LoginPane
-
-local LoginEmailBox = Instance.new("TextBox")
-LoginEmailBox.Size = UDim2.new(1, -8, 0, 38)
-LoginEmailBox.Position = UDim2.new(0, 4, 0, 46)
-LoginEmailBox.BackgroundColor3 = Color3.fromRGB(36, 39, 56)
-LoginEmailBox.TextColor3 = Color3.fromRGB(255, 255, 255)
-LoginEmailBox.PlaceholderColor3 = Color3.fromRGB(145, 145, 165)
-LoginEmailBox.PlaceholderText = "Email tài khoản"
-LoginEmailBox.Text = SavedAccounts[1].Email
-LoginEmailBox.TextSize = 11
-LoginEmailBox.Font = Enum.Font.Gotham
-LoginEmailBox.ClearTextOnFocus = false
-LoginEmailBox.ZIndex = 72
-LoginEmailBox.Parent = LoginPane
-Instance.new("UICorner", LoginEmailBox).CornerRadius = UDim.new(0, 8)
-
-local LoginPwBox = Instance.new("TextBox")
-LoginPwBox.Size = UDim2.new(1, -8, 0, 38)
-LoginPwBox.Position = UDim2.new(0, 4, 0, 94)
-LoginPwBox.BackgroundColor3 = Color3.fromRGB(36, 39, 56)
-LoginPwBox.TextColor3 = Color3.fromRGB(255, 255, 255)
-LoginPwBox.PlaceholderColor3 = Color3.fromRGB(145, 145, 165)
-LoginPwBox.PlaceholderText = "Mật khẩu (mặc định: lumen2026)"
-LoginPwBox.Text = ""
-LoginPwBox.TextSize = 11
-LoginPwBox.Font = Enum.Font.Gotham
-LoginPwBox.ClearTextOnFocus = false
-LoginPwBox.ZIndex = 72
-LoginPwBox.Parent = LoginPane
-Instance.new("UICorner", LoginPwBox).CornerRadius = UDim.new(0, 8)
-
-local LoginErrLabel = Instance.new("TextLabel")
-LoginErrLabel.Size = UDim2.new(1, -8, 0, 26)
-LoginErrLabel.Position = UDim2.new(0, 4, 0, 142)
-LoginErrLabel.BackgroundTransparency = 1
-LoginErrLabel.Text = ""
-LoginErrLabel.TextColor3 = Color3.fromRGB(255, 125, 140)
-LoginErrLabel.TextSize = 10
-LoginErrLabel.Font = Enum.Font.GothamBold
-LoginErrLabel.TextWrapped = true
-LoginErrLabel.TextXAlignment = Enum.TextXAlignment.Left
-LoginErrLabel.ZIndex = 72
-LoginErrLabel.Parent = LoginPane
-
-local SignInBtn = Instance.new("TextButton")
-SignInBtn.Size = UDim2.new(1, -8, 0, 40)
-SignInBtn.Position = UDim2.new(0, 4, 0, 180)
-SignInBtn.BackgroundColor3 = Color3.fromRGB(244, 240, 232)
-SignInBtn.TextColor3 = Color3.fromRGB(15, 16, 24)
-SignInBtn.Text = "Sign in"
-SignInBtn.TextSize = 12
-SignInBtn.Font = Enum.Font.GothamBold
-SignInBtn.ZIndex = 72
-SignInBtn.Parent = LoginPane
-Instance.new("UICorner", SignInBtn).CornerRadius = UDim.new(0, 10)
-
-onButtonClicked(SwitchToLoginBtn, function()
-    CreateAccPane.Visible = false
-    LoginPane.Visible = true
-    SignUpErrLabel.Text = ""
+onButtonClicked(CopySampleKeyBtn, function()
+    KeyInputBox.Text = "LUMEN-2026"
+    KeyStatusLabel.TextColor3 = Color3.fromRGB(126, 232, 192)
+    KeyStatusLabel.Text = "Đã điền key mẫu LUMEN-2026"
 end)
 
-onButtonClicked(SwitchToCreateBtn, function()
-    LoginPane.Visible = false
-    CreateAccPane.Visible = true
-    LoginErrLabel.Text = ""
+local function lockToKeyScreen(reasonText)
+    isKeyUnlocked = false
+    MainFrame.Visible = false
+    ToggleIconBtn.Visible = false
+    KeyPanel.Visible = true
+    KeyInputBox.Text = ""
+    KeyStatusLabel.TextColor3 = Color3.fromRGB(255, 125, 140)
+    KeyStatusLabel.Text = reasonText or "Key không còn hiệu lực!"
+end
+
+local function unlockScriptWithKey(k)
+    ActiveKeyName = k
+    if KeyStore[k] and not KeyStore[k].deviceInfo then
+        KeyStore[k].deviceInfo = getDeviceSummary()
+    end
+    isKeyUnlocked = true
+    KeyPanel.Visible = false
+    ToggleIconBtn.Visible = true
+    MainFrame.Visible = true
+    isMenuVisible = true
+end
+
+onButtonClicked(SubmitKeyBtn, function()
+    local entered = string.upper((KeyInputBox.Text or ""):gsub("^%s+", ""):gsub("%s+$", ""))
+    local ok, msg = isKeyValid(entered)
+    if ok then
+        KeyStatusLabel.TextColor3 = Color3.fromRGB(126, 232, 192)
+        KeyStatusLabel.Text = "Key hợp lệ! Đang mở menu..."
+        task.wait(0.2)
+        unlockScriptWithKey(entered)
+    else
+        KeyStatusLabel.TextColor3 = Color3.fromRGB(255, 125, 140)
+        KeyStatusLabel.Text = msg
+    end
 end)
 
 local introElapsed = 0
@@ -777,7 +740,6 @@ introConn = RunService.Heartbeat:Connect(function(dt)
     IntroBarFill.Size = UDim2.new(ratio, 0, 1, 0)
     IntroSubLabel.Text = string.format("Đang chạy intro... %d%%", math.floor(ratio * 100))
 
-    -- Giai đoạn 1 (0 -> 0.55): Tia sáng quét & các điểm quỹ đạo hội tụ
     local sweepP = math.clamp(ratio / 0.55, 0, 1)
     SweepBeam.Position = UDim2.new(0.28 + 0.22 * sweepP, 0, 0.75 - 0.25 * sweepP, 0)
     SweepBeam.BackgroundTransparency = sweepP > 0.85 and ((sweepP - 0.85) / 0.15) or 0
@@ -792,11 +754,9 @@ introConn = RunService.Heartbeat:Connect(function(dt)
         tip.Position = UDim2.new(0.5 + rx, 0, 0.5 + ry, 0)
     end
 
-    -- Giai đoạn 2 (0.55 -> 0.75): Cầu quỹ đạo xoay đều ở tâm
     local spinBoost = ratio > 0.55 and ((ratio - 0.55) * 4.5) or 0
     OrbitCenter.Rotation = (introElapsed * 65 + spinBoost * 30) % 360
 
-    -- Giai đoạn 3 (0.75 -> 1.0): Lõi sáng bùng lên rực rỡ
     local flareP = math.clamp((ratio - 0.72) / 0.28, 0, 1)
     local haloSize = 10 + flareP * 78
     CoreHalo.Size = UDim2.new(0, haloSize, 0, haloSize)
@@ -815,9 +775,7 @@ introConn = RunService.Heartbeat:Connect(function(dt)
         if IntroRectFrame then
             IntroRectFrame:Destroy()
         end
-        AuthPanel.Visible = true
-        CreateAccPane.Visible = true
-        LoginPane.Visible = false
+        KeyPanel.Visible = true
     end
 end)
 
@@ -990,214 +948,258 @@ DropdownListFrame:GetPropertyChangedSignal("Visible"):Connect(function()
     end
 end)
 
--- --- TAB 3: SETTINGS (THÔNG TIN TÀI KHOẢN + CHUYỂN ĐỔI TÀI KHOẢN + THANH CUỘN) ---
+-- --- TAB 3: SETTINGS (CÓ THANH CUỘN) ---
 local Tab3Content = Instance.new("ScrollingFrame")
 Tab3Content.Size = UDim2.new(1, -16, 1, -70)
 Tab3Content.Position = UDim2.new(0, 8, 0, 66)
 Tab3Content.BackgroundTransparency = 1
 Tab3Content.BorderSizePixel = 0
-Tab3Content.CanvasSize = UDim2.new(0, 0, 0, 320)
+Tab3Content.CanvasSize = UDim2.new(0, 0, 0, 210)
 Tab3Content.ScrollBarThickness = 4
 Tab3Content.Visible = false
 Tab3Content.ZIndex = 12
 Tab3Content.Parent = MainFrame
 
-local ProfileCard = Instance.new("Frame")
-ProfileCard.Size = UDim2.new(1, -6, 0, 96)
-ProfileCard.Position = UDim2.new(0, 0, 0, 0)
-ProfileCard.BackgroundColor3 = Color3.fromRGB(32, 34, 46)
-ProfileCard.BorderSizePixel = 0
-ProfileCard.ZIndex = 13
-ProfileCard.Parent = Tab3Content
-Instance.new("UICorner", ProfileCard).CornerRadius = UDim.new(0, 8)
-
-local ProfileInfoLabel = Instance.new("TextLabel")
-ProfileInfoLabel.Size = UDim2.new(1, -12, 1, -8)
-ProfileInfoLabel.Position = UDim2.new(0, 6, 0, 4)
-ProfileInfoLabel.BackgroundTransparency = 1
-ProfileInfoLabel.Text = ""
-ProfileInfoLabel.TextColor3 = Color3.fromRGB(244, 240, 232)
-ProfileInfoLabel.TextSize = 11
-ProfileInfoLabel.Font = Enum.Font.Code
-ProfileInfoLabel.TextWrapped = true
-ProfileInfoLabel.TextXAlignment = Enum.TextXAlignment.Left
-ProfileInfoLabel.TextYAlignment = Enum.TextYAlignment.Top
-ProfileInfoLabel.ZIndex = 14
-ProfileInfoLabel.Parent = ProfileCard
-
-local SwitchAccTitle = Instance.new("TextLabel")
-SwitchAccTitle.Size = UDim2.new(1, -6, 0, 20)
-SwitchAccTitle.Position = UDim2.new(0, 0, 0, 102)
-SwitchAccTitle.BackgroundTransparency = 1
-SwitchAccTitle.Text = "🔄 Chuyển đổi tài khoản đã lưu:"
-SwitchAccTitle.TextColor3 = Color3.fromRGB(183, 164, 255)
-SwitchAccTitle.TextSize = 11
-SwitchAccTitle.Font = Enum.Font.GothamBold
-SwitchAccTitle.TextXAlignment = Enum.TextXAlignment.Left
-SwitchAccTitle.ZIndex = 13
-SwitchAccTitle.Parent = Tab3Content
-
-local SwitchAccList = Instance.new("Frame")
-SwitchAccList.Size = UDim2.new(1, -6, 0, 32)
-SwitchAccList.Position = UDim2.new(0, 0, 0, 124)
-SwitchAccList.BackgroundTransparency = 1
-SwitchAccList.ZIndex = 13
-SwitchAccList.Parent = Tab3Content
-local SwitchAccLayout = Instance.new("UIListLayout")
-SwitchAccLayout.SortOrder = Enum.SortOrder.LayoutOrder
-SwitchAccLayout.Padding = UDim.new(0, 4)
-SwitchAccLayout.Parent = SwitchAccList
-
-local OpenAuthBtn = Instance.new("TextButton")
-OpenAuthBtn.Size = UDim2.new(1, -6, 0, 34)
-OpenAuthBtn.Position = UDim2.new(0, 0, 0, 166)
-OpenAuthBtn.BackgroundColor3 = Color3.fromRGB(61, 139, 255)
-OpenAuthBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-OpenAuthBtn.Text = "➕ Tạo tài khoản / Đăng nhập khác"
-OpenAuthBtn.TextSize = 11
-OpenAuthBtn.Font = Enum.Font.GothamBold
-OpenAuthBtn.ZIndex = 13
-OpenAuthBtn.Parent = Tab3Content
-Instance.new("UICorner", OpenAuthBtn).CornerRadius = UDim.new(0, 8)
-
 local SettingsInfoLabel = Instance.new("TextLabel")
-SettingsInfoLabel.Size = UDim2.new(1, -6, 0, 84)
-SettingsInfoLabel.Position = UDim2.new(0, 0, 0, 208)
+SettingsInfoLabel.Size = UDim2.new(1, -6, 0, 140)
+SettingsInfoLabel.Position = UDim2.new(0, 0, 0, 0)
 SettingsInfoLabel.BackgroundColor3 = Color3.fromRGB(32, 34, 46)
-SettingsInfoLabel.TextColor3 = Color3.fromRGB(205, 205, 220)
-SettingsInfoLabel.TextSize = 10
+SettingsInfoLabel.TextColor3 = Color3.fromRGB(225, 225, 235)
+SettingsInfoLabel.TextSize = 11
 SettingsInfoLabel.Font = Enum.Font.Code
 SettingsInfoLabel.TextWrapped = true
 SettingsInfoLabel.TextXAlignment = Enum.TextXAlignment.Left
 SettingsInfoLabel.TextYAlignment = Enum.TextYAlignment.Top
-SettingsInfoLabel.Text = " • Quét túi đồ & nhân vật tự động\n • Lọc tiền theo hậu tố K, M, B, T, Qa, spd...\n • Lưu lịch sử pet bắt được kèm giờ VN"
+SettingsInfoLabel.Text = " ⚙️ Cài đặt nâng cao:\n • Tự động quét Backpack & Character\n • Hỗ trợ lọc hậu tố tiền K, M, B, T, Qa, spd...\n • Lưu lịch sử thú bắt được kèm giờ Việt Nam"
 SettingsInfoLabel.ZIndex = 13
 SettingsInfoLabel.Parent = Tab3Content
 Instance.new("UICorner", SettingsInfoLabel).CornerRadius = UDim.new(0, 8)
 
-local refreshProfileUI
-local refreshAccountSwitcher
+-- --- TAB 4: ADMIN (THIẾT BỊ, THỜI GIAN CÒN LẠI, THÊM GIỜ, XÓA VV KEY) ---
+local Tab4Content = Instance.new("ScrollingFrame")
+Tab4Content.Size = UDim2.new(1, -16, 1, -70)
+Tab4Content.Position = UDim2.new(0, 8, 0, 66)
+Tab4Content.BackgroundTransparency = 1
+Tab4Content.BorderSizePixel = 0
+Tab4Content.CanvasSize = UDim2.new(0, 0, 0, 320)
+Tab4Content.ScrollBarThickness = 4
+Tab4Content.Visible = false
+Tab4Content.ZIndex = 12
+Tab4Content.Parent = MainFrame
 
-refreshProfileUI = function()
-    ProfileInfoLabel.Text = string.format(
-        "👤 Tên: %s\n✉️ Email: %s\n📱 SĐT: %s\n🏢 Nhóm: %s",
-        ActiveAccount.Name or "User",
-        ActiveAccount.Email or "N/A",
-        ActiveAccount.Phone or "Không có",
-        ActiveAccount.Workspace or "Default"
-    )
+local AdminInfoCard = Instance.new("TextLabel")
+AdminInfoCard.Size = UDim2.new(1, -6, 0, 96)
+AdminInfoCard.Position = UDim2.new(0, 0, 0, 0)
+AdminInfoCard.BackgroundColor3 = Color3.fromRGB(32, 34, 46)
+AdminInfoCard.TextColor3 = Color3.fromRGB(235, 240, 255)
+AdminInfoCard.TextSize = 10
+AdminInfoCard.Font = Enum.Font.Code
+AdminInfoCard.TextWrapped = true
+AdminInfoCard.TextXAlignment = Enum.TextXAlignment.Left
+AdminInfoCard.TextYAlignment = Enum.TextYAlignment.Top
+AdminInfoCard.Text = "Đang tải thông tin key & thiết bị..."
+AdminInfoCard.ZIndex = 13
+AdminInfoCard.Parent = Tab4Content
+Instance.new("UICorner", AdminInfoCard).CornerRadius = UDim.new(0, 8)
+
+local TargetKeyBox = Instance.new("TextBox")
+TargetKeyBox.Size = UDim2.new(1, -6, 0, 28)
+TargetKeyBox.Position = UDim2.new(0, 0, 0, 102)
+TargetKeyBox.BackgroundColor3 = Color3.fromRGB(32, 34, 46)
+TargetKeyBox.TextColor3 = Color3.fromRGB(255, 255, 255)
+TargetKeyBox.PlaceholderColor3 = Color3.fromRGB(150, 155, 175)
+TargetKeyBox.PlaceholderText = "Mã Key (mặc định: key đang dùng)"
+TargetKeyBox.Text = ""
+TargetKeyBox.TextSize = 10
+TargetKeyBox.Font = Enum.Font.GothamBold
+TargetKeyBox.ClearTextOnFocus = false
+TargetKeyBox.ZIndex = 13
+TargetKeyBox.Parent = Tab4Content
+Instance.new("UICorner", TargetKeyBox).CornerRadius = UDim.new(0, 6)
+
+local AddHoursBox = Instance.new("TextBox")
+AddHoursBox.Size = UDim2.new(0.46, -3, 0, 28)
+AddHoursBox.Position = UDim2.new(0, 0, 0, 136)
+AddHoursBox.BackgroundColor3 = Color3.fromRGB(32, 34, 46)
+AddHoursBox.TextColor3 = Color3.fromRGB(255, 255, 255)
+AddHoursBox.PlaceholderColor3 = Color3.fromRGB(150, 155, 175)
+AddHoursBox.PlaceholderText = "Số giờ (vd: 24)"
+AddHoursBox.Text = "24"
+AddHoursBox.TextSize = 10
+AddHoursBox.Font = Enum.Font.GothamBold
+AddHoursBox.ClearTextOnFocus = false
+AddHoursBox.ZIndex = 13
+AddHoursBox.Parent = Tab4Content
+Instance.new("UICorner", AddHoursBox).CornerRadius = UDim.new(0, 6)
+
+local AddTimeBtn = Instance.new("TextButton")
+AddTimeBtn.Size = UDim2.new(0.27, -3, 0, 28)
+AddTimeBtn.Position = UDim2.new(0.46, 2, 0, 136)
+AddTimeBtn.BackgroundColor3 = Color3.fromRGB(46, 204, 113)
+AddTimeBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+AddTimeBtn.Text = "+ Thêm"
+AddTimeBtn.TextSize = 10
+AddTimeBtn.Font = Enum.Font.GothamBold
+AddTimeBtn.ZIndex = 13
+AddTimeBtn.Parent = Tab4Content
+Instance.new("UICorner", AddTimeBtn).CornerRadius = UDim.new(0, 6)
+
+local SubTimeBtn = Instance.new("TextButton")
+SubTimeBtn.Size = UDim2.new(0.27, -4, 0, 28)
+SubTimeBtn.Position = UDim2.new(0.73, 1, 0, 136)
+SubTimeBtn.BackgroundColor3 = Color3.fromRGB(230, 126, 34)
+SubTimeBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+SubTimeBtn.Text = "- Bớt"
+SubTimeBtn.TextSize = 10
+SubTimeBtn.Font = Enum.Font.GothamBold
+SubTimeBtn.ZIndex = 13
+SubTimeBtn.Parent = Tab4Content
+Instance.new("UICorner", SubTimeBtn).CornerRadius = UDim.new(0, 6)
+
+local Quick1hBtn = Instance.new("TextButton")
+Quick1hBtn.Size = UDim2.new(0.32, -3, 0, 26)
+Quick1hBtn.Position = UDim2.new(0, 0, 0, 170)
+Quick1hBtn.BackgroundColor3 = Color3.fromRGB(52, 73, 94)
+Quick1hBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+Quick1hBtn.Text = "+1 Giờ"
+Quick1hBtn.TextSize = 10
+Quick1hBtn.Font = Enum.Font.GothamBold
+Quick1hBtn.ZIndex = 13
+Quick1hBtn.Parent = Tab4Content
+Instance.new("UICorner", Quick1hBtn).CornerRadius = UDim.new(0, 6)
+
+local Quick7dBtn = Instance.new("TextButton")
+Quick7dBtn.Size = UDim2.new(0.32, -3, 0, 26)
+Quick7dBtn.Position = UDim2.new(0.34, 0, 0, 170)
+Quick7dBtn.BackgroundColor3 = Color3.fromRGB(52, 73, 94)
+Quick7dBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+Quick7dBtn.Text = "+7 Ngày"
+Quick7dBtn.TextSize = 10
+Quick7dBtn.Font = Enum.Font.GothamBold
+Quick7dBtn.ZIndex = 13
+Quick7dBtn.Parent = Tab4Content
+Instance.new("UICorner", Quick7dBtn).CornerRadius = UDim.new(0, 6)
+
+local PermKeyBtn = Instance.new("TextButton")
+PermKeyBtn.Size = UDim2.new(0.32, -2, 0, 26)
+PermKeyBtn.Position = UDim2.new(0.68, 0, 0, 170)
+PermKeyBtn.BackgroundColor3 = Color3.fromRGB(61, 139, 255)
+PermKeyBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+PermKeyBtn.Text = "♾️ Vĩnh viễn"
+PermKeyBtn.TextSize = 10
+PermKeyBtn.Font = Enum.Font.GothamBold
+PermKeyBtn.ZIndex = 13
+PermKeyBtn.Parent = Tab4Content
+Instance.new("UICorner", PermKeyBtn).CornerRadius = UDim.new(0, 6)
+
+local DeleteForeverKeyBtn = Instance.new("TextButton")
+DeleteForeverKeyBtn.Size = UDim2.new(1, -6, 0, 32)
+DeleteForeverKeyBtn.Position = UDim2.new(0, 0, 0, 202)
+DeleteForeverKeyBtn.BackgroundColor3 = Color3.fromRGB(192, 57, 43)
+DeleteForeverKeyBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+DeleteForeverKeyBtn.Text = "🗑️ XÓA VĨNH VIỄN KEY NÀY (KHÔNG DÙNG ĐƯỢC NỮA)"
+DeleteForeverKeyBtn.TextSize = 10
+DeleteForeverKeyBtn.Font = Enum.Font.GothamBold
+DeleteForeverKeyBtn.ZIndex = 13
+DeleteForeverKeyBtn.Parent = Tab4Content
+Instance.new("UICorner", DeleteForeverKeyBtn).CornerRadius = UDim.new(0, 6)
+
+local AdminActionStatus = Instance.new("TextLabel")
+AdminActionStatus.Size = UDim2.new(1, -6, 0, 34)
+AdminActionStatus.Position = UDim2.new(0, 0, 0, 240)
+AdminActionStatus.BackgroundColor3 = Color3.fromRGB(28, 30, 42)
+AdminActionStatus.TextColor3 = Color3.fromRGB(126, 232, 192)
+AdminActionStatus.TextSize = 10
+AdminActionStatus.Font = Enum.Font.Code
+AdminActionStatus.TextWrapped = true
+AdminActionStatus.Text = "Sẵn sàng quản lý thời gian & xóa vĩnh viễn key."
+AdminActionStatus.ZIndex = 13
+AdminActionStatus.Parent = Tab4Content
+Instance.new("UICorner", AdminActionStatus).CornerRadius = UDim.new(0, 6)
+
+local function resolveTargetKeyName()
+    local raw = string.upper((TargetKeyBox.Text or ""):gsub("^%s+", ""):gsub("%s+$", ""))
+    if raw ~= "" then return raw end
+    return ActiveKeyName or ""
 end
 
-refreshAccountSwitcher = function()
-    for _, child in ipairs(SwitchAccList:GetChildren()) do
-        if child:IsA("TextButton") then child:Destroy() end
+local function adjustKeySeconds(deltaSec)
+    local k = resolveTargetKeyName()
+    if k == "" then
+        AdminActionStatus.TextColor3 = Color3.fromRGB(255, 125, 140)
+        AdminActionStatus.Text = "Chưa có mã key để chỉnh thời gian."
+        return
     end
-    for i, acc in ipairs(SavedAccounts) do
-        local isCurrent = (acc == ActiveAccount)
-        local itemBtn = Instance.new("TextButton")
-        itemBtn.Size = UDim2.new(1, 0, 0, 28)
-        itemBtn.BackgroundColor3 = isCurrent and Color3.fromRGB(46, 204, 113) or Color3.fromRGB(44, 46, 62)
-        itemBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-        itemBtn.TextSize = 10
-        itemBtn.Font = Enum.Font.GothamBold
-        itemBtn.Text = (isCurrent and "✓ " or "⇄ ") .. acc.Name .. " (" .. acc.Email .. ")"
-        itemBtn.LayoutOrder = i
-        itemBtn.ZIndex = 14
-        itemBtn.Parent = SwitchAccList
-        Instance.new("UICorner", itemBtn).CornerRadius = UDim.new(0, 6)
-
-        onButtonClicked(itemBtn, function()
-            ActiveAccount = acc
-            LoginEmailBox.Text = acc.Email
-            refreshProfileUI()
-            refreshAccountSwitcher()
-        end)
+    if RevokedKeys[k] then
+        AdminActionStatus.TextColor3 = Color3.fromRGB(255, 125, 140)
+        AdminActionStatus.Text = "Key " .. k .. " đã bị xóa vĩnh viễn!"
+        return
     end
-    local listH = math.max(28, #SavedAccounts * 32)
-    SwitchAccList.Size = UDim2.new(1, -6, 0, listH)
-    local authBtnY = 124 + listH + 8
-    OpenAuthBtn.Position = UDim2.new(0, 0, 0, authBtnY)
-    local infoY = authBtnY + 42
-    SettingsInfoLabel.Position = UDim2.new(0, 0, 0, infoY)
-    Tab3Content.CanvasSize = UDim2.new(0, 0, 0, infoY + 96)
+    if not KeyStore[k] then
+        KeyStore[k] = { expireAt = os.time(), isAdmin = false, deviceInfo = nil }
+    end
+    local baseTime = KeyStore[k].expireAt or os.time()
+    if baseTime < os.time() then baseTime = os.time() end
+    KeyStore[k].expireAt = math.max(os.time(), baseTime + deltaSec)
+    AdminActionStatus.TextColor3 = Color3.fromRGB(126, 232, 192)
+    AdminActionStatus.Text = string.format("Đã cập nhật %s -> Còn: %s", k, formatRemainingTime(KeyStore[k].expireAt))
 end
 
-refreshProfileUI()
-refreshAccountSwitcher()
-
-local function enterAuthenticatedSession(acc)
-    ActiveAccount = acc
-    isAuthenticated = true
-    refreshProfileUI()
-    refreshAccountSwitcher()
-    AuthPanel.Visible = false
-    ToggleIconBtn.Visible = true
-    MainFrame.Visible = true
-    isMenuVisible = true
-end
-
-onButtonClicked(OpenAuthBtn, function()
-    isAuthenticated = false
-    MainFrame.Visible = false
-    ToggleIconBtn.Visible = false
-    AuthPanel.Visible = true
-    CreateAccPane.Visible = true
-    LoginPane.Visible = false
-    LoginEmailBox.Text = ActiveAccount.Email or ""
-    LoginPwBox.Text = ""
-    LoginErrLabel.Text = ""
-    SignUpErrLabel.Text = ""
+onButtonClicked(AddTimeBtn, function()
+    local hrs = tonumber(AddHoursBox.Text) or 0
+    if hrs <= 0 then
+        AdminActionStatus.TextColor3 = Color3.fromRGB(255, 125, 140)
+        AdminActionStatus.Text = "Nhập số giờ lớn hơn 0."
+        return
+    end
+    adjustKeySeconds(hrs * 3600)
 end)
 
-onButtonClicked(SignInBtn, function()
-    local acc = findAccount(LoginEmailBox.Text, LoginPwBox.Text)
-    if acc then
-        LoginErrLabel.Text = ""
-        enterAuthenticatedSession(acc)
-    else
-        LoginErrLabel.Text = "Sai email hoặc mật khẩu (mặc định: lumen2026)"
+onButtonClicked(SubTimeBtn, function()
+    local hrs = tonumber(AddHoursBox.Text) or 0
+    if hrs <= 0 then
+        AdminActionStatus.TextColor3 = Color3.fromRGB(255, 125, 140)
+        AdminActionStatus.Text = "Nhập số giờ lớn hơn 0."
+        return
     end
+    adjustKeySeconds(-hrs * 3600)
 end)
 
-onButtonClicked(SignUpSubmitBtn, function()
-    local nm = (SignUpNameBox.Text or ""):gsub("^%s+", ""):gsub("%s+$", "")
-    local em = (SignUpEmailBox.Text or ""):gsub("^%s+", ""):gsub("%s+$", "")
-    local pwVal = SignUpPwBox.Text or ""
-    local ph = (SignUpPhoneBox.Text or ""):gsub("^%s+", ""):gsub("%s+$", "")
+onButtonClicked(Quick1hBtn, function()
+    adjustKeySeconds(3600)
+end)
 
-    if nm == "" then
-        SignUpErrLabel.Text = "Vui lòng nhập họ tên"
-        return
-    end
-    if not string.match(em, "^[^%s@]+@[^%s@]+%.[^%s@]+$") then
-        SignUpErrLabel.Text = "Email không hợp lệ"
-        return
-    end
-    if #pwVal < 6 then
-        SignUpErrLabel.Text = "Mật khẩu tối thiểu 6 ký tự"
-        return
-    end
-    if not agreedTerms then
-        SignUpErrLabel.Text = "Vui lòng đồng ý lưu tài khoản"
-        return
-    end
+onButtonClicked(Quick7dBtn, function()
+    adjustKeySeconds(7 * 86400)
+end)
 
-    local existing = findAccountByEmail(em)
-    if existing then
-        existing.Name = nm
-        existing.Password = pwVal
-        existing.Phone = ph ~= "" and ph or existing.Phone
-        enterAuthenticatedSession(existing)
+onButtonClicked(PermKeyBtn, function()
+    local k = resolveTargetKeyName()
+    if k == "" or RevokedKeys[k] then return end
+    if not KeyStore[k] then
+        KeyStore[k] = { expireAt = nil, isAdmin = false, deviceInfo = nil }
     else
-        local newAcc = {
-            Name = nm,
-            Email = em,
-            Password = pwVal,
-            Phone = ph ~= "" and ph or "Không có",
-            Workspace = "New Era Account"
-        }
-        table.insert(SavedAccounts, newAcc)
-        enterAuthenticatedSession(newAcc)
+        KeyStore[k].expireAt = nil
+    end
+    AdminActionStatus.TextColor3 = Color3.fromRGB(126, 232, 192)
+    AdminActionStatus.Text = "Đã đặt key " .. k .. " thành Vĩnh viễn!"
+end)
+
+onButtonClicked(DeleteForeverKeyBtn, function()
+    local k = resolveTargetKeyName()
+    if k == "" then
+        AdminActionStatus.TextColor3 = Color3.fromRGB(255, 125, 140)
+        AdminActionStatus.Text = "Vui lòng chọn hoặc nhập mã key cần xóa vĩnh viễn."
+        return
+    end
+    RevokedKeys[k] = true
+    KeyStore[k] = nil
+    AdminActionStatus.TextColor3 = Color3.fromRGB(255, 125, 140)
+    AdminActionStatus.Text = "🗑️ Đã xóa vĩnh viễn key: " .. k .. " (không thể dùng lại)"
+    if ActiveKeyName == k then
+        ActiveKeyName = nil
+        task.wait(0.25)
+        lockToKeyScreen("Key " .. k .. " đã bị xóa vĩnh viễn bởi Admin!")
     end
 end)
 
@@ -1375,7 +1377,7 @@ HistorySearch:GetPropertyChangedSignal("Text"):Connect(function()
 end)
 
 local function setActiveTabStyle(activeBtn)
-    for _, b in ipairs({Tab1Btn, Tab2Btn, Tab3Btn}) do
+    for _, b in ipairs({Tab1Btn, Tab2Btn, Tab3Btn, Tab4Btn}) do
         if b == activeBtn then
             b.BackgroundColor3 = Color3.fromRGB(46, 204, 113)
             b.TextColor3 = Color3.fromRGB(255, 255, 255)
@@ -1391,6 +1393,7 @@ onButtonClicked(Tab1Btn, function()
     Tab1Content.Visible = true
     Tab2Content.Visible = false
     Tab3Content.Visible = false
+    Tab4Content.Visible = false
     HistorySearch.Visible = false
     HistoryFilterBtn.Visible = false
     HistoryClearBtn.Visible = false
@@ -1403,6 +1406,7 @@ onButtonClicked(Tab2Btn, function()
     Tab1Content.Visible = false
     Tab2Content.Visible = true
     Tab3Content.Visible = false
+    Tab4Content.Visible = false
     HistorySearch.Visible = true
     HistoryFilterBtn.Visible = true
     HistoryClearBtn.Visible = true
@@ -1415,13 +1419,28 @@ onButtonClicked(Tab3Btn, function()
     Tab1Content.Visible = false
     Tab2Content.Visible = false
     Tab3Content.Visible = true
+    Tab4Content.Visible = false
     HistorySearch.Visible = false
     HistoryFilterBtn.Visible = false
     HistoryClearBtn.Visible = false
     HistoryCountLabel.Visible = false
     HistoryFilterPopup.Visible = false
-    refreshProfileUI()
-    refreshAccountSwitcher()
+end)
+
+onButtonClicked(Tab4Btn, function()
+    setActiveTabStyle(Tab4Btn)
+    Tab1Content.Visible = false
+    Tab2Content.Visible = false
+    Tab3Content.Visible = false
+    Tab4Content.Visible = true
+    HistorySearch.Visible = false
+    HistoryFilterBtn.Visible = false
+    HistoryClearBtn.Visible = false
+    HistoryCountLabel.Visible = false
+    HistoryFilterPopup.Visible = false
+    if TargetKeyBox.Text == "" and ActiveKeyName then
+        TargetKeyBox.Text = ActiveKeyName
+    end
 end)
 
 -- ==========================================
@@ -1718,13 +1737,51 @@ onButtonClicked(ToggleButton, function()
 end)
 
 -- ==========================================
--- VÒNG LẶP CẬP NHẬT TRẠNG THÁI
+-- VÒNG LẶP CẬP NHẬT TRẠNG THÁI, ADMIN & TUYẾT
 -- ==========================================
 local frameCount = 0
 local lastFpsUpdate = tick()
 local currentFps = 60
 
-RunService.RenderStepped:Connect(function()
+RunService.RenderStepped:Connect(function(dt)
+    if KeyPanel.Visible and snowEnabled then
+        local hue = (tick() * 0.14) % 1
+        KeyStroke.Color = Color3.fromHSV(hue, 0.55, 1)
+        KeyBoxStroke.Color = Color3.fromHSV((hue + 0.25) % 1, 0.65, 1)
+
+        local t = tick()
+        for _, f in ipairs(snowFlakes) do
+            f.yPos = f.yPos + f.speedY * dt
+            if f.yPos > 1.05 then
+                f.yPos = -0.05
+            end
+            local swayX = math.sin(t * f.swayFreq + f.phase) * f.swayAmp
+            local xClamped = math.clamp(f.xBase + swayX, 0.02, 0.98)
+            f.obj.Position = UDim2.new(xClamped, 0, f.yPos, 0)
+        end
+    end
+
+    if isKeyUnlocked and ActiveKeyName then
+        local ok, reason = isKeyValid(ActiveKeyName)
+        if not ok then
+            ActiveKeyName = nil
+            lockToKeyScreen(reason)
+        end
+    end
+
+    if Tab4Content.Visible then
+        local targetK = resolveTargetKeyName()
+        local entry = targetK ~= "" and KeyStore[targetK] or nil
+        local remStr = entry and formatRemainingTime(entry.expireAt) or (RevokedKeys[targetK] and "🗑️ Đã xóa VV" or "Không có")
+        local devStr = (entry and entry.deviceInfo) or getDeviceSummary()
+        AdminInfoCard.Text = string.format(
+            "🔑 Key: %s\n⏳ Còn lại: %s\n📱 Thiết bị: %s",
+            targetK ~= "" and targetK or "Chưa chọn",
+            remStr,
+            devStr
+        )
+    end
+
     frameCount = frameCount + 1
     if tick() - lastFpsUpdate >= 0.5 then
         currentFps = math.floor(frameCount / (tick() - lastFpsUpdate))
