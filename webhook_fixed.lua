@@ -15,6 +15,7 @@ local RunService = game:GetService("RunService")
 local MarketplaceService = game:GetService("MarketplaceService")
 local CoreGui = game:GetService("CoreGui")
 local TweenService = game:GetService("TweenService")
+local UserInputService = game:GetService("UserInputService")
 local LocalPlayer = Players.LocalPlayer
 
 local httpRequest = (syn and syn.request) or (http and http.request) or http_request or (fluxus and fluxus.request) or request
@@ -174,6 +175,218 @@ Tab2Btn.Text = "📜 Lịch sử Pet"
 Tab2Btn.Parent = TabContainer
 Instance.new("UICorner", Tab2Btn).CornerRadius = UDim.new(0, 6)
 
+-- ==========================================
+-- DYNAMIC ISLAND (#459) - TRÊN ĐẦU KHI QUAY NGANG
+-- ==========================================
+local DynamicIsland = Instance.new("Frame")
+DynamicIsland.Name = "u459DynamicIsland"
+DynamicIsland.AnchorPoint = Vector2.new(0.5, 0)
+DynamicIsland.Position = UDim2.new(0.5, 0, 0, 8)
+DynamicIsland.Size = UDim2.new(0, 206, 0, 36)
+DynamicIsland.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+DynamicIsland.BorderSizePixel = 0
+DynamicIsland.Visible = false
+DynamicIsland.ZIndex = 80
+DynamicIsland.Parent = ScreenGui
+Instance.new("UICorner", DynamicIsland).CornerRadius = UDim.new(0, 18)
+
+local IslandStroke = Instance.new("UIStroke")
+IslandStroke.Color = Color3.fromRGB(255, 255, 255)
+IslandStroke.Transparency = 0.86
+IslandStroke.Thickness = 1
+IslandStroke.Parent = DynamicIsland
+
+local IslandTapBtn = Instance.new("TextButton")
+IslandTapBtn.Size = UDim2.new(1, 0, 1, 0)
+IslandTapBtn.Position = UDim2.new(0, 0, 0, 0)
+IslandTapBtn.BackgroundTransparency = 1
+IslandTapBtn.Text = ""
+IslandTapBtn.ZIndex = 81
+IslandTapBtn.Parent = DynamicIsland
+
+-- Trạng thái thu gọn (Compact: 206x36)
+local CompactView = Instance.new("Frame")
+CompactView.Size = UDim2.new(1, 0, 1, 0)
+CompactView.BackgroundTransparency = 1
+CompactView.ZIndex = 82
+CompactView.Parent = DynamicIsland
+
+local CompactDot = Instance.new("Frame")
+CompactDot.Size = UDim2.new(0, 8, 0, 8)
+CompactDot.Position = UDim2.new(0, 12, 0.5, -4)
+CompactDot.BackgroundColor3 = Color3.fromRGB(48, 209, 88)
+CompactDot.BorderSizePixel = 0
+CompactDot.ZIndex = 83
+CompactDot.Parent = CompactView
+Instance.new("UICorner", CompactDot).CornerRadius = UDim.new(1, 0)
+
+local CompactTitle = Instance.new("TextLabel")
+CompactTitle.Size = UDim2.new(0, 96, 1, 0)
+CompactTitle.Position = UDim2.new(0, 25, 0, 0)
+CompactTitle.BackgroundTransparency = 1
+CompactTitle.Text = "🐾 0 Pet"
+CompactTitle.TextColor3 = Color3.fromRGB(255, 255, 255)
+CompactTitle.TextSize = 12
+CompactTitle.Font = Enum.Font.GothamBold
+CompactTitle.TextXAlignment = Enum.TextXAlignment.Left
+CompactTitle.ZIndex = 83
+CompactTitle.Parent = CompactView
+
+local CompactTimer = Instance.new("TextLabel")
+CompactTimer.Size = UDim2.new(0, 72, 1, 0)
+CompactTimer.Position = UDim2.new(1, -82, 0, 0)
+CompactTimer.BackgroundTransparency = 1
+CompactTimer.Text = "00:00:00"
+CompactTimer.TextColor3 = Color3.fromRGB(255, 159, 10)
+CompactTimer.TextSize = 11
+CompactTimer.Font = Enum.Font.Code
+CompactTimer.TextXAlignment = Enum.TextXAlignment.Right
+CompactTimer.ZIndex = 83
+CompactTimer.Parent = CompactView
+
+-- Trạng thái mở rộng (Expanded: 316x84)
+local ExpandedView = Instance.new("Frame")
+ExpandedView.Size = UDim2.new(1, 0, 1, 0)
+ExpandedView.BackgroundTransparency = 1
+ExpandedView.Visible = false
+ExpandedView.ZIndex = 82
+ExpandedView.Parent = DynamicIsland
+
+local ExpandedInfo = Instance.new("TextLabel")
+ExpandedInfo.Size = UDim2.new(1, -24, 0, 34)
+ExpandedInfo.Position = UDim2.new(0, 12, 0, 8)
+ExpandedInfo.BackgroundTransparency = 1
+ExpandedInfo.Text = "Đang tải trạng thái..."
+ExpandedInfo.TextColor3 = Color3.fromRGB(244, 240, 232)
+ExpandedInfo.TextSize = 10
+ExpandedInfo.Font = Enum.Font.Code
+ExpandedInfo.TextXAlignment = Enum.TextXAlignment.Left
+ExpandedInfo.TextYAlignment = Enum.TextYAlignment.Top
+ExpandedInfo.ZIndex = 83
+ExpandedInfo.Parent = ExpandedView
+
+local IslandToggleRunBtn = Instance.new("TextButton")
+IslandToggleRunBtn.Size = UDim2.new(0, 96, 0, 26)
+IslandToggleRunBtn.Position = UDim2.new(0, 12, 1, -34)
+IslandToggleRunBtn.BackgroundColor3 = Color3.fromRGB(46, 204, 113)
+IslandToggleRunBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+IslandToggleRunBtn.TextSize = 10
+IslandToggleRunBtn.Font = Enum.Font.GothamBold
+IslandToggleRunBtn.Text = "STOP SCRIPT"
+IslandToggleRunBtn.ZIndex = 84
+IslandToggleRunBtn.Parent = ExpandedView
+Instance.new("UICorner", IslandToggleRunBtn).CornerRadius = UDim.new(0, 8)
+
+local IslandMenuBtn = Instance.new("TextButton")
+IslandMenuBtn.Size = UDim2.new(0, 96, 0, 26)
+IslandMenuBtn.Position = UDim2.new(0, 114, 1, -34)
+IslandMenuBtn.BackgroundColor3 = Color3.fromRGB(52, 52, 64)
+IslandMenuBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+IslandMenuBtn.TextSize = 10
+IslandMenuBtn.Font = Enum.Font.GothamBold
+IslandMenuBtn.Text = "Ẩn/Hiện Menu"
+IslandMenuBtn.ZIndex = 84
+IslandMenuBtn.Parent = ExpandedView
+Instance.new("UICorner", IslandMenuBtn).CornerRadius = UDim.new(0, 8)
+
+local IslandCollapseBtn = Instance.new("TextButton")
+IslandCollapseBtn.Size = UDim2.new(0, 82, 0, 26)
+IslandCollapseBtn.Position = UDim2.new(1, -94, 1, -34)
+IslandCollapseBtn.BackgroundColor3 = Color3.fromRGB(38, 38, 46)
+IslandCollapseBtn.TextColor3 = Color3.fromRGB(255, 159, 10)
+IslandCollapseBtn.TextSize = 10
+IslandCollapseBtn.Font = Enum.Font.GothamBold
+IslandCollapseBtn.Text = "Thu gọn"
+IslandCollapseBtn.ZIndex = 84
+IslandCollapseBtn.Parent = ExpandedView
+Instance.new("UICorner", IslandCollapseBtn).CornerRadius = UDim.new(0, 8)
+
+local isIslandExpanded = false
+
+local function setIslandExpanded(expanded)
+    isIslandExpanded = expanded
+    if expanded then
+        CompactView.Visible = false
+        ExpandedView.Visible = true
+        TweenService:Create(DynamicIsland, TweenInfo.new(0.45, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
+            Size = UDim2.new(0, 316, 0, 84)
+        }):Play()
+        TweenService:Create(DynamicIsland:FindFirstChildOfClass("UICorner"), TweenInfo.new(0.45, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+            CornerRadius = UDim.new(0, 24)
+        }):Play()
+    else
+        ExpandedView.Visible = false
+        CompactView.Visible = true
+        TweenService:Create(DynamicIsland, TweenInfo.new(0.4, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+            Size = UDim2.new(0, 206, 0, 36)
+        }):Play()
+        TweenService:Create(DynamicIsland:FindFirstChildOfClass("UICorner"), TweenInfo.new(0.4, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+            CornerRadius = UDim.new(0, 18)
+        }):Play()
+    end
+end
+
+onButtonClicked(IslandTapBtn, function()
+    if not isIslandExpanded then
+        setIslandExpanded(true)
+    end
+end)
+
+onButtonClicked(IslandCollapseBtn, function()
+    setIslandExpanded(false)
+end)
+
+onButtonClicked(IslandMenuBtn, function()
+    isMenuVisible = not isMenuVisible
+    MainFrame.Visible = isMenuVisible
+end)
+
+local function syncRunButtons()
+    if isRunning then
+        ToggleButton.Text = "STOP SCRIPT"
+        ToggleButton.BackgroundColor3 = Color3.fromRGB(46, 204, 113)
+        IslandToggleRunBtn.Text = "STOP SCRIPT"
+        IslandToggleRunBtn.BackgroundColor3 = Color3.fromRGB(46, 204, 113)
+        CompactDot.BackgroundColor3 = Color3.fromRGB(48, 209, 88)
+    else
+        ToggleButton.Text = "START SCRIPT"
+        ToggleButton.BackgroundColor3 = Color3.fromRGB(224, 86, 36)
+        IslandToggleRunBtn.Text = "START SCRIPT"
+        IslandToggleRunBtn.BackgroundColor3 = Color3.fromRGB(224, 86, 36)
+        CompactDot.BackgroundColor3 = Color3.fromRGB(255, 69, 58)
+    end
+end
+
+onButtonClicked(IslandToggleRunBtn, function()
+    isRunning = not isRunning
+    syncRunButtons()
+end)
+
+local function updateLandscapeVisibility()
+    local cam = workspace.CurrentCamera
+    if not cam then return end
+    local vp = cam.ViewportSize
+    local isLandscape = vp.X > vp.Y
+    DynamicIsland.Visible = isLandscape
+    if not isLandscape and isIslandExpanded then
+        isIslandExpanded = false
+        ExpandedView.Visible = false
+        CompactView.Visible = true
+        DynamicIsland.Size = UDim2.new(0, 206, 0, 36)
+    end
+end
+
+if workspace.CurrentCamera then
+    workspace.CurrentCamera:GetPropertyChangedSignal("ViewportSize"):Connect(updateLandscapeVisibility)
+end
+workspace:GetPropertyChangedSignal("CurrentCamera"):Connect(function()
+    if workspace.CurrentCamera then
+        workspace.CurrentCamera:GetPropertyChangedSignal("ViewportSize"):Connect(updateLandscapeVisibility)
+        updateLandscapeVisibility()
+    end
+end)
+updateLandscapeVisibility()
+
 -- --- TAB 1 ---
 local Tab1Content = Instance.new("Frame")
 Tab1Content.Size = UDim2.new(1, 0, 1, -70)
@@ -195,7 +408,6 @@ StatusLabel.TextYAlignment = Enum.TextYAlignment.Top
 StatusLabel.Parent = Tab1Content
 Instance.new("UICorner", StatusLabel).CornerRadius = UDim.new(0, 8)
 
--- Ô nhập & lưu số tiền tối thiểu để lọc cả Lưu Lịch Sử & Gửi Webhook
 local CustomMoneyInput = Instance.new("TextBox")
 CustomMoneyInput.Size = UDim2.new(1, -92, 0, 28)
 CustomMoneyInput.Position = UDim2.new(0, 10, 0, 72)
@@ -337,7 +549,7 @@ DropdownListFrame:GetPropertyChangedSignal("Visible"):Connect(function()
     end
 end)
 
--- --- TAB 2: LỊCH SỬ + CHỌN NHIỀU MỤC ĐỂ XÓA ---
+-- --- TAB 2: LỊCH SỬ + XÁC NHẬN XOÁ (#436) ---
 local HistoryRecords = {}
 local historyFilterMode = "all"
 local isSelectMode = false
@@ -461,6 +673,238 @@ onButtonClicked(HistoryFilterBtn, function()
     HistoryFilterPopup.Visible = not HistoryFilterPopup.Visible
 end)
 
+-- ==========================================
+-- HỘP THOẠI XÁC NHẬN XOÁ (#436) CHO LỊCH SỬ
+-- ==========================================
+local ConfirmOverlay = Instance.new("Frame")
+ConfirmOverlay.Name = "u436ConfirmOverlay"
+ConfirmOverlay.Size = UDim2.new(1, 0, 1, 0)
+ConfirmOverlay.Position = UDim2.new(0, 0, 0, 0)
+ConfirmOverlay.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+ConfirmOverlay.BackgroundTransparency = 0.45
+ConfirmOverlay.BorderSizePixel = 0
+ConfirmOverlay.Visible = false
+ConfirmOverlay.ZIndex = 50
+ConfirmOverlay.Parent = MainFrame
+Instance.new("UICorner", ConfirmOverlay).CornerRadius = UDim.new(0, 14)
+
+local ConfirmCard = Instance.new("Frame")
+ConfirmCard.Name = "u436-d"
+ConfirmCard.Size = UDim2.new(0, 274, 0, 186)
+ConfirmCard.Position = UDim2.new(0.5, -137, 0.5, -93)
+ConfirmCard.BackgroundColor3 = Color3.fromRGB(30, 31, 40)
+ConfirmCard.BorderSizePixel = 0
+ConfirmCard.ZIndex = 51
+ConfirmCard.Parent = ConfirmOverlay
+Instance.new("UICorner", ConfirmCard).CornerRadius = UDim.new(0, 16)
+local ConfirmStroke = Instance.new("UIStroke")
+ConfirmStroke.Color = Color3.fromRGB(255, 255, 255)
+ConfirmStroke.Transparency = 0.85
+ConfirmStroke.Thickness = 1
+ConfirmStroke.Parent = ConfirmCard
+
+local BinIconBox = Instance.new("Frame")
+BinIconBox.Size = UDim2.new(0, 42, 0, 42)
+BinIconBox.Position = UDim2.new(0, 16, 0, 14)
+BinIconBox.BackgroundColor3 = Color3.fromRGB(217, 58, 85)
+BinIconBox.BackgroundTransparency = 0.85
+BinIconBox.BorderSizePixel = 0
+BinIconBox.ZIndex = 52
+BinIconBox.Parent = ConfirmCard
+Instance.new("UICorner", BinIconBox).CornerRadius = UDim.new(0, 12)
+
+local BinLid = Instance.new("Frame")
+BinLid.Size = UDim2.new(0, 22, 0, 3)
+BinLid.Position = UDim2.new(0.5, -11, 0, 12)
+BinLid.BackgroundColor3 = Color3.fromRGB(255, 125, 140)
+BinLid.BorderSizePixel = 0
+BinLid.ZIndex = 54
+BinLid.Parent = BinIconBox
+Instance.new("UICorner", BinLid).CornerRadius = UDim.new(0, 2)
+
+local BinBody = Instance.new("Frame")
+BinBody.Size = UDim2.new(0, 16, 0, 15)
+BinBody.Position = UDim2.new(0.5, -8, 0, 16)
+BinBody.BackgroundColor3 = Color3.fromRGB(255, 125, 140)
+BinBody.BorderSizePixel = 0
+BinBody.ZIndex = 53
+BinBody.Parent = BinIconBox
+Instance.new("UICorner", BinBody).CornerRadius = UDim.new(0, 3)
+
+local DocSheet = Instance.new("Frame")
+DocSheet.Size = UDim2.new(0, 9, 0, 11)
+DocSheet.Position = UDim2.new(0.5, -4, 0, 2)
+DocSheet.BackgroundColor3 = Color3.fromRGB(244, 240, 232)
+DocSheet.BackgroundTransparency = 1
+DocSheet.BorderSizePixel = 0
+DocSheet.ZIndex = 53
+DocSheet.Parent = BinIconBox
+Instance.new("UICorner", DocSheet).CornerRadius = UDim.new(0, 1)
+
+local ConfirmTitle = Instance.new("TextLabel")
+ConfirmTitle.Size = UDim2.new(1, -80, 0, 24)
+ConfirmTitle.Position = UDim2.new(0, 66, 0, 14)
+ConfirmTitle.BackgroundTransparency = 1
+ConfirmTitle.Text = "Xoá lịch sử pet?"
+ConfirmTitle.TextColor3 = Color3.fromRGB(244, 240, 232)
+ConfirmTitle.TextSize = 14
+ConfirmTitle.Font = Enum.Font.GothamBold
+ConfirmTitle.TextXAlignment = Enum.TextXAlignment.Left
+ConfirmTitle.ZIndex = 52
+ConfirmTitle.Parent = ConfirmCard
+
+local ConfirmDesc = Instance.new("TextLabel")
+ConfirmDesc.Size = UDim2.new(1, -32, 0, 46)
+ConfirmDesc.Position = UDim2.new(0, 16, 0, 62)
+ConfirmDesc.BackgroundTransparency = 1
+ConfirmDesc.Text = "Các mục đã chọn sẽ bị xoá khỏi lịch sử và không thể hoàn tác."
+ConfirmDesc.TextColor3 = Color3.fromRGB(195, 192, 205)
+ConfirmDesc.TextSize = 11
+ConfirmDesc.Font = Enum.Font.Gotham
+ConfirmDesc.TextWrapped = true
+ConfirmDesc.TextXAlignment = Enum.TextXAlignment.Left
+ConfirmDesc.TextYAlignment = Enum.TextYAlignment.Top
+ConfirmDesc.ZIndex = 52
+ConfirmDesc.Parent = ConfirmCard
+
+local CancelConfirmBtn = Instance.new("TextButton")
+CancelConfirmBtn.Size = UDim2.new(0.5, -20, 0, 36)
+CancelConfirmBtn.Position = UDim2.new(0, 16, 1, -50)
+CancelConfirmBtn.BackgroundColor3 = Color3.fromRGB(48, 50, 62)
+CancelConfirmBtn.TextColor3 = Color3.fromRGB(244, 240, 232)
+CancelConfirmBtn.TextSize = 12
+CancelConfirmBtn.Font = Enum.Font.GothamBold
+CancelConfirmBtn.Text = "Cancel"
+CancelConfirmBtn.ZIndex = 52
+CancelConfirmBtn.Parent = ConfirmCard
+Instance.new("UICorner", CancelConfirmBtn).CornerRadius = UDim.new(0, 10)
+
+local OkConfirmBtn = Instance.new("TextButton")
+OkConfirmBtn.Size = UDim2.new(0.5, -20, 0, 36)
+OkConfirmBtn.Position = UDim2.new(0.5, 4, 1, -50)
+OkConfirmBtn.BackgroundColor3 = Color3.fromRGB(217, 48, 74)
+OkConfirmBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+OkConfirmBtn.TextSize = 12
+OkConfirmBtn.Font = Enum.Font.GothamBold
+OkConfirmBtn.Text = "Delete"
+OkConfirmBtn.ZIndex = 52
+OkConfirmBtn.Parent = ConfirmCard
+Instance.new("UICorner", OkConfirmBtn).CornerRadius = UDim.new(0, 10)
+
+local pendingDeleteMode = nil
+local confirmBusy = false
+
+local function resetTrashVisual()
+    BinLid.Rotation = 0
+    DocSheet.Position = UDim2.new(0.5, -4, 0, 2)
+    DocSheet.BackgroundTransparency = 1
+    ConfirmCard.Position = UDim2.new(0.5, -137, 0.5, -93)
+    ConfirmOverlay.BackgroundTransparency = 0.45
+end
+
+local function closeConfirmDialog(afterFn)
+    local outTween = TweenService:Create(ConfirmCard, TweenInfo.new(0.26, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {
+        Position = UDim2.new(0.5, -137, 0.5, -83)
+    })
+    local fadeTween = TweenService:Create(ConfirmOverlay, TweenInfo.new(0.26, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+        BackgroundTransparency = 1
+    })
+    outTween:Play()
+    fadeTween:Play()
+    outTween.Completed:Once(function()
+        ConfirmOverlay.Visible = false
+        resetTrashVisual()
+        confirmBusy = false
+        pendingDeleteMode = nil
+        if afterFn then afterFn() end
+    end)
+end
+
+local function openConfirmDialog(mode)
+    if confirmBusy then return end
+    if mode == "selected" then
+        local count = 0
+        for _, v in pairs(selectedIndices) do
+            if v then count = count + 1 end
+        end
+        if count == 0 then return end
+        ConfirmTitle.Text = "Xoá mục đã chọn?"
+        ConfirmDesc.Text = string.format("%d mục lịch sử sẽ bị xoá vĩnh viễn. Thao tác này không thể hoàn tác.", count)
+    elseif mode == "all" then
+        if #HistoryRecords == 0 then return end
+        ConfirmTitle.Text = "Xoá toàn bộ lịch sử?"
+        ConfirmDesc.Text = string.format("Toàn bộ %d mục trong lịch sử pet sẽ bị xoá. Thao tác này không thể hoàn tác.", #HistoryRecords)
+    else
+        return
+    end
+
+    pendingDeleteMode = mode
+    resetTrashVisual()
+    ConfirmOverlay.Visible = true
+    ConfirmCard.Position = UDim2.new(0.5, -137, 0.5, -79)
+    TweenService:Create(ConfirmCard, TweenInfo.new(0.35, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
+        Position = UDim2.new(0.5, -137, 0.5, -93)
+    }):Play()
+end
+
+onButtonClicked(CancelConfirmBtn, function()
+    if confirmBusy then return end
+    confirmBusy = true
+    closeConfirmDialog()
+end)
+
+onButtonClicked(OkConfirmBtn, function()
+    if confirmBusy or not pendingDeleteMode then return end
+    confirmBusy = true
+
+    TweenService:Create(BinLid, TweenInfo.new(0.25, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+        Rotation = -38
+    }):Play()
+    DocSheet.BackgroundTransparency = 0
+    DocSheet.Position = UDim2.new(0.5, -4, 0, 1)
+
+    task.delay(0.25, function()
+        if not ConfirmOverlay.Visible then return end
+        local dropTween = TweenService:Create(DocSheet, TweenInfo.new(0.35, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {
+            Position = UDim2.new(0.5, -4, 0, 18)
+        })
+        dropTween:Play()
+        dropTween.Completed:Once(function()
+            DocSheet.BackgroundTransparency = 1
+            local lidClose = TweenService:Create(BinLid, TweenInfo.new(0.22, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
+                Rotation = 0
+            })
+            lidClose:Play()
+            lidClose.Completed:Once(function()
+                local modeToRun = pendingDeleteMode
+                closeConfirmDialog(function()
+                    if modeToRun == "selected" then
+                        local newRecords = {}
+                        for idx, record in ipairs(HistoryRecords) do
+                            if not selectedIndices[idx] then
+                                table.insert(newRecords, record)
+                            end
+                        end
+                        HistoryRecords = newRecords
+                        selectedIndices = {}
+                    elseif modeToRun == "all" then
+                        HistoryRecords = {}
+                        selectedIndices = {}
+                    end
+                    if refreshHistory then refreshHistory() end
+                end)
+            end)
+        end)
+    end)
+end)
+
+UserInputService.InputBegan:Connect(function(input, gameProcessed)
+    if input.KeyCode == Enum.KeyCode.Escape and ConfirmOverlay.Visible and not confirmBusy then
+        confirmBusy = true
+        closeConfirmDialog()
+    end
+end)
+
 local Tab2Content = Instance.new("ScrollingFrame")
 Tab2Content.Size = UDim2.new(1, -10, 1, -145)
 Tab2Content.Position = UDim2.new(0, 5, 0, 102)
@@ -574,21 +1018,11 @@ onButtonClicked(HistorySelectBtn, function()
 end)
 
 onButtonClicked(DeleteSelectedBtn, function()
-    local newRecords = {}
-    for idx, record in ipairs(HistoryRecords) do
-        if not selectedIndices[idx] then
-            table.insert(newRecords, record)
-        end
-    end
-    HistoryRecords = newRecords
-    selectedIndices = {}
-    refreshHistory()
+    openConfirmDialog("selected")
 end)
 
 onButtonClicked(DeleteAllBtn, function()
-    HistoryRecords = {}
-    selectedIndices = {}
-    refreshHistory()
+    openConfirmDialog("all")
 end)
 
 HistorySearch:GetPropertyChangedSignal("Text"):Connect(function()
@@ -604,6 +1038,7 @@ onButtonClicked(Tab1Btn, function()
     HistoryCountLabel.Visible = false
     HistoryFilterPopup.Visible = false
     DeleteActionBar.Visible = false
+    ConfirmOverlay.Visible = false
     Tab1Btn.BackgroundColor3 = Color3.fromRGB(46, 204, 113)
     Tab1Btn.TextColor3 = Color3.fromRGB(255, 255, 255)
     Tab2Btn.BackgroundColor3 = Color3.fromRGB(45, 45, 55)
@@ -798,7 +1233,7 @@ local function isRealPet(item)
 end
 
 -- ==========================================
--- GỬI WEBHOOK & GHI LỊCH SỬ (ÁP DỤNG MỐC TIỀN CHO CẢ 2)
+-- GỬI WEBHOOK & GHI LỊCH SỬ
 -- ==========================================
 local function sendDiscordWebhook(petData)
     if CURRENT_MIN_MONEY > 0 and petData.NumericMoney < CURRENT_MIN_MONEY then
@@ -909,13 +1344,7 @@ end
 -- ==========================================
 onButtonClicked(ToggleButton, function()
     isRunning = not isRunning
-    if isRunning then
-        ToggleButton.Text = "STOP SCRIPT"
-        ToggleButton.BackgroundColor3 = Color3.fromRGB(46, 204, 113)
-    else
-        ToggleButton.Text = "START SCRIPT"
-        ToggleButton.BackgroundColor3 = Color3.fromRGB(224, 86, 36)
-    end
+    syncRunButtons()
 end)
 
 -- ==========================================
@@ -956,5 +1385,16 @@ RunService.RenderStepped:Connect(function()
         FooterLabel.Text = string.format("Đã lưu/gửi: %d thú | Trạng thái: 🟢 Đang chạy", petsCaughtCount)
     else
         FooterLabel.Text = string.format("Đã lưu/gửi: %d thú | Trạng thái: 🔴 Đang tạm dừng gửi", petsCaughtCount)
+    end
+
+    -- Cập nhật Dynamic Island khi màn hình ngang
+    if DynamicIsland.Visible then
+        CompactTitle.Text = string.format("🐾 %d Pet", #HistoryRecords)
+        CompactTimer.Text = runTimeStr
+        local minMoneyStr = CURRENT_MIN_MONEY == 0 and "Tất cả" or (formatBigNumber(CURRENT_MIN_MONEY) .. "+/s")
+        ExpandedInfo.Text = string.format(
+            "⏱️ %s | ⚡ %d FPS | 📶 %dms\n💰 Lọc: %s | 🐾 Lịch sử: %d",
+            runTimeStr, currentFps, ping, minMoneyStr, #HistoryRecords
+        )
     end
 end)
