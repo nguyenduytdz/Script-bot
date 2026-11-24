@@ -35,6 +35,41 @@ pcall(function()
 end)
 
 -- ==========================================
+-- LƯU TRỮ TÀI KHOẢN TRONG SCRIPT (#062 / #244 / #037 / #408)
+-- ==========================================
+local SavedAccounts = {
+    {
+        Name = "Seoyeon Kim",
+        Email = "seoyeon@example.com",
+        Password = "lumen2026",
+        Phone = "Không có",
+        Workspace = "Lumen Design"
+    }
+}
+local ActiveAccount = SavedAccounts[1]
+local isAuthenticated = false
+
+local function findAccount(email, password)
+    local targetEmail = string.lower((email or ""):gsub("^%s+", ""):gsub("%s+$", ""))
+    for _, acc in ipairs(SavedAccounts) do
+        if string.lower(acc.Email) == targetEmail and acc.Password == password then
+            return acc
+        end
+    end
+    return nil
+end
+
+local function findAccountByEmail(email)
+    local targetEmail = string.lower((email or ""):gsub("^%s+", ""):gsub("%s+$", ""))
+    for _, acc in ipairs(SavedAccounts) do
+        if string.lower(acc.Email) == targetEmail then
+            return acc
+        end
+    end
+    return nil
+end
+
+-- ==========================================
 -- BẢNG HẬU TỐ SỐ LỚN
 -- ==========================================
 local Suffixes = {
@@ -112,6 +147,7 @@ ToggleIconBtn.Font = Enum.Font.GothamBold
 ToggleIconBtn.Text = "⚡"
 ToggleIconBtn.Active = true
 ToggleIconBtn.Draggable = false
+ToggleIconBtn.Visible = false
 ToggleIconBtn.Parent = ScreenGui
 Instance.new("UICorner", ToggleIconBtn).CornerRadius = UDim.new(1, 0)
 local IconStroke = Instance.new("UIStroke")
@@ -127,11 +163,13 @@ MainFrame.BackgroundColor3 = Color3.fromRGB(25, 25, 30)
 MainFrame.BorderSizePixel = 0
 MainFrame.Active = true
 MainFrame.Draggable = true
+MainFrame.Visible = false
 MainFrame.Parent = ScreenGui
 Instance.new("UICorner", MainFrame).CornerRadius = UDim.new(0, 14)
 
 local isMenuVisible = true
 onButtonClicked(ToggleIconBtn, function()
+    if not isAuthenticated then return end
     isMenuVisible = not isMenuVisible
     MainFrame.Visible = isMenuVisible
     TweenService:Create(ToggleIconBtn, TweenInfo.new(0.4, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
@@ -176,19 +214,673 @@ Tab2Btn.Parent = TabContainer
 Instance.new("UICorner", Tab2Btn).CornerRadius = UDim.new(0, 6)
 
 -- ==========================================
--- DYNAMIC ISLAND (#459) - TRÊN ĐẦU KHI QUAY NGANG
+-- MÀN HÌNH ĐĂNG NHẬP (#062) & TẠO TÀI KHOẢN (#244)
+-- ==========================================
+local AuthContainer = Instance.new("Frame")
+AuthContainer.Name = "AuthScreens"
+AuthContainer.Size = UDim2.new(0, 320, 0, 440)
+AuthContainer.Position = UDim2.new(0.5, -160, 0.5, -220)
+AuthContainer.BackgroundColor3 = Color3.fromRGB(19, 20, 28)
+AuthContainer.BorderSizePixel = 0
+AuthContainer.Active = true
+AuthContainer.Draggable = true
+AuthContainer.ZIndex = 120
+AuthContainer.Parent = ScreenGui
+Instance.new("UICorner", AuthContainer).CornerRadius = UDim.new(0, 26)
+local AuthStroke = Instance.new("UIStroke")
+AuthStroke.Color = Color3.fromRGB(255, 255, 255)
+AuthStroke.Transparency = 0.88
+AuthStroke.Thickness = 1
+AuthStroke.Parent = AuthContainer
+
+-- --- LOGIN PANE (#062) ---
+local LoginPane = Instance.new("Frame")
+LoginPane.Name = "u062LoginPane"
+LoginPane.Size = UDim2.new(1, 0, 1, 0)
+LoginPane.BackgroundTransparency = 1
+LoginPane.ZIndex = 121
+LoginPane.Parent = AuthContainer
+
+local LoginLogo = Instance.new("Frame")
+LoginLogo.Size = UDim2.new(0, 42, 0, 42)
+LoginLogo.Position = UDim2.new(0, 22, 0, 22)
+LoginLogo.BackgroundColor3 = Color3.fromRGB(123, 97, 255)
+LoginLogo.BorderSizePixel = 0
+LoginLogo.ZIndex = 122
+LoginLogo.Parent = LoginPane
+Instance.new("UICorner", LoginLogo).CornerRadius = UDim.new(0, 13)
+
+local LoginTitle = Instance.new("TextLabel")
+LoginTitle.Size = UDim2.new(1, -44, 0, 28)
+LoginTitle.Position = UDim2.new(0, 22, 0, 74)
+LoginTitle.BackgroundTransparency = 1
+LoginTitle.Text = "Welcome back"
+LoginTitle.TextColor3 = Color3.fromRGB(244, 240, 232)
+LoginTitle.TextSize = 21
+LoginTitle.Font = Enum.Font.GothamBold
+LoginTitle.TextXAlignment = Enum.TextXAlignment.Left
+LoginTitle.ZIndex = 122
+LoginTitle.Parent = LoginPane
+
+local LoginSub = Instance.new("TextLabel")
+LoginSub.Size = UDim2.new(1, -44, 0, 20)
+LoginSub.Position = UDim2.new(0, 22, 0, 102)
+LoginSub.BackgroundTransparency = 1
+LoginSub.Text = "Đăng nhập tài khoản để mở Script"
+LoginSub.TextColor3 = Color3.fromRGB(165, 162, 178)
+LoginSub.TextSize = 12
+LoginSub.Font = Enum.Font.Gotham
+LoginSub.TextXAlignment = Enum.TextXAlignment.Left
+LoginSub.ZIndex = 122
+LoginSub.Parent = LoginPane
+
+local LoginEmailLabel = Instance.new("TextLabel")
+LoginEmailLabel.Size = UDim2.new(1, -44, 0, 18)
+LoginEmailLabel.Position = UDim2.new(0, 22, 0, 134)
+LoginEmailLabel.BackgroundTransparency = 1
+LoginEmailLabel.Text = "Email"
+LoginEmailLabel.TextColor3 = Color3.fromRGB(210, 207, 220)
+LoginEmailLabel.TextSize = 12
+LoginEmailLabel.Font = Enum.Font.GothamBold
+LoginEmailLabel.TextXAlignment = Enum.TextXAlignment.Left
+LoginEmailLabel.ZIndex = 122
+LoginEmailLabel.Parent = LoginPane
+
+local LoginEmailBox = Instance.new("TextBox")
+LoginEmailBox.Size = UDim2.new(1, -44, 0, 44)
+LoginEmailBox.Position = UDim2.new(0, 22, 0, 155)
+LoginEmailBox.BackgroundColor3 = Color3.fromRGB(28, 30, 40)
+LoginEmailBox.TextColor3 = Color3.fromRGB(244, 240, 232)
+LoginEmailBox.PlaceholderColor3 = Color3.fromRGB(125, 122, 140)
+LoginEmailBox.PlaceholderText = "Nhập email..."
+LoginEmailBox.Text = SavedAccounts[1].Email
+LoginEmailBox.TextSize = 13
+LoginEmailBox.Font = Enum.Font.Gotham
+LoginEmailBox.ClearTextOnFocus = false
+LoginEmailBox.ZIndex = 122
+LoginEmailBox.Parent = LoginPane
+Instance.new("UICorner", LoginEmailBox).CornerRadius = UDim.new(0, 13)
+
+local LoginPwLabel = Instance.new("TextLabel")
+LoginPwLabel.Size = UDim2.new(1, -44, 0, 18)
+LoginPwLabel.Position = UDim2.new(0, 22, 0, 208)
+LoginPwLabel.BackgroundTransparency = 1
+LoginPwLabel.Text = "Password"
+LoginPwLabel.TextColor3 = Color3.fromRGB(210, 207, 220)
+LoginPwLabel.TextSize = 12
+LoginPwLabel.Font = Enum.Font.GothamBold
+LoginPwLabel.TextXAlignment = Enum.TextXAlignment.Left
+LoginPwLabel.ZIndex = 122
+LoginPwLabel.Parent = LoginPane
+
+local LoginPwBox = Instance.new("TextBox")
+LoginPwBox.Size = UDim2.new(1, -92, 0, 44)
+LoginPwBox.Position = UDim2.new(0, 22, 0, 229)
+LoginPwBox.BackgroundColor3 = Color3.fromRGB(28, 30, 40)
+LoginPwBox.TextColor3 = Color3.fromRGB(244, 240, 232)
+LoginPwBox.PlaceholderColor3 = Color3.fromRGB(125, 122, 140)
+LoginPwBox.PlaceholderText = "Nhập mật khẩu..."
+LoginPwBox.Text = ""
+LoginPwBox.TextSize = 13
+LoginPwBox.Font = Enum.Font.Gotham
+LoginPwBox.ClearTextOnFocus = false
+LoginPwBox.ZIndex = 122
+LoginPwBox.Parent = LoginPane
+Instance.new("UICorner", LoginPwBox).CornerRadius = UDim.new(0, 13)
+
+local LoginEyeBtn = Instance.new("TextButton")
+LoginEyeBtn.Size = UDim2.new(0, 44, 0, 44)
+LoginEyeBtn.Position = UDim2.new(1, -66, 0, 229)
+LoginEyeBtn.BackgroundColor3 = Color3.fromRGB(36, 38, 52)
+LoginEyeBtn.TextColor3 = Color3.fromRGB(183, 164, 255)
+LoginEyeBtn.Text = "👁"
+LoginEyeBtn.TextSize = 14
+LoginEyeBtn.Font = Enum.Font.GothamBold
+LoginEyeBtn.ZIndex = 122
+LoginEyeBtn.Parent = LoginPane
+Instance.new("UICorner", LoginEyeBtn).CornerRadius = UDim.new(0, 13)
+
+local showLoginPw = true
+onButtonClicked(LoginEyeBtn, function()
+    showLoginPw = not showLoginPw
+    LoginEyeBtn.Text = showLoginPw and "👁" or "🙈"
+end)
+
+local LoginErrLabel = Instance.new("TextLabel")
+LoginErrLabel.Size = UDim2.new(1, -44, 0, 22)
+LoginErrLabel.Position = UDim2.new(0, 22, 0, 278)
+LoginErrLabel.BackgroundTransparency = 1
+LoginErrLabel.Text = ""
+LoginErrLabel.TextColor3 = Color3.fromRGB(255, 125, 140)
+LoginErrLabel.TextSize = 11
+LoginErrLabel.Font = Enum.Font.GothamBold
+LoginErrLabel.TextXAlignment = Enum.TextXAlignment.Left
+LoginErrLabel.ZIndex = 122
+LoginErrLabel.Parent = LoginPane
+
+local SignInBtn = Instance.new("TextButton")
+SignInBtn.Size = UDim2.new(1, -44, 0, 46)
+SignInBtn.Position = UDim2.new(0, 22, 0, 308)
+SignInBtn.BackgroundColor3 = Color3.fromRGB(244, 240, 232)
+SignInBtn.TextColor3 = Color3.fromRGB(11, 12, 18)
+SignInBtn.Text = "Sign in"
+SignInBtn.TextSize = 14
+SignInBtn.Font = Enum.Font.GothamBold
+SignInBtn.ZIndex = 122
+SignInBtn.Parent = LoginPane
+Instance.new("UICorner", SignInBtn).CornerRadius = UDim.new(0, 15)
+
+-- Mục tạo tài khoản nằm dưới nút Sign in, chữ màu xanh
+local OpenSignUpBtn = Instance.new("TextButton")
+OpenSignUpBtn.Size = UDim2.new(1, -44, 0, 28)
+OpenSignUpBtn.Position = UDim2.new(0, 22, 0, 362)
+OpenSignUpBtn.BackgroundTransparency = 1
+OpenSignUpBtn.Text = "Chưa có tài khoản? Tạo tài khoản"
+OpenSignUpBtn.TextColor3 = Color3.fromRGB(64, 156, 255)
+OpenSignUpBtn.TextSize = 12
+OpenSignUpBtn.Font = Enum.Font.GothamBold
+OpenSignUpBtn.ZIndex = 122
+OpenSignUpBtn.Parent = LoginPane
+
+-- --- SIGN UP PANE (#244) ---
+local SignUpPane = Instance.new("Frame")
+SignUpPane.Name = "u244SignUpPane"
+SignUpPane.Size = UDim2.new(1, 0, 1, 0)
+SignUpPane.BackgroundTransparency = 1
+SignUpPane.Visible = false
+SignUpPane.ZIndex = 121
+SignUpPane.Parent = AuthContainer
+
+local SignUpTitle = Instance.new("TextLabel")
+SignUpTitle.Size = UDim2.new(1, -44, 0, 24)
+SignUpTitle.Position = UDim2.new(0, 22, 0, 18)
+SignUpTitle.BackgroundTransparency = 1
+SignUpTitle.Text = "Tạo tài khoản (Sign up)"
+SignUpTitle.TextColor3 = Color3.fromRGB(244, 240, 232)
+SignUpTitle.TextSize = 18
+SignUpTitle.Font = Enum.Font.GothamBold
+SignUpTitle.TextXAlignment = Enum.TextXAlignment.Left
+SignUpTitle.ZIndex = 122
+SignUpTitle.Parent = SignUpPane
+
+local SignUpNameBox = Instance.new("TextBox")
+SignUpNameBox.Size = UDim2.new(1, -44, 0, 38)
+SignUpNameBox.Position = UDim2.new(0, 22, 0, 52)
+SignUpNameBox.BackgroundColor3 = Color3.fromRGB(28, 30, 40)
+SignUpNameBox.TextColor3 = Color3.fromRGB(244, 240, 232)
+SignUpNameBox.PlaceholderColor3 = Color3.fromRGB(125, 122, 140)
+SignUpNameBox.PlaceholderText = "Họ tên (Name)"
+SignUpNameBox.Text = ""
+SignUpNameBox.TextSize = 12
+SignUpNameBox.Font = Enum.Font.Gotham
+SignUpNameBox.ClearTextOnFocus = false
+SignUpNameBox.ZIndex = 122
+SignUpNameBox.Parent = SignUpPane
+Instance.new("UICorner", SignUpNameBox).CornerRadius = UDim.new(0, 11)
+
+local SignUpEmailBox = Instance.new("TextBox")
+SignUpEmailBox.Size = UDim2.new(1, -44, 0, 38)
+SignUpEmailBox.Position = UDim2.new(0, 22, 0, 98)
+SignUpEmailBox.BackgroundColor3 = Color3.fromRGB(28, 30, 40)
+SignUpEmailBox.TextColor3 = Color3.fromRGB(244, 240, 232)
+SignUpEmailBox.PlaceholderColor3 = Color3.fromRGB(125, 122, 140)
+SignUpEmailBox.PlaceholderText = "Email (vd: ten@domain.com)"
+SignUpEmailBox.Text = ""
+SignUpEmailBox.TextSize = 12
+SignUpEmailBox.Font = Enum.Font.Gotham
+SignUpEmailBox.ClearTextOnFocus = false
+SignUpEmailBox.ZIndex = 122
+SignUpEmailBox.Parent = SignUpPane
+Instance.new("UICorner", SignUpEmailBox).CornerRadius = UDim.new(0, 11)
+
+local SignUpPwBox = Instance.new("TextBox")
+SignUpPwBox.Size = UDim2.new(1, -44, 0, 38)
+SignUpPwBox.Position = UDim2.new(0, 22, 0, 144)
+SignUpPwBox.BackgroundColor3 = Color3.fromRGB(28, 30, 40)
+SignUpPwBox.TextColor3 = Color3.fromRGB(244, 240, 232)
+SignUpPwBox.PlaceholderColor3 = Color3.fromRGB(125, 122, 140)
+SignUpPwBox.PlaceholderText = "Mật khẩu (ít nhất 6 ký tự)"
+SignUpPwBox.Text = ""
+SignUpPwBox.TextSize = 12
+SignUpPwBox.Font = Enum.Font.Gotham
+SignUpPwBox.ClearTextOnFocus = false
+SignUpPwBox.ZIndex = 122
+SignUpPwBox.Parent = SignUpPane
+Instance.new("UICorner", SignUpPwBox).CornerRadius = UDim.new(0, 11)
+
+local SignUpPhoneBox = Instance.new("TextBox")
+SignUpPhoneBox.Size = UDim2.new(1, -44, 0, 38)
+SignUpPhoneBox.Position = UDim2.new(0, 22, 0, 190)
+SignUpPhoneBox.BackgroundColor3 = Color3.fromRGB(28, 30, 40)
+SignUpPhoneBox.TextColor3 = Color3.fromRGB(244, 240, 232)
+SignUpPhoneBox.PlaceholderColor3 = Color3.fromRGB(125, 122, 140)
+SignUpPhoneBox.PlaceholderText = "Số điện thoại (tuỳ chọn)"
+SignUpPhoneBox.Text = ""
+SignUpPhoneBox.TextSize = 12
+SignUpPhoneBox.Font = Enum.Font.Gotham
+SignUpPhoneBox.ClearTextOnFocus = false
+SignUpPhoneBox.ZIndex = 122
+SignUpPhoneBox.Parent = SignUpPane
+Instance.new("UICorner", SignUpPhoneBox).CornerRadius = UDim.new(0, 11)
+
+local AgreeTermsBtn = Instance.new("TextButton")
+AgreeTermsBtn.Size = UDim2.new(1, -44, 0, 28)
+AgreeTermsBtn.Position = UDim2.new(0, 22, 0, 236)
+AgreeTermsBtn.BackgroundTransparency = 1
+AgreeTermsBtn.Text = "[✓] Tôi đồng ý điều khoản & lưu trong script"
+AgreeTermsBtn.TextColor3 = Color3.fromRGB(126, 232, 192)
+AgreeTermsBtn.TextSize = 11
+AgreeTermsBtn.Font = Enum.Font.GothamBold
+AgreeTermsBtn.TextXAlignment = Enum.TextXAlignment.Left
+AgreeTermsBtn.ZIndex = 122
+AgreeTermsBtn.Parent = SignUpPane
+
+local agreedTerms = true
+onButtonClicked(AgreeTermsBtn, function()
+    agreedTerms = not agreedTerms
+    AgreeTermsBtn.Text = agreedTerms and "[✓] Tôi đồng ý điều khoản & lưu trong script" or "[ ] Tôi đồng ý điều khoản & lưu trong script"
+    AgreeTermsBtn.TextColor3 = agreedTerms and Color3.fromRGB(126, 232, 192) or Color3.fromRGB(165, 162, 178)
+end)
+
+local SignUpErrLabel = Instance.new("TextLabel")
+SignUpErrLabel.Size = UDim2.new(1, -44, 0, 22)
+SignUpErrLabel.Position = UDim2.new(0, 22, 0, 268)
+SignUpErrLabel.BackgroundTransparency = 1
+SignUpErrLabel.Text = ""
+SignUpErrLabel.TextColor3 = Color3.fromRGB(255, 125, 140)
+SignUpErrLabel.TextSize = 11
+SignUpErrLabel.Font = Enum.Font.GothamBold
+SignUpErrLabel.TextXAlignment = Enum.TextXAlignment.Left
+SignUpErrLabel.ZIndex = 122
+SignUpErrLabel.Parent = SignUpPane
+
+local SignUpSubmitBtn = Instance.new("TextButton")
+SignUpSubmitBtn.Size = UDim2.new(1, -44, 0, 44)
+SignUpSubmitBtn.Position = UDim2.new(0, 22, 0, 296)
+SignUpSubmitBtn.BackgroundColor3 = Color3.fromRGB(126, 232, 192)
+SignUpSubmitBtn.TextColor3 = Color3.fromRGB(11, 12, 18)
+SignUpSubmitBtn.Text = "Tạo & Đăng nhập"
+SignUpSubmitBtn.TextSize = 13
+SignUpSubmitBtn.Font = Enum.Font.GothamBold
+SignUpSubmitBtn.ZIndex = 122
+SignUpSubmitBtn.Parent = SignUpPane
+Instance.new("UICorner", SignUpSubmitBtn).CornerRadius = UDim.new(0, 13)
+
+local BackToLoginBtn = Instance.new("TextButton")
+BackToLoginBtn.Size = UDim2.new(1, -44, 0, 28)
+BackToLoginBtn.Position = UDim2.new(0, 22, 0, 350)
+BackToLoginBtn.BackgroundTransparency = 1
+BackToLoginBtn.Text = "Đã có tài khoản? Đăng nhập"
+BackToLoginBtn.TextColor3 = Color3.fromRGB(64, 156, 255)
+BackToLoginBtn.TextSize = 12
+BackToLoginBtn.Font = Enum.Font.GothamBold
+BackToLoginBtn.ZIndex = 122
+BackToLoginBtn.Parent = SignUpPane
+
+onButtonClicked(OpenSignUpBtn, function()
+    LoginPane.Visible = false
+    SignUpPane.Visible = true
+    LoginErrLabel.Text = ""
+end)
+
+onButtonClicked(BackToLoginBtn, function()
+    SignUpPane.Visible = false
+    LoginPane.Visible = true
+    SignUpErrLabel.Text = ""
+end)
+
+-- ==========================================
+-- MENU SIDEBAR (#417) + CHUYỂN TÀI KHOẢN (#037) + SETTING (#408)
+-- ==========================================
+local SidebarFrame = Instance.new("Frame")
+SidebarFrame.Name = "u417Sidebar"
+SidebarFrame.Size = UDim2.new(0, 132, 0, 226)
+SidebarFrame.Position = UDim2.new(1, 8, 0, 65)
+SidebarFrame.BackgroundColor3 = Color3.fromRGB(19, 20, 28)
+SidebarFrame.BorderSizePixel = 0
+SidebarFrame.ZIndex = 40
+SidebarFrame.Parent = MainFrame
+Instance.new("UICorner", SidebarFrame).CornerRadius = UDim.new(0, 14)
+local SidebarStroke = Instance.new("UIStroke")
+SidebarStroke.Color = Color3.fromRGB(255, 255, 255)
+SidebarStroke.Transparency = 0.9
+SidebarStroke.Thickness = 1
+SidebarStroke.Parent = SidebarFrame
+
+local SidebarHeader = Instance.new("TextLabel")
+SidebarHeader.Size = UDim2.new(1, -12, 0, 26)
+SidebarHeader.Position = UDim2.new(0, 8, 0, 4)
+SidebarHeader.BackgroundTransparency = 1
+SidebarHeader.Text = "⚡ Menu"
+SidebarHeader.TextColor3 = Color3.fromRGB(183, 164, 255)
+SidebarHeader.TextSize = 12
+SidebarHeader.Font = Enum.Font.GothamBold
+SidebarHeader.TextXAlignment = Enum.TextXAlignment.Left
+SidebarHeader.ZIndex = 41
+SidebarHeader.Parent = SidebarFrame
+
+local SidebarCollapseBtn = Instance.new("TextButton")
+SidebarCollapseBtn.Size = UDim2.new(0, 22, 0, 22)
+SidebarCollapseBtn.Position = UDim2.new(1, -26, 0, 6)
+SidebarCollapseBtn.BackgroundColor3 = Color3.fromRGB(36, 37, 48)
+SidebarCollapseBtn.TextColor3 = Color3.fromRGB(244, 240, 232)
+SidebarCollapseBtn.Text = "‹"
+SidebarCollapseBtn.TextSize = 14
+SidebarCollapseBtn.Font = Enum.Font.GothamBold
+SidebarCollapseBtn.ZIndex = 42
+SidebarCollapseBtn.Parent = SidebarFrame
+Instance.new("UICorner", SidebarCollapseBtn).CornerRadius = UDim.new(1, 0)
+
+local SidebarPill = Instance.new("Frame")
+SidebarPill.Name = "u417Pill"
+SidebarPill.Size = UDim2.new(1, -12, 0, 32)
+SidebarPill.Position = UDim2.new(0, 6, 0, 34)
+SidebarPill.BackgroundColor3 = Color3.fromRGB(37, 38, 50)
+SidebarPill.BorderSizePixel = 0
+SidebarPill.ZIndex = 41
+SidebarPill.Parent = SidebarFrame
+Instance.new("UICorner", SidebarPill).CornerRadius = UDim.new(0, 10)
+
+local InboxBadge = Instance.new("TextLabel")
+InboxBadge.Size = UDim2.new(0, 18, 0, 16)
+InboxBadge.Position = UDim2.new(1, -24, 0.5, -8)
+InboxBadge.BackgroundColor3 = Color3.fromRGB(183, 164, 255)
+InboxBadge.TextColor3 = Color3.fromRGB(11, 12, 18)
+InboxBadge.Text = "0"
+InboxBadge.TextSize = 9
+InboxBadge.Font = Enum.Font.GothamBold
+InboxBadge.ZIndex = 44
+InboxBadge.Parent = SidebarFrame
+Instance.new("UICorner", InboxBadge).CornerRadius = UDim.new(1, 0)
+
+-- --- PANEL SETTING (#408) & CHUYỂN TÀI KHOẢN (#037) ---
+local SettingPane = Instance.new("Frame")
+SettingPane.Name = "u408SettingPane"
+SettingPane.Size = UDim2.new(1, -20, 1, -70)
+SettingPane.Position = UDim2.new(0, 10, 0, 65)
+SettingPane.BackgroundTransparency = 1
+SettingPane.Visible = false
+SettingPane.ZIndex = 20
+SettingPane.Parent = MainFrame
+
+local ProfileCard = Instance.new("Frame")
+ProfileCard.Size = UDim2.new(1, 0, 0, 108)
+ProfileCard.Position = UDim2.new(0, 0, 0, 0)
+ProfileCard.BackgroundColor3 = Color3.fromRGB(35, 36, 46)
+ProfileCard.BorderSizePixel = 0
+ProfileCard.ZIndex = 21
+ProfileCard.Parent = SettingPane
+Instance.new("UICorner", ProfileCard).CornerRadius = UDim.new(0, 12)
+
+local ProfileInfoLabel = Instance.new("TextLabel")
+ProfileInfoLabel.Size = UDim2.new(1, -16, 1, -12)
+ProfileInfoLabel.Position = UDim2.new(0, 8, 0, 6)
+ProfileInfoLabel.BackgroundTransparency = 1
+ProfileInfoLabel.Text = ""
+ProfileInfoLabel.TextColor3 = Color3.fromRGB(244, 240, 232)
+ProfileInfoLabel.TextSize = 11
+ProfileInfoLabel.Font = Enum.Font.Code
+ProfileInfoLabel.TextWrapped = true
+ProfileInfoLabel.TextXAlignment = Enum.TextXAlignment.Left
+ProfileInfoLabel.TextYAlignment = Enum.TextYAlignment.Top
+ProfileInfoLabel.ZIndex = 22
+ProfileInfoLabel.Parent = ProfileCard
+
+local SwitchAccToggleBtn = Instance.new("TextButton")
+SwitchAccToggleBtn.Size = UDim2.new(1, 0, 0, 32)
+SwitchAccToggleBtn.Position = UDim2.new(0, 0, 0, 116)
+SwitchAccToggleBtn.BackgroundColor3 = Color3.fromRGB(106, 87, 242)
+SwitchAccToggleBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+SwitchAccToggleBtn.Text = "🔄 Chuyển đổi tài khoản (#037)"
+SwitchAccToggleBtn.TextSize = 11
+SwitchAccToggleBtn.Font = Enum.Font.GothamBold
+SwitchAccToggleBtn.ZIndex = 22
+SwitchAccToggleBtn.Parent = SettingPane
+Instance.new("UICorner", SwitchAccToggleBtn).CornerRadius = UDim.new(0, 8)
+
+local SwitchAccList = Instance.new("ScrollingFrame")
+SwitchAccList.Size = UDim2.new(1, 0, 0, 96)
+SwitchAccList.Position = UDim2.new(0, 0, 0, 154)
+SwitchAccList.BackgroundColor3 = Color3.fromRGB(30, 31, 40)
+SwitchAccList.BorderSizePixel = 0
+SwitchAccList.Visible = false
+SwitchAccList.CanvasSize = UDim2.new(0, 0, 0, 0)
+SwitchAccList.ScrollBarThickness = 4
+SwitchAccList.ZIndex = 25
+SwitchAccList.Parent = SettingPane
+Instance.new("UICorner", SwitchAccList).CornerRadius = UDim.new(0, 8)
+local SwitchAccLayout = Instance.new("UIListLayout")
+SwitchAccLayout.SortOrder = Enum.SortOrder.LayoutOrder
+SwitchAccLayout.Padding = UDim.new(0, 4)
+SwitchAccLayout.Parent = SwitchAccList
+
+local LogoutAuthBtn = Instance.new("TextButton")
+LogoutAuthBtn.Size = UDim2.new(1, 0, 0, 32)
+LogoutAuthBtn.Position = UDim2.new(0, 0, 1, -34)
+LogoutAuthBtn.BackgroundColor3 = Color3.fromRGB(217, 58, 85)
+LogoutAuthBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+LogoutAuthBtn.Text = "🚪 Đăng xuất / Màn hình Login"
+LogoutAuthBtn.TextSize = 11
+LogoutAuthBtn.Font = Enum.Font.GothamBold
+LogoutAuthBtn.ZIndex = 22
+LogoutAuthBtn.Parent = SettingPane
+Instance.new("UICorner", LogoutAccBtn or LogoutAuthBtn).CornerRadius = UDim.new(0, 8)
+
+local refreshProfileUI
+local refreshAccountSwitcher
+
+refreshProfileUI = function()
+    ProfileInfoLabel.Text = string.format(
+        "👤 Tên: %s\n✉️ Email: %s\n📱 SĐT: %s\n🏢 Workspace: %s",
+        ActiveAccount.Name or "User",
+        ActiveAccount.Email or "N/A",
+        ActiveAccount.Phone or "Không có",
+        ActiveAccount.Workspace or "Default"
+    )
+end
+
+refreshAccountSwitcher = function()
+    for _, child in ipairs(SwitchAccList:GetChildren()) do
+        if child:IsA("TextButton") then child:Destroy() end
+    end
+    for i, acc in ipairs(SavedAccounts) do
+        local isCurrent = (acc == ActiveAccount)
+        local itemBtn = Instance.new("TextButton")
+        itemBtn.Size = UDim2.new(1, -6, 0, 28)
+        itemBtn.BackgroundColor3 = isCurrent and Color3.fromRGB(46, 204, 113) or Color3.fromRGB(48, 50, 64)
+        itemBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+        itemBtn.TextSize = 10
+        itemBtn.Font = Enum.Font.GothamBold
+        itemBtn.Text = (isCurrent and "✓ " or "") .. acc.Name .. " (" .. acc.Email .. ")"
+        itemBtn.LayoutOrder = i
+        itemBtn.ZIndex = 26
+        itemBtn.Parent = SwitchAccList
+        Instance.new("UICorner", itemBtn).CornerRadius = UDim.new(0, 6)
+
+        onButtonClicked(itemBtn, function()
+            ActiveAccount = acc
+            LoginEmailBox.Text = acc.Email
+            refreshProfileUI()
+            refreshAccountSwitcher()
+        end)
+    end
+    SwitchAccList.CanvasSize = UDim2.new(0, 0, 0, #SavedAccounts * 32)
+end
+
+refreshProfileUI()
+refreshAccountSwitcher()
+
+onButtonClicked(SwitchAccToggleBtn, function()
+    SwitchAccList.Visible = not SwitchAccList.Visible
+    if SwitchAccList.Visible then
+        refreshAccountSwitcher()
+    end
+end)
+
+local function enterAuthenticatedSession(acc)
+    ActiveAccount = acc
+    isAuthenticated = true
+    refreshProfileUI()
+    refreshAccountSwitcher()
+    AuthContainer.Visible = false
+    ToggleIconBtn.Visible = true
+    MainFrame.Visible = true
+    isMenuVisible = true
+end
+
+onButtonClicked(LogoutAuthBtn, function()
+    isAuthenticated = false
+    MainFrame.Visible = false
+    ToggleIconBtn.Visible = false
+    SwitchAccList.Visible = false
+    LoginPane.Visible = true
+    SignUpPane.Visible = false
+    LoginEmailBox.Text = ActiveAccount.Email or ""
+    LoginPwBox.Text = ""
+    LoginErrLabel.Text = ""
+    AuthContainer.Visible = true
+end)
+
+onButtonClicked(SignInBtn, function()
+    local acc = findAccount(LoginEmailBox.Text, LoginPwBox.Text)
+    if acc then
+        LoginErrLabel.Text = ""
+        enterAuthenticatedSession(acc)
+    else
+        LoginErrLabel.Text = "Sai email hoặc mật khẩu (mặc định: lumen2026)"
+    end
+end)
+
+onButtonClicked(SignUpSubmitBtn, function()
+    local nm = (SignUpNameBox.Text or ""):gsub("^%s+", ""):gsub("%s+$", "")
+    local em = (SignUpEmailBox.Text or ""):gsub("^%s+", ""):gsub("%s+$", "")
+    local pwVal = SignUpPwBox.Text or ""
+    local ph = (SignUpPhoneBox.Text or ""):gsub("^%s+", ""):gsub("%s+$", "")
+
+    if nm == "" then
+        SignUpErrLabel.Text = "Vui lòng nhập họ tên"
+        return
+    end
+    if not string.match(em, "^[^%s@]+@[^%s@]+%.[^%s@]+$") then
+        SignUpErrLabel.Text = "Email không hợp lệ"
+        return
+    end
+    if #pwVal < 6 then
+        SignUpErrLabel.Text = "Mật khẩu tối thiểu 6 ký tự"
+        return
+    end
+    if not agreedTerms then
+        SignUpErrLabel.Text = "Vui lòng đồng ý điều khoản"
+        return
+    end
+
+    local existing = findAccountByEmail(em)
+    if existing then
+        existing.Name = nm
+        existing.Password = pwVal
+        existing.Phone = ph ~= "" and ph or existing.Phone
+        enterAuthenticatedSession(existing)
+    else
+        local newAcc = {
+            Name = nm,
+            Email = em,
+            Password = pwVal,
+            Phone = ph ~= "" and ph or "Không có",
+            Workspace = "Custom Account"
+        }
+        table.insert(SavedAccounts, newAcc)
+        enterAuthenticatedSession(newAcc)
+    end
+end)
+
+local isSidebarRail = false
+local sidebarButtons = {}
+
+local function setSidebarActive(btn, index)
+    for _, b in ipairs(sidebarButtons) do
+        b.TextColor3 = Color3.fromRGB(155, 152, 168)
+    end
+    btn.TextColor3 = Color3.fromRGB(244, 240, 232)
+    TweenService:Create(SidebarPill, TweenInfo.new(0.45, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
+        Position = UDim2.new(0, 6, 0, 34 + (index - 1) * 36)
+    }):Play()
+end
+
+local function makeSidebarItem(labelText, index, onSelect)
+    local b = Instance.new("TextButton")
+    b.Size = UDim2.new(1, -12, 0, 32)
+    b.Position = UDim2.new(0, 6, 0, 34 + (index - 1) * 36)
+    b.BackgroundTransparency = 1
+    b.Text = labelText
+    b.TextColor3 = index == 1 and Color3.fromRGB(244, 240, 232) or Color3.fromRGB(155, 152, 168)
+    b.TextSize = 11
+    b.Font = Enum.Font.GothamBold
+    b.TextXAlignment = Enum.TextXAlignment.Left
+    b.ZIndex = 43
+    b.Parent = SidebarFrame
+    table.insert(sidebarButtons, b)
+
+    onButtonClicked(b, function()
+        setSidebarActive(b, index)
+        if onSelect then onSelect() end
+    end)
+    return b
+end
+
+local switchToWebhookTab
+local switchToSettingTab
+
+local sbHomeBtn = makeSidebarItem("  🏠 Home", 1, function()
+    if switchToWebhookTab then switchToWebhookTab() end
+end)
+
+local sbInboxBtn = makeSidebarItem("  📥 Inbox", 2, function()
+    if switchToWebhookTab then switchToWebhookTab() end
+end)
+
+local sbProjectsBtn = makeSidebarItem("  📁 Projects", 3, function()
+    if switchToWebhookTab then switchToWebhookTab() end
+end)
+
+local sbCalendarBtn = makeSidebarItem("  📅 Calendar", 4, function()
+    if switchToWebhookTab then switchToWebhookTab() end
+end)
+
+local sbSettingsBtn = makeSidebarItem("  ⚙️ Settings", 5, function()
+    if switchToSettingTab then switchToSettingTab() end
+end)
+
+onButtonClicked(SidebarCollapseBtn, function()
+    isSidebarRail = not isSidebarRail
+    local targetWidth = isSidebarRail and 46 or 132
+    TweenService:Create(SidebarFrame, TweenInfo.new(0.45, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
+        Size = UDim2.new(0, targetWidth, 0, 226)
+    }):Play()
+    SidebarHeader.Visible = not isSidebarRail
+    SidebarCollapseBtn.Text = isSidebarRail and "›" or "‹"
+    InboxBadge.Visible = not isSidebarRail
+    sbHomeBtn.Text = isSidebarRail and " 🏠" or "  🏠 Home"
+    sbInboxBtn.Text = isSidebarRail and " 📥" or "  📥 Inbox"
+    sbProjectsBtn.Text = isSidebarRail and " 📁" or "  📁 Projects"
+    sbCalendarBtn.Text = isSidebarRail and " 📅" or "  📅 Calendar"
+    sbSettingsBtn.Text = isSidebarRail and " ⚙️" or "  ⚙️ Settings"
+end)
+
+-- ==========================================
+-- DYNAMIC ISLAND (#459) - CAO TRÊN ĐẦU KHI QUAY NGANG
 -- ==========================================
 local DynamicIsland = Instance.new("Frame")
 DynamicIsland.Name = "u459DynamicIsland"
 DynamicIsland.AnchorPoint = Vector2.new(0.5, 0)
-DynamicIsland.Position = UDim2.new(0.5, 0, 0, 8)
+DynamicIsland.Position = UDim2.new(0.5, 0, 0, 4)
 DynamicIsland.Size = UDim2.new(0, 206, 0, 36)
 DynamicIsland.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
 DynamicIsland.BorderSizePixel = 0
 DynamicIsland.Visible = false
 DynamicIsland.ZIndex = 80
 DynamicIsland.Parent = ScreenGui
-Instance.new("UICorner", DynamicIsland).CornerRadius = UDim.new(0, 18)
+local IslandCorner = Instance.new("UICorner", DynamicIsland)
+IslandCorner.CornerRadius = UDim.new(0, 18)
 
 local IslandStroke = Instance.new("UIStroke")
 IslandStroke.Color = Color3.fromRGB(255, 255, 255)
@@ -196,170 +888,68 @@ IslandStroke.Transparency = 0.86
 IslandStroke.Thickness = 1
 IslandStroke.Parent = DynamicIsland
 
+local IslandCompactText = Instance.new("TextLabel")
+IslandCompactText.Size = UDim2.new(1, -20, 1, 0)
+IslandCompactText.Position = UDim2.new(0, 10, 0, 0)
+IslandCompactText.BackgroundTransparency = 1
+IslandCompactText.Text = "🟢 0 Pet • 00:00:00"
+IslandCompactText.TextColor3 = Color3.fromRGB(255, 255, 255)
+IslandCompactText.TextSize = 12
+IslandCompactText.Font = Enum.Font.GothamBold
+IslandCompactText.TextXAlignment = Enum.TextXAlignment.Center
+IslandCompactText.ZIndex = 82
+IslandCompactText.Parent = DynamicIsland
+
+local IslandExpandedText = Instance.new("TextLabel")
+IslandExpandedText.Size = UDim2.new(1, -24, 1, -12)
+IslandExpandedText.Position = UDim2.new(0, 12, 0, 6)
+IslandExpandedText.BackgroundTransparency = 1
+IslandExpandedText.Text = ""
+IslandExpandedText.TextColor3 = Color3.fromRGB(244, 240, 232)
+IslandExpandedText.TextSize = 11
+IslandExpandedText.Font = Enum.Font.Code
+IslandExpandedText.TextWrapped = true
+IslandExpandedText.TextXAlignment = Enum.TextXAlignment.Left
+IslandExpandedText.TextYAlignment = Enum.TextYAlignment.Center
+IslandExpandedText.Visible = false
+IslandExpandedText.ZIndex = 82
+IslandExpandedText.Parent = DynamicIsland
+
 local IslandTapBtn = Instance.new("TextButton")
 IslandTapBtn.Size = UDim2.new(1, 0, 1, 0)
 IslandTapBtn.Position = UDim2.new(0, 0, 0, 0)
 IslandTapBtn.BackgroundTransparency = 1
 IslandTapBtn.Text = ""
-IslandTapBtn.ZIndex = 81
+IslandTapBtn.ZIndex = 85
 IslandTapBtn.Parent = DynamicIsland
-
--- Trạng thái thu gọn (Compact: 206x36)
-local CompactView = Instance.new("Frame")
-CompactView.Size = UDim2.new(1, 0, 1, 0)
-CompactView.BackgroundTransparency = 1
-CompactView.ZIndex = 82
-CompactView.Parent = DynamicIsland
-
-local CompactDot = Instance.new("Frame")
-CompactDot.Size = UDim2.new(0, 8, 0, 8)
-CompactDot.Position = UDim2.new(0, 12, 0.5, -4)
-CompactDot.BackgroundColor3 = Color3.fromRGB(48, 209, 88)
-CompactDot.BorderSizePixel = 0
-CompactDot.ZIndex = 83
-CompactDot.Parent = CompactView
-Instance.new("UICorner", CompactDot).CornerRadius = UDim.new(1, 0)
-
-local CompactTitle = Instance.new("TextLabel")
-CompactTitle.Size = UDim2.new(0, 96, 1, 0)
-CompactTitle.Position = UDim2.new(0, 25, 0, 0)
-CompactTitle.BackgroundTransparency = 1
-CompactTitle.Text = "🐾 0 Pet"
-CompactTitle.TextColor3 = Color3.fromRGB(255, 255, 255)
-CompactTitle.TextSize = 12
-CompactTitle.Font = Enum.Font.GothamBold
-CompactTitle.TextXAlignment = Enum.TextXAlignment.Left
-CompactTitle.ZIndex = 83
-CompactTitle.Parent = CompactView
-
-local CompactTimer = Instance.new("TextLabel")
-CompactTimer.Size = UDim2.new(0, 72, 1, 0)
-CompactTimer.Position = UDim2.new(1, -82, 0, 0)
-CompactTimer.BackgroundTransparency = 1
-CompactTimer.Text = "00:00:00"
-CompactTimer.TextColor3 = Color3.fromRGB(255, 159, 10)
-CompactTimer.TextSize = 11
-CompactTimer.Font = Enum.Font.Code
-CompactTimer.TextXAlignment = Enum.TextXAlignment.Right
-CompactTimer.ZIndex = 83
-CompactTimer.Parent = CompactView
-
--- Trạng thái mở rộng (Expanded: 316x84)
-local ExpandedView = Instance.new("Frame")
-ExpandedView.Size = UDim2.new(1, 0, 1, 0)
-ExpandedView.BackgroundTransparency = 1
-ExpandedView.Visible = false
-ExpandedView.ZIndex = 82
-ExpandedView.Parent = DynamicIsland
-
-local ExpandedInfo = Instance.new("TextLabel")
-ExpandedInfo.Size = UDim2.new(1, -24, 0, 34)
-ExpandedInfo.Position = UDim2.new(0, 12, 0, 8)
-ExpandedInfo.BackgroundTransparency = 1
-ExpandedInfo.Text = "Đang tải trạng thái..."
-ExpandedInfo.TextColor3 = Color3.fromRGB(244, 240, 232)
-ExpandedInfo.TextSize = 10
-ExpandedInfo.Font = Enum.Font.Code
-ExpandedInfo.TextXAlignment = Enum.TextXAlignment.Left
-ExpandedInfo.TextYAlignment = Enum.TextYAlignment.Top
-ExpandedInfo.ZIndex = 83
-ExpandedInfo.Parent = ExpandedView
-
-local IslandToggleRunBtn = Instance.new("TextButton")
-IslandToggleRunBtn.Size = UDim2.new(0, 96, 0, 26)
-IslandToggleRunBtn.Position = UDim2.new(0, 12, 1, -34)
-IslandToggleRunBtn.BackgroundColor3 = Color3.fromRGB(46, 204, 113)
-IslandToggleRunBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-IslandToggleRunBtn.TextSize = 10
-IslandToggleRunBtn.Font = Enum.Font.GothamBold
-IslandToggleRunBtn.Text = "STOP SCRIPT"
-IslandToggleRunBtn.ZIndex = 84
-IslandToggleRunBtn.Parent = ExpandedView
-Instance.new("UICorner", IslandToggleRunBtn).CornerRadius = UDim.new(0, 8)
-
-local IslandMenuBtn = Instance.new("TextButton")
-IslandMenuBtn.Size = UDim2.new(0, 96, 0, 26)
-IslandMenuBtn.Position = UDim2.new(0, 114, 1, -34)
-IslandMenuBtn.BackgroundColor3 = Color3.fromRGB(52, 52, 64)
-IslandMenuBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-IslandMenuBtn.TextSize = 10
-IslandMenuBtn.Font = Enum.Font.GothamBold
-IslandMenuBtn.Text = "Ẩn/Hiện Menu"
-IslandMenuBtn.ZIndex = 84
-IslandMenuBtn.Parent = ExpandedView
-Instance.new("UICorner", IslandMenuBtn).CornerRadius = UDim.new(0, 8)
-
-local IslandCollapseBtn = Instance.new("TextButton")
-IslandCollapseBtn.Size = UDim2.new(0, 82, 0, 26)
-IslandCollapseBtn.Position = UDim2.new(1, -94, 1, -34)
-IslandCollapseBtn.BackgroundColor3 = Color3.fromRGB(38, 38, 46)
-IslandCollapseBtn.TextColor3 = Color3.fromRGB(255, 159, 10)
-IslandCollapseBtn.TextSize = 10
-IslandCollapseBtn.Font = Enum.Font.GothamBold
-IslandCollapseBtn.Text = "Thu gọn"
-IslandCollapseBtn.ZIndex = 84
-IslandCollapseBtn.Parent = ExpandedView
-Instance.new("UICorner", IslandCollapseBtn).CornerRadius = UDim.new(0, 8)
 
 local isIslandExpanded = false
 
 local function setIslandExpanded(expanded)
     isIslandExpanded = expanded
     if expanded then
-        CompactView.Visible = false
-        ExpandedView.Visible = true
-        TweenService:Create(DynamicIsland, TweenInfo.new(0.45, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
+        IslandCompactText.Visible = false
+        IslandExpandedText.Visible = true
+        TweenService:Create(DynamicIsland, TweenInfo.new(0.42, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
             Size = UDim2.new(0, 316, 0, 84)
         }):Play()
-        TweenService:Create(DynamicIsland:FindFirstChildOfClass("UICorner"), TweenInfo.new(0.45, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+        TweenService:Create(IslandCorner, TweenInfo.new(0.42, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
             CornerRadius = UDim.new(0, 24)
         }):Play()
     else
-        ExpandedView.Visible = false
-        CompactView.Visible = true
-        TweenService:Create(DynamicIsland, TweenInfo.new(0.4, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+        IslandExpandedText.Visible = false
+        IslandCompactText.Visible = true
+        TweenService:Create(DynamicIsland, TweenInfo.new(0.38, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
             Size = UDim2.new(0, 206, 0, 36)
         }):Play()
-        TweenService:Create(DynamicIsland:FindFirstChildOfClass("UICorner"), TweenInfo.new(0.4, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+        TweenService:Create(IslandCorner, TweenInfo.new(0.38, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
             CornerRadius = UDim.new(0, 18)
         }):Play()
     end
 end
 
 onButtonClicked(IslandTapBtn, function()
-    if not isIslandExpanded then
-        setIslandExpanded(true)
-    end
-end)
-
-onButtonClicked(IslandCollapseBtn, function()
-    setIslandExpanded(false)
-end)
-
-onButtonClicked(IslandMenuBtn, function()
-    isMenuVisible = not isMenuVisible
-    MainFrame.Visible = isMenuVisible
-end)
-
-local function syncRunButtons()
-    if isRunning then
-        ToggleButton.Text = "STOP SCRIPT"
-        ToggleButton.BackgroundColor3 = Color3.fromRGB(46, 204, 113)
-        IslandToggleRunBtn.Text = "STOP SCRIPT"
-        IslandToggleRunBtn.BackgroundColor3 = Color3.fromRGB(46, 204, 113)
-        CompactDot.BackgroundColor3 = Color3.fromRGB(48, 209, 88)
-    else
-        ToggleButton.Text = "START SCRIPT"
-        ToggleButton.BackgroundColor3 = Color3.fromRGB(224, 86, 36)
-        IslandToggleRunBtn.Text = "START SCRIPT"
-        IslandToggleRunBtn.BackgroundColor3 = Color3.fromRGB(224, 86, 36)
-        CompactDot.BackgroundColor3 = Color3.fromRGB(255, 69, 58)
-    end
-end
-
-onButtonClicked(IslandToggleRunBtn, function()
-    isRunning = not isRunning
-    syncRunButtons()
+    setIslandExpanded(not isIslandExpanded)
 end)
 
 local function updateLandscapeVisibility()
@@ -370,9 +960,10 @@ local function updateLandscapeVisibility()
     DynamicIsland.Visible = isLandscape
     if not isLandscape and isIslandExpanded then
         isIslandExpanded = false
-        ExpandedView.Visible = false
-        CompactView.Visible = true
+        IslandExpandedText.Visible = false
+        IslandCompactText.Visible = true
         DynamicIsland.Size = UDim2.new(0, 206, 0, 36)
+        IslandCorner.CornerRadius = UDim.new(0, 18)
     end
 end
 
@@ -549,7 +1140,7 @@ DropdownListFrame:GetPropertyChangedSignal("Visible"):Connect(function()
     end
 end)
 
--- --- TAB 2: LỊCH SỬ + XÁC NHẬN XOÁ (#436) ---
+-- --- TAB 2: LỊCH SỬ + CHỌN NGUYÊN MỤC + XÁC NHẬN XOÁ (#436) ---
 local HistoryRecords = {}
 local historyFilterMode = "all"
 local isSelectMode = false
@@ -948,41 +1539,19 @@ refreshHistory = function()
 
         if matches then
             shown = shown + 1
+            local isPicked = not not selectedIndices[idx]
+
             local itemFrame = Instance.new("Frame")
             itemFrame.Size = UDim2.new(1, -5, 0, 72)
-            itemFrame.BackgroundColor3 = selectedIndices[idx] and Color3.fromRGB(60, 40, 45) or Color3.fromRGB(35, 35, 42)
+            itemFrame.BackgroundColor3 = isPicked and Color3.fromRGB(60, 40, 45) or Color3.fromRGB(35, 35, 42)
             itemFrame.BorderSizePixel = 0
             itemFrame.LayoutOrder = shown
             itemFrame.Parent = Tab2Content
             Instance.new("UICorner", itemFrame).CornerRadius = UDim.new(0, 6)
 
-            local textLeftOffset = 5
-
-            if isSelectMode then
-                textLeftOffset = 32
-                local checkBtn = Instance.new("TextButton")
-                checkBtn.Size = UDim2.new(0, 22, 0, 22)
-                checkBtn.Position = UDim2.new(0, 5, 0.5, -11)
-                checkBtn.BackgroundColor3 = selectedIndices[idx] and Color3.fromRGB(46, 204, 113) or Color3.fromRGB(55, 55, 65)
-                checkBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-                checkBtn.TextSize = 12
-                checkBtn.Font = Enum.Font.GothamBold
-                checkBtn.Text = selectedIndices[idx] and "✓" or ""
-                checkBtn.Parent = itemFrame
-                Instance.new("UICorner", checkBtn).CornerRadius = UDim.new(0, 4)
-
-                onButtonClicked(checkBtn, function()
-                    selectedIndices[idx] = not selectedIndices[idx]
-                    itemFrame.BackgroundColor3 = selectedIndices[idx] and Color3.fromRGB(60, 40, 45) or Color3.fromRGB(35, 35, 42)
-                    checkBtn.BackgroundColor3 = selectedIndices[idx] and Color3.fromRGB(46, 204, 113) or Color3.fromRGB(55, 55, 65)
-                    checkBtn.Text = selectedIndices[idx] and "✓" or ""
-                    updateSelectedCountText()
-                end)
-            end
-
             local descLabel = Instance.new("TextLabel")
-            descLabel.Size = UDim2.new(1, -textLeftOffset - 5, 1, 0)
-            descLabel.Position = UDim2.new(0, textLeftOffset, 0, 0)
+            descLabel.Size = UDim2.new(1, -10, 1, 0)
+            descLabel.Position = UDim2.new(0, 5, 0, 0)
             descLabel.BackgroundTransparency = 1
             descLabel.TextColor3 = Color3.fromRGB(230, 230, 240)
             descLabel.TextSize = 11
@@ -991,7 +1560,8 @@ refreshHistory = function()
             descLabel.TextYAlignment = Enum.TextYAlignment.Center
             descLabel.TextWrapped = true
             descLabel.Text = string.format(
-                "🐾 %s | ⚖️ %s\n✨ %s | 🧬 %s\n💸 %s\n⏰ %s",
+                "%s🐾 %s | ⚖️ %s\n✨ %s | 🧬 %s\n💸 %s\n⏰ %s",
+                isSelectMode and (isPicked and "[✓] " or "[ ] ") or "",
                 d.Name or "Pet",
                 d.Weight or "Không rõ",
                 d.Rarity or "Không rõ",
@@ -1000,10 +1570,38 @@ refreshHistory = function()
                 record.time
             )
             descLabel.Parent = itemFrame
+
+            if isSelectMode then
+                local rowHitBtn = Instance.new("TextButton")
+                rowHitBtn.Size = UDim2.new(1, 0, 1, 0)
+                rowHitBtn.Position = UDim2.new(0, 0, 0, 0)
+                rowHitBtn.BackgroundTransparency = 1
+                rowHitBtn.Text = ""
+                rowHitBtn.ZIndex = 5
+                rowHitBtn.Parent = itemFrame
+
+                onButtonClicked(rowHitBtn, function()
+                    selectedIndices[idx] = not selectedIndices[idx]
+                    local nowPicked = not not selectedIndices[idx]
+                    itemFrame.BackgroundColor3 = nowPicked and Color3.fromRGB(60, 40, 45) or Color3.fromRGB(35, 35, 42)
+                    descLabel.Text = string.format(
+                        "%s🐾 %s | ⚖️ %s\n✨ %s | 🧬 %s\n💸 %s\n⏰ %s",
+                        nowPicked and "[✓] " or "[ ] ",
+                        d.Name or "Pet",
+                        d.Weight or "Không rõ",
+                        d.Rarity or "Không rõ",
+                        d.Mutation or "Mặc định",
+                        d.MoneyPerSec or "Không rõ",
+                        record.time
+                    )
+                    updateSelectedCountText()
+                end)
+            end
         end
     end
     Tab2Content.CanvasSize = UDim2.new(0, 0, 0, shown * 77)
     HistoryCountLabel.Text = tostring(#HistoryRecords)
+    InboxBadge.Text = tostring(#HistoryRecords)
     updateSelectedCountText()
 end
 
@@ -1029,7 +1627,8 @@ HistorySearch:GetPropertyChangedSignal("Text"):Connect(function()
     refreshHistory()
 end)
 
-onButtonClicked(Tab1Btn, function()
+switchToWebhookTab = function()
+    SettingPane.Visible = false
     Tab1Content.Visible = true
     Tab2Content.Visible = false
     HistorySearch.Visible = false
@@ -1043,9 +1642,30 @@ onButtonClicked(Tab1Btn, function()
     Tab1Btn.TextColor3 = Color3.fromRGB(255, 255, 255)
     Tab2Btn.BackgroundColor3 = Color3.fromRGB(45, 45, 55)
     Tab2Btn.TextColor3 = Color3.fromRGB(180, 180, 180)
+end
+
+switchToSettingTab = function()
+    Tab1Content.Visible = false
+    Tab2Content.Visible = false
+    HistorySearch.Visible = false
+    HistoryFilterBtn.Visible = false
+    HistorySelectBtn.Visible = false
+    HistoryCountLabel.Visible = false
+    HistoryFilterPopup.Visible = false
+    DeleteActionBar.Visible = false
+    ConfirmOverlay.Visible = false
+    SettingPane.Visible = true
+    refreshProfileUI()
+    refreshAccountSwitcher()
+end
+
+onButtonClicked(Tab1Btn, function()
+    switchToWebhookTab()
+    setSidebarActive(sbHomeBtn, 1)
 end)
 
 onButtonClicked(Tab2Btn, function()
+    SettingPane.Visible = false
     Tab1Content.Visible = false
     Tab2Content.Visible = true
     HistorySearch.Visible = true
@@ -1344,7 +1964,13 @@ end
 -- ==========================================
 onButtonClicked(ToggleButton, function()
     isRunning = not isRunning
-    syncRunButtons()
+    if isRunning then
+        ToggleButton.Text = "STOP SCRIPT"
+        ToggleButton.BackgroundColor3 = Color3.fromRGB(46, 204, 113)
+    else
+        ToggleButton.Text = "START SCRIPT"
+        ToggleButton.BackgroundColor3 = Color3.fromRGB(224, 86, 36)
+    end
 end)
 
 -- ==========================================
@@ -1387,14 +2013,15 @@ RunService.RenderStepped:Connect(function()
         FooterLabel.Text = string.format("Đã lưu/gửi: %d thú | Trạng thái: 🔴 Đang tạm dừng gửi", petsCaughtCount)
     end
 
-    -- Cập nhật Dynamic Island khi màn hình ngang
-    if DynamicIsland.Visible then
-        CompactTitle.Text = string.format("🐾 %d Pet", #HistoryRecords)
-        CompactTimer.Text = runTimeStr
-        local minMoneyStr = CURRENT_MIN_MONEY == 0 and "Tất cả" or (formatBigNumber(CURRENT_MIN_MONEY) .. "+/s")
-        ExpandedInfo.Text = string.format(
-            "⏱️ %s | ⚡ %d FPS | 📶 %dms\n💰 Lọc: %s | 🐾 Lịch sử: %d",
-            runTimeStr, currentFps, ping, minMoneyStr, #HistoryRecords
-        )
+    if DynamicIsland.Visible and isAuthenticated then
+        local statusIcon = isRunning and "🟢" or "🔴"
+        IslandCompactText.Text = string.format("%s %d Pet • %s", statusIcon, #HistoryRecords, runTimeStr)
+        if isIslandExpanded then
+            local minMoneyStr = CURRENT_MIN_MONEY == 0 and "Tất cả" or (formatBigNumber(CURRENT_MIN_MONEY) .. "+/s")
+            IslandExpandedText.Text = string.format(
+                "%s %s | ⏱️ %s\n⚡ %d FPS | 📶 %dms | 💰 %s",
+                statusIcon, isRunning and "Đang chạy" or "Tạm dừng", runTimeStr, currentFps, ping, minMoneyStr
+            )
+        end
     end
 end)
