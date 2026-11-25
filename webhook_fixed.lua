@@ -48,6 +48,14 @@ local petsCaughtCount = 0
 local processedItems = {}
 local isUiReady = false
 
+local liveActionStatus = "Sẵn sàng - Đang chờ thao tác của bạn"
+local liveActionColor = Color3.fromRGB(130, 225, 255)
+
+local function setLiveAction(msg, color)
+    liveActionStatus = tostring(msg or "")
+    liveActionColor = color or Color3.fromRGB(130, 225, 255)
+end
+
 local function getVnTimeString()
     local vnTimeTable = os.date("!*t", os.time() + 25200)
     return string.format("%02d:%02d:%02d - %02d/%02d/%d",
@@ -299,6 +307,7 @@ end
 
 onButtonClicked(ConfirmCancelBtn, function()
     if isConfirmBusy then return end
+    setLiveAction("Đã hủy xóa lịch sử", Color3.fromRGB(185, 190, 210))
     closeConfirmDialog()
 end)
 
@@ -368,7 +377,7 @@ IconStroke.Color = Color3.fromRGB(224, 86, 36)
 IconStroke.Thickness = 2
 IconStroke.Parent = ToggleIconBtn
 
--- Giữ nguyên kích thước 326x360 của giao diện chính, không kéo dài to ra
+-- Giữ nguyên kích thước 326x360 của giao diện chính
 local MainFrame = Instance.new("Frame")
 MainFrame.Name = "MainFrame"
 MainFrame.Size = UDim2.new(0, 326, 0, 360)
@@ -392,6 +401,7 @@ onButtonClicked(ToggleIconBtn, function()
     if not isUiReady then return end
     isMenuVisible = not isMenuVisible
     MainFrame.Visible = isMenuVisible
+    setLiveAction(isMenuVisible and "Đã mở giao diện chính" or "Đã thu gọn giao diện", Color3.fromRGB(255, 225, 110))
     TweenService:Create(ToggleIconBtn, TweenInfo.new(0.35, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
         Rotation = ToggleIconBtn.Rotation + 360
     }):Play()
@@ -408,7 +418,7 @@ TitleLabel.Font = Enum.Font.GothamBold
 TitleLabel.ZIndex = 11
 TitleLabel.Parent = MainFrame
 
--- THANH TAB NẰM BÊN DƯỚI MENU NHỎ GỌN (CÓ CUỘN NGANG, KHÔNG LÀM PHÌNH MENU)
+-- THANH TAB NẰM BÊN DƯỚI MENU NHỎ GỌN (CÓ CUỘN NGANG)
 local BottomTabBar = Instance.new("ScrollingFrame")
 BottomTabBar.Name = "BottomTabBar"
 BottomTabBar.Size = UDim2.new(1, -14, 0, 36)
@@ -531,7 +541,10 @@ local function setIslandExpanded(expanded)
         IslandCompactText.Visible = true
         TweenService:Create(DynamicIsland, TweenInfo.new(0.38, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
             Size = UDim2.new(0, 210, 0, 34)
-          }):Play()
+        }):Play()
+        TweenService:Create(IslandCorner, TweenInfo.new(0.38, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+            CornerRadius = UDim.new(0, 17)
+        }):Play()
     end
 end
 
@@ -757,13 +770,14 @@ introConn = RunService.Heartbeat:Connect(function(dt)
         ToggleIconBtn.Visible = true
         MainFrame.Visible = true
         isMenuVisible = true
+        setLiveAction("Đã tải xong menu - Sẵn sàng hoạt động", Color3.fromRGB(46, 204, 113))
     end
 end)
 
 local CONTENT_TOP_Y = 34
 local CONTENT_HEIGHT = 278
 
--- --- TAB HOME (ĐẦU TIÊN, TRƯỚC WEBHOOK) ---
+-- --- TAB HOME ---
 local HomeContent = Instance.new("ScrollingFrame")
 HomeContent.Size = UDim2.new(1, -16, 0, CONTENT_HEIGHT)
 HomeContent.Position = UDim2.new(0, 8, 0, CONTENT_TOP_Y)
@@ -829,7 +843,7 @@ HomeQuickHopBtn.ZIndex = 13
 HomeQuickHopBtn.Parent = HomeContent
 Instance.new("UICorner", HomeQuickHopBtn).CornerRadius = UDim.new(0, 8)
 
--- --- TAB WEBHOOK (WEBHOOK/ID CÁ NHÂN + CHỌN LƯU & GỬI + NÚT CHẠY + LỌC TIỀN) ---
+-- --- TAB WEBHOOK ---
 local Tab1Content = Instance.new("ScrollingFrame")
 Tab1Content.Size = UDim2.new(1, -16, 0, CONTENT_HEIGHT)
 Tab1Content.Position = UDim2.new(0, 8, 0, CONTENT_TOP_Y)
@@ -842,6 +856,7 @@ Tab1Content.Visible = false
 Tab1Content.ZIndex = 12
 Tab1Content.Parent = MainFrame
 
+-- Status hiển thị chính xác hành động người dùng đang làm
 local StatusLabel = Instance.new("TextLabel")
 StatusLabel.Size = UDim2.new(1, -8, 0, 48)
 StatusLabel.Position = UDim2.new(0, 0, 0, 0)
@@ -871,6 +886,10 @@ PersonalWebhookInput.ZIndex = 13
 PersonalWebhookInput.Parent = Tab1Content
 Instance.new("UICorner", PersonalWebhookInput).CornerRadius = UDim.new(0, 6)
 
+PersonalWebhookInput:GetPropertyChangedSignal("Text"):Connect(function()
+    setLiveAction("Đang sửa Webhook cá nhân...", Color3.fromRGB(130, 215, 255))
+end)
+
 local PersonalDiscordIdInput = Instance.new("TextBox")
 PersonalDiscordIdInput.Size = UDim2.new(1, -78, 0, 28)
 PersonalDiscordIdInput.Position = UDim2.new(0, 0, 0, 88)
@@ -885,6 +904,15 @@ PersonalDiscordIdInput.ClearTextOnFocus = false
 PersonalDiscordIdInput.ZIndex = 13
 PersonalDiscordIdInput.Parent = Tab1Content
 Instance.new("UICorner", PersonalDiscordIdInput).CornerRadius = UDim.new(0, 6)
+
+PersonalDiscordIdInput:GetPropertyChangedSignal("Text"):Connect(function()
+    local txt = PersonalDiscordIdInput.Text or ""
+    if txt == "" then
+        setLiveAction("Đang xóa ID Discord cá nhân (không ping)", Color3.fromRGB(255, 205, 105))
+    else
+        setLiveAction("Đang nhập ID Discord: " .. txt, Color3.fromRGB(130, 215, 255))
+    end
+end)
 
 local ApplyWebhookBtn = Instance.new("TextButton")
 ApplyWebhookBtn.Size = UDim2.new(0, 66, 0, 28)
@@ -905,6 +933,10 @@ onButtonClicked(ApplyWebhookBtn, function()
         WebhookURL = w
     end
     DiscordUserID = dId
+    setLiveAction(
+        string.format("Đã áp dụng Webhook & ID: %s", DiscordUserID ~= "" and DiscordUserID or "Không ping"),
+        Color3.fromRGB(46, 204, 113)
+    )
     ApplyWebhookBtn.Text = "✔ Xong"
     task.delay(1.2, function()
         if ApplyWebhookBtn and ApplyWebhookBtn.Parent then
@@ -913,7 +945,6 @@ onButtonClicked(ApplyWebhookBtn, function()
     end)
 end)
 
--- Chỗ chọn chế độ Lưu và Gửi
 local SaveSendModeBtn = Instance.new("TextButton")
 SaveSendModeBtn.Size = UDim2.new(1, -8, 0, 28)
 SaveSendModeBtn.Position = UDim2.new(0, 0, 0, 122)
@@ -927,9 +958,9 @@ SaveSendModeBtn.Parent = Tab1Content
 Instance.new("UICorner", SaveSendModeBtn).CornerRadius = UDim.new(0, 6)
 
 local saveSendCycle = {
-    { key = "both",      label = "📤 Chế độ: Lưu lịch sử + Gửi Webhook" },
-    { key = "save_only", label = "📥 Chế độ: Chỉ Lưu lịch sử (Không gửi)" },
-    { key = "send_only", label = "🚀 Chế độ: Chỉ Gửi Webhook" }
+    { key = "both",      label = "📤 Chế độ: Lưu lịch sử + Gửi Webhook", status = "Đã chọn chế độ: Lưu lịch sử + Gửi Webhook" },
+    { key = "save_only", label = "📥 Chế độ: Chỉ Lưu lịch sử (Không gửi)",  status = "Đã chọn chế độ: Chỉ Lưu lịch sử (Không gửi)" },
+    { key = "send_only", label = "🚀 Chế độ: Chỉ Gửi Webhook",              status = "Đã chọn chế độ: Chỉ Gửi Webhook" }
 }
 local saveSendIdx = 1
 
@@ -937,6 +968,7 @@ onButtonClicked(SaveSendModeBtn, function()
     saveSendIdx = (saveSendIdx % #saveSendCycle) + 1
     saveAndSendMode = saveSendCycle[saveSendIdx].key
     SaveSendModeBtn.Text = saveSendCycle[saveSendIdx].label
+    setLiveAction(saveSendCycle[saveSendIdx].status, Color3.fromRGB(130, 235, 185))
 end)
 
 local CustomMoneyInput = Instance.new("TextBox")
@@ -953,6 +985,15 @@ CustomMoneyInput.ClearTextOnFocus = false
 CustomMoneyInput.ZIndex = 13
 CustomMoneyInput.Parent = Tab1Content
 Instance.new("UICorner", CustomMoneyInput).CornerRadius = UDim.new(0, 6)
+
+CustomMoneyInput:GetPropertyChangedSignal("Text"):Connect(function()
+    local t = CustomMoneyInput.Text or ""
+    if t == "" then
+        setLiveAction("Đang xóa ô nhập mức tiền lọc", Color3.fromRGB(130, 215, 255))
+    else
+        setLiveAction("Đang nhập mức tiền lọc: " .. t, Color3.fromRGB(130, 215, 255))
+    end
+end)
 
 local SaveMoneyBtn = Instance.new("TextButton")
 SaveMoneyBtn.Size = UDim2.new(0, 66, 0, 28)
@@ -1001,8 +1042,11 @@ local function applyMinMoneyFilter(val, labelText)
     CURRENT_MIN_MONEY = math.max(0, tonumber(val) or 0)
     if CURRENT_MIN_MONEY == 0 then
         FilterDropdownBtn.Text = "🔽 Lọc Lưu & Gửi: Tất cả (0)"
+        setLiveAction("Đã đặt lọc tiền: Tất cả (Nhận hết)", Color3.fromRGB(46, 204, 113))
     else
-        FilterDropdownBtn.Text = "🔽 Lọc Lưu & Gửi: " .. (labelText or (formatBigNumber(CURRENT_MIN_MONEY) .. "+/s"))
+        local disp = labelText or (formatBigNumber(CURRENT_MIN_MONEY) .. "+/s")
+        FilterDropdownBtn.Text = "🔽 Lọc Lưu & Gửi: " .. disp
+        setLiveAction("Đã đặt lọc tiền: " .. disp, Color3.fromRGB(46, 204, 113))
     end
     isDropdownOpen = false
     DropdownListFrame.Visible = false
@@ -1046,6 +1090,7 @@ createFilterOption("Từ 1spd+ /s", 1e54)
 onButtonClicked(FilterDropdownBtn, function()
     isDropdownOpen = not isDropdownOpen
     DropdownListFrame.Visible = isDropdownOpen
+    setLiveAction(isDropdownOpen and "Đang mở danh sách chọn mức tiền" or "Đã đóng danh sách chọn mức tiền", Color3.fromRGB(130, 215, 255))
 end)
 
 local ToggleButton = Instance.new("TextButton")
@@ -1082,7 +1127,7 @@ DropdownListFrame:GetPropertyChangedSignal("Visible"):Connect(function()
     end
 end)
 
--- --- TAB HOP SEVER (HIỂN THỊ DANH SÁCH SEVER KÈM NÚT JOIN + COPY JOB + DÁN & JOIN JOB) ---
+-- --- TAB HOP SEVER ---
 local HopContent = Instance.new("ScrollingFrame")
 HopContent.Size = UDim2.new(1, -16, 0, CONTENT_HEIGHT)
 HopContent.Position = UDim2.new(0, 8, 0, CONTENT_TOP_Y)
@@ -1174,6 +1219,13 @@ PasteJobInput.ZIndex = 13
 PasteJobInput.Parent = HopContent
 Instance.new("UICorner", PasteJobInput).CornerRadius = UDim.new(0, 6)
 
+PasteJobInput:GetPropertyChangedSignal("Text"):Connect(function()
+    local j = PasteJobInput.Text or ""
+    if j ~= "" then
+        setLiveAction("Đang nhập JobId: " .. j:sub(1, 18), Color3.fromRGB(130, 215, 255))
+    end
+end)
+
 local JoinJobBtn = Instance.new("TextButton")
 JoinJobBtn.Size = UDim2.new(0, 68, 0, 28)
 JoinJobBtn.Position = UDim2.new(1, -76, 0, 106)
@@ -1186,7 +1238,6 @@ JoinJobBtn.ZIndex = 13
 JoinJobBtn.Parent = HopContent
 Instance.new("UICorner", JoinJobBtn).CornerRadius = UDim.new(0, 6)
 
--- Khung cuộn hiển thị danh sách server (Sever 1: ... [Join], Sever 2: ... [Join])
 local ServerListFrame = Instance.new("ScrollingFrame")
 ServerListFrame.Size = UDim2.new(1, -8, 0, 134)
 ServerListFrame.Position = UDim2.new(0, 0, 0, 140)
@@ -1253,14 +1304,18 @@ local function teleportToJob(jobId, labelHint)
     local cleanId = tostring(jobId or ""):gsub("^%s+", ""):gsub("%s+$", "")
     if cleanId == "" then
         setHopStatus("⚠️ Vui lòng dán JobId hợp lệ trước khi Join!")
+        setLiveAction("Chưa có JobId hợp lệ để Join", Color3.fromRGB(255, 195, 80))
         return
     end
-    setHopStatus("🔄 Đang Join " .. (labelHint or cleanId) .. "...")
+    local targetMsg = "Đang Join " .. (labelHint or cleanId:sub(1, 14))
+    setHopStatus("🔄 " .. targetMsg .. "...")
+    setLiveAction(targetMsg, Color3.fromRGB(46, 204, 113))
     local ok, err = pcall(function()
         TeleportService:TeleportToPlaceInstance(game.PlaceId, cleanId, LocalPlayer)
     end)
     if not ok then
         setHopStatus("❌ Join thất bại: " .. tostring(err))
+        setLiveAction("Join thất bại: " .. tostring(err), Color3.fromRGB(255, 95, 95))
     end
 end
 
@@ -1321,18 +1376,23 @@ local function renderServerList(serverRows, titlePrefix)
     end
 
     ServerListFrame.CanvasSize = UDim2.new(0, 0, 0, count * 38 + 6)
-    setHopStatus(string.format("%s: tìm thấy %d sever", titlePrefix, count))
+    local doneMsg = string.format("%s: tìm thấy %d sever", titlePrefix, count)
+    setHopStatus(doneMsg)
+    setLiveAction("Đã tải xong " .. doneMsg, Color3.fromRGB(46, 204, 113))
 end
 
 local function loadServersByMode(mode)
     if isHopping then return end
     isHopping = true
-    setHopStatus("🔍 Đang tải danh sách sever...")
+    local modeName = mode == "one_player" and "sever 1 người" or (mode == "low_ping" and "sever ping thấp" or "sever cũ")
+    setHopStatus("🔍 Đang tải danh sách " .. modeName .. "...")
+    setLiveAction("Đang tải danh sách " .. modeName .. "...", Color3.fromRGB(130, 215, 255))
 
     task.spawn(function()
         local servers, err = fetchPublicServers(4)
         if not servers then
             setHopStatus("❌ " .. tostring(err))
+            setLiveAction("Lỗi tải server: " .. tostring(err), Color3.fromRGB(255, 95, 95))
             isHopping = false
             return
         end
@@ -1397,8 +1457,10 @@ local function copyJobToClipboard()
     PasteJobInput.Text = curId
     if copied then
         setHopStatus("📋 Đã copy JobId: " .. curId)
+        setLiveAction("Đã copy JobId: " .. curId:sub(1, 18), Color3.fromRGB(46, 204, 113))
     else
         setHopStatus("📌 Đã điền JobId: " .. curId)
+        setLiveAction("Đã điền JobId hiện tại", Color3.fromRGB(130, 215, 255))
     end
 end
 
@@ -1411,7 +1473,7 @@ onButtonClicked(JoinJobBtn, function()
     teleportToJob(PasteJobInput.Text, "JobId đã dán")
 end)
 
--- --- TAB SETTINGS (CÓ THANH CUỘN) ---
+-- --- TAB SETTINGS ---
 local Tab3Content = Instance.new("ScrollingFrame")
 Tab3Content.Size = UDim2.new(1, -16, 0, CONTENT_HEIGHT)
 Tab3Content.Position = UDim2.new(0, 8, 0, CONTENT_TOP_Y)
@@ -1439,7 +1501,7 @@ SettingsInfoLabel.ZIndex = 13
 SettingsInfoLabel.Parent = Tab3Content
 Instance.new("UICorner", SettingsInfoLabel).CornerRadius = UDim.new(0, 8)
 
--- --- TAB GHI CHÚ MÀN HÌNH (CÓ THANH CUỘN NẰM TRONG KHUNG CỐ ĐỊNH) ---
+-- --- TAB GHI CHÚ MÀN HÌNH ---
 local Tab4Content = Instance.new("ScrollingFrame")
 Tab4Content.Size = UDim2.new(1, -16, 0, CONTENT_HEIGHT)
 Tab4Content.Position = UDim2.new(0, 8, 0, CONTENT_TOP_Y)
@@ -1597,7 +1659,6 @@ NoteBgToggleBtn.ZIndex = 13
 NoteBgToggleBtn.Parent = Tab4Content
 Instance.new("UICorner", NoteBgToggleBtn).CornerRadius = UDim.new(0, 8)
 
--- Logic Ghi chú nổi trên màn hình
 local currentNoteSize = 22
 local isNoteShowing = false
 local hasNoteBg = false
@@ -1631,6 +1692,7 @@ NoteInputBox:GetPropertyChangedSignal("Text"):Connect(function()
         DisplayLabel.Text = "Ghi chú trống..."
     else
         DisplayLabel.Text = NoteInputBox.Text
+        setLiveAction("Đang sửa ghi chú: " .. NoteInputBox.Text:sub(1, 22), Color3.fromRGB(130, 215, 255))
     end
     local textBounds = DisplayLabel.TextBounds
     DisplayContainer.Size = UDim2.new(0, math.clamp(textBounds.X + 28, 140, 480), 0, math.max(textBounds.Y + 18, 46))
@@ -1645,33 +1707,39 @@ onButtonClicked(NoteToggleShowBtn, function()
         end
         NoteToggleShowBtn.Text = "🙈 Ẩn khỏi màn hình"
         NoteToggleShowBtn.BackgroundColor3 = Color3.fromRGB(40, 180, 90)
+        setLiveAction("Đã bật ghi chú nổi trên màn hình", Color3.fromRGB(46, 204, 113))
     else
         NoteToggleShowBtn.Text = "👁️ Hiển thị lên màn hình"
         NoteToggleShowBtn.BackgroundColor3 = Color3.fromRGB(0, 150, 255)
+        setLiveAction("Đã ẩn ghi chú khỏi màn hình", Color3.fromRGB(185, 190, 210))
     end
 end)
 
 onButtonClicked(NoteClearBtn, function()
     NoteInputBox.Text = ""
     DisplayLabel.Text = ""
+    setLiveAction("Đã xóa nội dung ghi chú", Color3.fromRGB(255, 195, 80))
 end)
 
 onButtonClicked(NoteMinusBtn, function()
     currentNoteSize = math.max(10, currentNoteSize - 2)
     DisplayLabel.TextSize = currentNoteSize
     NoteSizeLabel.Text = "Kích thước chữ: " .. currentNoteSize
+    setLiveAction("Cỡ chữ ghi chú: " .. currentNoteSize, Color3.fromRGB(130, 215, 255))
 end)
 
 onButtonClicked(NotePlusBtn, function()
     currentNoteSize = math.min(72, currentNoteSize + 2)
     DisplayLabel.TextSize = currentNoteSize
     NoteSizeLabel.Text = "Kích thước chữ: " .. currentNoteSize
+    setLiveAction("Cỡ chữ ghi chú: " .. currentNoteSize, Color3.fromRGB(130, 215, 255))
 end)
 
 onButtonClicked(NoteFontBtn, function()
     noteFontIdx = (noteFontIdx % #noteFonts) + 1
     DisplayLabel.Font = noteFonts[noteFontIdx].Enum
     NoteFontBtn.Text = "🔤 Font: " .. noteFonts[noteFontIdx].Name
+    setLiveAction("Font ghi chú: " .. noteFonts[noteFontIdx].Name, Color3.fromRGB(130, 215, 255))
 end)
 
 onButtonClicked(NoteColorBtn, function()
@@ -1679,6 +1747,7 @@ onButtonClicked(NoteColorBtn, function()
     DisplayLabel.TextColor3 = noteColors[noteColorIdx].Val
     NoteColorBtn.Text = "🎨 Màu chữ: " .. noteColors[noteColorIdx].Name
     NoteColorBtn.TextColor3 = noteColors[noteColorIdx].Val
+    setLiveAction("Màu chữ ghi chú: " .. noteColors[noteColorIdx].Name, noteColors[noteColorIdx].Val)
 end)
 
 onButtonClicked(NoteEffectBtn, function()
@@ -1696,6 +1765,7 @@ onButtonClicked(NoteEffectBtn, function()
         TextStroke.Thickness = 3.5
         DisplayLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
     end
+    setLiveAction("Hiệu ứng ghi chú: " .. currentEffect, Color3.fromRGB(255, 215, 0))
 end)
 
 onButtonClicked(NoteBgToggleBtn, function()
@@ -1707,13 +1777,15 @@ onButtonClicked(NoteBgToggleBtn, function()
             Instance.new("UICorner", DisplayContainer).CornerRadius = UDim.new(0, 10)
         end
         NoteBgToggleBtn.Text = "⬛ Nền chữ: Bật (Dễ đọc)"
+        setLiveAction("Đã bật nền chữ ghi chú", Color3.fromRGB(46, 204, 113))
     else
         DisplayContainer.BackgroundTransparency = 1
         NoteBgToggleBtn.Text = "⬛ Nền chữ: Tắt (Bấm để bật)"
+        setLiveAction("Đã tắt nền chữ ghi chú", Color3.fromRGB(185, 190, 210))
     end
 end)
 
--- --- TAB LỊCH SỬ (CÓ THANH CUỘN & HỎI TRƯỚC KHI XÓA) ---
+-- --- TAB LỊCH SỬ ---
 local HistoryRecords = {}
 local historyFilterMode = "all"
 local refreshHistory
@@ -1798,6 +1870,7 @@ local function makeHistoryModeButton(label, mode, y)
     onButtonClicked(b, function()
         historyFilterMode = mode
         HistoryFilterPopup.Visible = false
+        setLiveAction("Lọc lịch sử: " .. label, Color3.fromRGB(130, 215, 255))
         if refreshHistory then refreshHistory() end
     end)
 end
@@ -1807,15 +1880,21 @@ makeHistoryModeButton("Lọc độ hiếm", "rarity", 56)
 
 onButtonClicked(HistoryFilterBtn, function()
     HistoryFilterPopup.Visible = not HistoryFilterPopup.Visible
+    setLiveAction(HistoryFilterPopup.Visible and "Đang mở bộ lọc lịch sử" or "Đã đóng bộ lọc lịch sử", Color3.fromRGB(130, 215, 255))
 end)
 
 onButtonClicked(HistoryClearBtn, function()
-    if #HistoryRecords == 0 then return end
+    if #HistoryRecords == 0 then
+        setLiveAction("Lịch sử đang trống", Color3.fromRGB(185, 190, 210))
+        return
+    end
+    setLiveAction("Đang hỏi xác nhận xóa toàn bộ lịch sử", Color3.fromRGB(255, 195, 80))
     promptDeleteConfirm(
         "Xóa toàn bộ lịch sử?",
         string.format("Tất cả %d mục trong lịch sử sẽ bị xóa. Không thể hoàn tác.", #HistoryRecords),
         function()
             HistoryRecords = {}
+            setLiveAction("Đã xóa toàn bộ lịch sử", Color3.fromRGB(255, 110, 110))
             if refreshHistory then refreshHistory() end
         end
     )
@@ -1900,12 +1979,14 @@ refreshHistory = function()
             local targetIndex = recIdx
             local targetPetName = d.Name or "Pet"
             onButtonClicked(removeOneBtn, function()
+                setLiveAction("Đang hỏi xóa mục: " .. targetPetName, Color3.fromRGB(255, 195, 80))
                 promptDeleteConfirm(
                     "Xóa mục này?",
                     string.format("Mục “%s” sẽ bị xóa khỏi lịch sử. Không thể hoàn tác.", targetPetName),
                     function()
                         if HistoryRecords[targetIndex] then
                             table.remove(HistoryRecords, targetIndex)
+                            setLiveAction("Đã xóa mục: " .. targetPetName, Color3.fromRGB(255, 110, 110))
                             refreshHistory()
                         end
                     end
@@ -1918,6 +1999,12 @@ refreshHistory = function()
 end
 
 HistorySearch:GetPropertyChangedSignal("Text"):Connect(function()
+    local q = HistorySearch.Text or ""
+    if q == "" then
+        setLiveAction("Đã xóa từ khóa tìm lịch sử", Color3.fromRGB(185, 190, 210))
+    else
+        setLiveAction("Đang tìm lịch sử: " .. q, Color3.fromRGB(130, 215, 255))
+    end
     refreshHistory()
 end)
 
@@ -1928,6 +2015,15 @@ local allTabButtons = {
     history = TabHistoryBtn,
     settings = TabSettingsBtn,
     note = TabNoteBtn
+}
+
+local tabNamesVi = {
+    home = "Home",
+    webhook = "Webhook",
+    hop = "Hop Sever",
+    history = "Lịch sử",
+    settings = "Settings",
+    note = "Ghi chú"
 }
 
 local function setActiveTabStyle(tabKey)
@@ -1949,6 +2045,7 @@ openTab = function(tabKey)
     end
 
     setActiveTabStyle(tabKey)
+    setLiveAction("Đã chuyển sang tab " .. (tabNamesVi[tabKey] or tostring(tabKey)), Color3.fromRGB(130, 215, 255))
 
     HomeContent.Visible = (tabKey == "home")
     Tab1Content.Visible = (tabKey == "webhook")
@@ -2154,6 +2251,7 @@ end
 -- ==========================================
 local function sendDiscordWebhook(petData)
     if CURRENT_MIN_MONEY > 0 and petData.NumericMoney < CURRENT_MIN_MONEY then
+        setLiveAction("Bỏ qua " .. petData.Name .. " (dưới mức lọc tiền)", Color3.fromRGB(185, 190, 210))
         return
     end
 
@@ -2166,7 +2264,12 @@ local function sendDiscordWebhook(petData)
     end
 
     local shouldSend = (saveAndSendMode == "both" or saveAndSendMode == "send_only")
-    if not isRunning or not shouldSend or not httpRequest or WebhookURL == "" then return end
+    if not isRunning or not shouldSend or not httpRequest or WebhookURL == "" then
+        setLiveAction("Đã lưu " .. petData.Name .. " (không gửi Webhook)", Color3.fromRGB(130, 235, 185))
+        return
+    end
+
+    setLiveAction("Đang gửi Webhook: " .. petData.Name .. "...", Color3.fromRGB(130, 215, 255))
 
     local playerName = LocalPlayer.Name
     local displayName = LocalPlayer.DisplayName
@@ -2200,6 +2303,7 @@ local function sendDiscordWebhook(petData)
             Headers = { ["Content-Type"] = "application/json" },
             Body = HttpService:JSONEncode(payload)
         })
+        setLiveAction("Đã gửi Webhook: " .. petData.Name, Color3.fromRGB(46, 204, 113))
     end)
 end
 
@@ -2221,6 +2325,7 @@ local function handleNewItem(newItem)
     if not newItem.Parent then return end
     if not isRealPet(newItem) then return end
 
+    setLiveAction("Phát hiện thú mới: " .. newItem.Name, Color3.fromRGB(255, 215, 0))
     local petInfo = extractPetInfo(newItem)
     sendDiscordWebhook(petInfo)
 end
@@ -2264,9 +2369,11 @@ onButtonClicked(ToggleButton, function()
     if isRunning then
         ToggleButton.Text = "⏹️ DỪNG CHẠY"
         ToggleButton.BackgroundColor3 = Color3.fromRGB(46, 204, 113)
+        setLiveAction("Đã bấm CHẠY - Đang tự động theo dõi", Color3.fromRGB(46, 204, 113))
     else
         ToggleButton.Text = "▶️ CHẠY"
         ToggleButton.BackgroundColor3 = Color3.fromRGB(224, 86, 36)
+        setLiveAction("Đã bấm DỪNG - Tạm dừng gửi Webhook", Color3.fromRGB(255, 130, 85))
     end
 end)
 
@@ -2328,9 +2435,11 @@ RunService.RenderStepped:Connect(function(dt)
         isRunning and "Đang chạy" or "Tạm dừng"
     )
 
+    -- Dòng trên hiển thị đúng hành động bạn đang làm; dòng dưới hiển thị giờ VN + FPS + Ping
+    StatusLabel.TextColor3 = liveActionColor
     StatusLabel.Text = string.format(
-        " ⏱️ %s | 🇻🇳 %s\n ⚡ %d FPS | 📶 %dms | ID: %s",
-        runTimeStr, vnClockStr, currentFps, ping, DiscordUserID ~= "" and DiscordUserID or "Không"
+        " ⚡ %s\n 🇻🇳 %s • %d FPS • %dms",
+        liveActionStatus, vnClockStr, currentFps, ping
     )
 
     if isRunning then
