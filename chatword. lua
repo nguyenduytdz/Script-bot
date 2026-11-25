@@ -1,0 +1,735 @@
+--[[
+    ROBLOX CROSS-SERVER MESSENGER UI
+    - Chat xuyên server (khác server / khác game vẫn thấy nhau miễn cùng bật script)
+    - Tự động lấy Avatar & Tên Roblox (DisplayName + @Username)
+    - Thời gian chuẩn Việt Nam (UTC+7)
+    - Hỗ trợ Reply tin nhắn & Thả Reaction icon
+    - Tối ưu thao tác chạm trên điện thoại
+]]
+
+local Players = game:GetService("Players")
+local CoreGui = game:GetService("CoreGui")
+local UserInputService = game:GetService("UserInputService")
+local HttpService = game:GetService("HttpService")
+
+local LocalPlayer = Players.LocalPlayer
+
+-- Xóa UI cũ nếu chạy lại
+local targetGui = (gethui and gethui()) or CoreGui
+if targetGui:FindFirstChild("RbxCrossChatUI") then
+    targetGui.RbxCrossChatUI:Destroy()
+end
+
+-- ==========================================
+-- CẤU HÌNH KẾT NỐI XUYÊN SERVER
+-- ==========================================
+local CONFIG = {
+    RoomId = "GLOBAL_ROOM_01", -- Đổi mã phòng nếu muốn tạo phòng riêng cho nhóm bạn
+    PollInterval = 2.0,         -- Chu kỳ cập nhật tin nhắn mới (giây)
+    -- Thay URL này bằng API trung gian của bạn (hỗ trợ GET lấy tin, POST gửi tin/reaction)
+    -- Ví dụ: "https://your-chat-api.example.com/api/chat"
+    Endpoint = ""
+}
+
+-- Bộ nhớ đệm local (hoạt động ngay cả khi chưa cấu hình Endpoint ngoài)
+local LocalSharedStore = {
+    messages = {},
+    reactions = {}
+}
+
+local MessagesData = {}
+local RenderedIds = {}
+local CurrentReplyId = nil
+local AvatarCache = {}
+local msgOrderCount = 0
+
+-- Hàm lấy request function tương thích đa executor
+local function getHttpRequest()
+    return (syn and syn.request)
+        or (http and http.request)
+        or http_request
+        or request
+end
+
+-- Lấy giờ Việt Nam (UTC+7)
+local function getVNTime()
+    local utc = os.time(os.date("!*t"))
+    local vn = os.date("*t", utc + 7 * 3600)
+    return string.format("%02d:%02d", vn.hour, vn.min)
+end
+
+-- Lấy Avatar Roblox
+local function getPlayerAvatar(userId)
+    if AvatarCache[userId] then
+        return AvatarCache[userId]
+    end
+    local ok, url = pcall(function()
+        return Players:GetUserThumbnailAsync(userId, Enum.ThumbnailType.HeadShot, Enum.ThumbnailSize.Size100x100)
+    end)
+    local result = (ok and url) or "rbxassetid://0"
+    AvatarCache[userId] = result
+    return result
+end
+
+-- Gửi payload lên server trung gian (hoặc lưu local fallback)
+local function pushPacketToNetwork(payloadTable)
+    payloadTable.room = CONFIG.RoomId
+    payloadTable.timestamp = os.time()
+    payloadTable.timeStr = getVNTime()
+
+    if CONFIG.Endpoint == "" then
+        if payloadTable.kind == "message" then
+            table.insert(LocalSharedStore.messages, payloadTable)
+        elseif payloadTable.kind == "reaction" then
+            LocalSharedStore.reactions[payloadTable.msgId .. "_" .. payloadTable.userId] = payloadTable
+        end
+        return true
+    end
+
+    local reqFn = getHttpRequest()
+    if not reqFn then return false end
+
+    local ok = pcall(function()
+        reqFn({
+            Url = CONFIG.Endpoint,
+            Method = "POST",
+            Headers = {
+                ["Content-Type"] = "application/json"
+            },
+            Body = HttpService:JSONEncode(payloadTable)
+        })
+    end)
+    return ok
+end
+
+-- Kéo dữ liệu mới từ server trung gian
+local function pullUpdatesFromNetwork()
+    if CONFIG.Endpoint == "" then
+        return {
+            messages = LocalSharedStore.messages,
+            reactions = LocalSharedStore.reactions
+        }
+    end
+
+    local reqFn = getHttpRequest()
+    if not reqFn then return nil end
+
+    local resultData = nil
+    local ok = pcall(function()
+        local sep = string.find(CONFIG.Endpoint, "?", 1, true) and "&" or "?"
+        local url = CONFIG.Endpoint .. sep .. "room=" .. HttpService:UrlEncode(CONFIG.RoomId)
+        local res = reqFn({
+            Url = url,
+            Method = "GET"
+        })
+        if res and res.Body and res.Body ~= "" then
+            resultData = HttpService:JSONDecode(res.Body)
+        end
+    end)
+
+    return ok and resultData or nil
+end
+
+-- ==========================================
+-- GIAO DIỆN ỨNG DỤNG CHAT
+-- ==========================================
+local ScreenGui = Instance.new("ScreenGui")
+ScreenGui.Name = "RbxCrossChatUI"
+ScreenGui.ResetOnSpawn = false
+ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+ScreenGui.Parent = targetGui
+
+-- Bong bóng nổi bật/tắt UI
+local ToggleBtn = Instance.new("TextButton")
+ToggleBtn.Name = "ToggleBtn"
+ToggleBtn.Size = UDim2.new(0, 48, 0, 48)
+ToggleBtn.Position = UDim2.new(0.05, 0, 0.25, 0)
+ToggleBtn.BackgroundColor3 = Color3.fromRGB(0, 132, 255)
+ToggleBtn.Text = "💬"
+ToggleBtn.TextSize = 22
+ToggleBtn.Font = Enum.Font.GothamBold
+ToggleBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+ToggleBtn.Parent = ScreenGui
+Instance.new("UICorner", ToggleBtn).CornerRadius = UDim.new(1, 0)
+
+local ToggleStroke = Instance.new("UIStroke")
+ToggleStroke.Color = Color3.fromRGB(255, 255, 255)
+ToggleStroke.Thickness = 1.5
+ToggleStroke.Parent = ToggleBtn
+
+local UnreadBadge = Instance.new("Frame")
+UnreadBadge.Size = UDim2.new(0, 14, 0, 14)
+UnreadBadge.Position = UDim2.new(1, -12, 0, -2)
+UnreadBadge.BackgroundColor3 = Color3.fromRGB(255, 59, 48)
+UnreadBadge.Visible = false
+UnreadBadge.Parent = ToggleBtn
+Instance.new("UICorner", UnreadBadge).CornerRadius = UDim.new(1, 0)
+
+-- Khung chat chính
+local MainFrame = Instance.new("Frame")
+MainFrame.Name = "MainFrame"
+MainFrame.Size = UDim2.new(0, 344, 0, 440)
+MainFrame.Position = UDim2.new(0.5, -172, 0.5, -220)
+MainFrame.BackgroundColor3 = Color3.fromRGB(24, 25, 28)
+MainFrame.BorderSizePixel = 0
+MainFrame.Active = true
+MainFrame.Parent = ScreenGui
+Instance.new("UICorner", MainFrame).CornerRadius = UDim.new(0, 14)
+
+local MainStroke = Instance.new("UIStroke")
+MainStroke.Color = Color3.fromRGB(55, 58, 65)
+MainStroke.Thickness = 1.2
+MainStroke.Parent = MainFrame
+
+-- Kéo thả mượt trên cảm ứng và chuột
+local function makeDraggable(guiObject, dragHandle)
+    local dragging, dragInput, dragStart, startPos
+    dragHandle.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType.Touch then
+            dragging = true
+            dragStart = input.Position
+            startPos = guiObject.Position
+            input.Changed:Connect(function()
+                if input.UserInputState == Enum.UserInputState.End then
+                    dragging = false
+                end
+            end)
+        end
+    end)
+    dragHandle.InputChanged:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
+            dragInput = input
+        end
+    end)
+    UserInputService.InputChanged:Connect(function(input)
+        if input == dragInput and dragging then
+            local delta = input.Position - dragStart
+            guiObject.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+        end
+    end)
+end
+
+makeDraggable(ToggleBtn, ToggleBtn)
+
+-- Header
+local Header = Instance.new("Frame")
+Header.Size = UDim2.new(1, 0, 0, 48)
+Header.BackgroundColor3 = Color3.fromRGB(32, 34, 38)
+Header.BorderSizePixel = 0
+Header.Parent = MainFrame
+Instance.new("UICorner", Header).CornerRadius = UDim.new(0, 14)
+
+local HeaderFix = Instance.new("Frame")
+HeaderFix.Size = UDim2.new(1, 0, 0, 12)
+HeaderFix.Position = UDim2.new(0, 0, 1, -12)
+HeaderFix.BackgroundColor3 = Color3.fromRGB(32, 34, 38)
+HeaderFix.BorderSizePixel = 0
+HeaderFix.Parent = Header
+
+makeDraggable(MainFrame, Header)
+
+local MyAvatarImg = Instance.new("ImageLabel")
+MyAvatarImg.Size = UDim2.new(0, 32, 0, 32)
+MyAvatarImg.Position = UDim2.new(0, 12, 0.5, -16)
+MyAvatarImg.BackgroundColor3 = Color3.fromRGB(45, 48, 55)
+MyAvatarImg.Image = getPlayerAvatar(LocalPlayer.UserId)
+MyAvatarImg.Parent = Header
+Instance.new("UICorner", MyAvatarImg).CornerRadius = UDim.new(1, 0)
+
+local HeaderTitle = Instance.new("TextLabel")
+HeaderTitle.Size = UDim2.new(1, -96, 0, 20)
+HeaderTitle.Position = UDim2.new(0, 52, 0, 6)
+HeaderTitle.BackgroundTransparency = 1
+HeaderTitle.Text = "Cross-Server Chat • " .. CONFIG.RoomId
+HeaderTitle.Font = Enum.Font.GothamBold
+HeaderTitle.TextSize = 13
+HeaderTitle.TextColor3 = Color3.fromRGB(245, 245, 245)
+HeaderTitle.TextXAlignment = Enum.TextXAlignment.Left
+HeaderTitle.Parent = Header
+
+local HeaderSub = Instance.new("TextLabel")
+HeaderSub.Size = UDim2.new(1, -96, 0, 14)
+HeaderSub.Position = UDim2.new(0, 52, 0, 26)
+HeaderSub.BackgroundTransparency = 1
+HeaderSub.Text = LocalPlayer.DisplayName .. " (@" .. LocalPlayer.Name .. ")"
+HeaderSub.Font = Enum.Font.Gotham
+HeaderSub.TextSize = 11
+HeaderSub.TextColor3 = Color3.fromRGB(160, 165, 175)
+HeaderSub.TextXAlignment = Enum.TextXAlignment.Left
+HeaderSub.Parent = Header
+
+local MinimizeBtn = Instance.new("TextButton")
+MinimizeBtn.Size = UDim2.new(0, 28, 0, 28)
+MinimizeBtn.Position = UDim2.new(1, -38, 0.5, -14)
+MinimizeBtn.BackgroundColor3 = Color3.fromRGB(48, 50, 56)
+MinimizeBtn.Text = "—"
+MinimizeBtn.Font = Enum.Font.GothamBold
+MinimizeBtn.TextSize = 14
+MinimizeBtn.TextColor3 = Color3.fromRGB(220, 220, 220)
+MinimizeBtn.Parent = Header
+Instance.new("UICorner", MinimizeBtn).CornerRadius = UDim.new(0, 8)
+
+-- Vùng cuộn tin nhắn
+local ChatScroll = Instance.new("ScrollingFrame")
+ChatScroll.Name = "ChatScroll"
+ChatScroll.Size = UDim2.new(1, -12, 1, -106)
+ChatScroll.Position = UDim2.new(0, 6, 0, 52)
+ChatScroll.BackgroundTransparency = 1
+ChatScroll.BorderSizePixel = 0
+ChatScroll.ScrollBarThickness = 3
+ChatScroll.ScrollBarImageColor3 = Color3.fromRGB(90, 95, 105)
+ChatScroll.CanvasSize = UDim2.new(0, 0, 0, 0)
+ChatScroll.AutomaticCanvasSize = Enum.AutomaticSize.Y
+ChatScroll.Parent = MainFrame
+
+local ChatListLayout = Instance.new("UIListLayout")
+ChatListLayout.SortOrder = Enum.SortOrder.LayoutOrder
+ChatListLayout.Padding = UDim.new(0, 10)
+ChatListLayout.Parent = ChatScroll
+
+local ChatPadding = Instance.new("UIPadding")
+ChatPadding.PaddingTop = UDim.new(0, 6)
+ChatPadding.PaddingBottom = UDim.new(0, 10)
+ChatPadding.PaddingLeft = UDim.new(0, 4)
+ChatPadding.PaddingRight = UDim.new(0, 6)
+ChatPadding.Parent = ChatScroll
+
+-- Thanh trích dẫn khi đang trả lời
+local ReplyBar = Instance.new("Frame")
+ReplyBar.Name = "ReplyBar"
+ReplyBar.Size = UDim2.new(1, -16, 0, 34)
+ReplyBar.Position = UDim2.new(0, 8, 1, -86)
+ReplyBar.BackgroundColor3 = Color3.fromRGB(38, 41, 47)
+ReplyBar.Visible = false
+ReplyBar.Parent = MainFrame
+Instance.new("UICorner", ReplyBar).CornerRadius = UDim.new(0, 8)
+
+local ReplyAccent = Instance.new("Frame")
+ReplyAccent.Size = UDim2.new(0, 3, 1, -8)
+ReplyAccent.Position = UDim2.new(0, 6, 0, 4)
+ReplyAccent.BackgroundColor3 = Color3.fromRGB(0, 132, 255)
+ReplyAccent.Parent = ReplyBar
+Instance.new("UICorner", ReplyAccent).CornerRadius = UDim.new(1, 0)
+
+local ReplyPreviewText = Instance.new("TextLabel")
+ReplyPreviewText.Size = UDim2.new(1, -42, 1, 0)
+ReplyPreviewText.Position = UDim2.new(0, 14, 0, 0)
+ReplyPreviewText.BackgroundTransparency = 1
+ReplyPreviewText.Text = "Đang trả lời..."
+ReplyPreviewText.Font = Enum.Font.Gotham
+ReplyPreviewText.TextSize = 11
+ReplyPreviewText.TextColor3 = Color3.fromRGB(200, 205, 215)
+ReplyPreviewText.TextXAlignment = Enum.TextXAlignment.Left
+ReplyPreviewText.TextTruncate = Enum.TextTruncate.AtEnd
+ReplyPreviewText.Parent = ReplyBar
+
+local CancelReplyBtn = Instance.new("TextButton")
+CancelReplyBtn.Size = UDim2.new(0, 24, 0, 24)
+CancelReplyBtn.Position = UDim2.new(1, -28, 0.5, -12)
+CancelReplyBtn.BackgroundTransparency = 1
+CancelReplyBtn.Text = "✕"
+CancelReplyBtn.Font = Enum.Font.GothamBold
+CancelReplyBtn.TextSize = 13
+CancelReplyBtn.TextColor3 = Color3.fromRGB(170, 175, 185)
+CancelReplyBtn.Parent = ReplyBar
+
+-- Ô nhập tin nhắn
+local InputContainer = Instance.new("Frame")
+InputContainer.Size = UDim2.new(1, -16, 0, 40)
+InputContainer.Position = UDim2.new(0, 8, 1, -48)
+InputContainer.BackgroundColor3 = Color3.fromRGB(36, 38, 44)
+InputContainer.Parent = MainFrame
+Instance.new("UICorner", InputContainer).CornerRadius = UDim.new(0, 20)
+
+local MsgInput = Instance.new("TextBox")
+MsgInput.Size = UDim2.new(1, -54, 1, -8)
+MsgInput.Position = UDim2.new(0, 14, 0, 4)
+MsgInput.BackgroundTransparency = 1
+MsgInput.PlaceholderText = "Nhắn tin xuyên server..."
+MsgInput.PlaceholderColor3 = Color3.fromRGB(135, 140, 150)
+MsgInput.Text = ""
+MsgInput.Font = Enum.Font.Gotham
+MsgInput.TextSize = 13
+MsgInput.TextColor3 = Color3.fromRGB(255, 255, 255)
+MsgInput.TextXAlignment = Enum.TextXAlignment.Left
+MsgInput.ClearTextOnFocus = false
+MsgInput.Parent = InputContainer
+
+local SendBtn = Instance.new("TextButton")
+SendBtn.Size = UDim2.new(0, 32, 0, 32)
+SendBtn.Position = UDim2.new(1, -36, 0.5, -16)
+SendBtn.BackgroundColor3 = Color3.fromRGB(0, 132, 255)
+SendBtn.Text = "➤"
+SendBtn.Font = Enum.Font.GothamBold
+SendBtn.TextSize = 14
+SendBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+SendBtn.Parent = InputContainer
+Instance.new("UICorner", SendBtn).CornerRadius = UDim.new(1, 0)
+
+-- Bảng chọn Icon cảm xúc
+local ReactionPicker = Instance.new("Frame")
+ReactionPicker.Name = "ReactionPicker"
+ReactionPicker.Size = UDim2.new(0, 190, 0, 36)
+ReactionPicker.BackgroundColor3 = Color3.fromRGB(42, 45, 52)
+ReactionPicker.Visible = false
+ReactionPicker.ZIndex = 20
+ReactionPicker.Parent = MainFrame
+Instance.new("UICorner", ReactionPicker).CornerRadius = UDim.new(1, 0)
+Instance.new("UIStroke", ReactionPicker).Color = Color3.fromRGB(80, 85, 95)
+
+local PickerLayout = Instance.new("UIListLayout")
+PickerLayout.FillDirection = Enum.FillDirection.Horizontal
+PickerLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
+PickerLayout.VerticalAlignment = Enum.VerticalAlignment.Center
+PickerLayout.Padding = UDim.new(0, 4)
+PickerLayout.Parent = ReactionPicker
+
+local TargetReactionMsgId = nil
+local ReactionIcons = {"❤️", "😂", "😮", "😢", "👍"}
+
+for _, icon in ipairs(ReactionIcons) do
+    local rBtn = Instance.new("TextButton")
+    rBtn.Size = UDim2.new(0, 30, 0, 30)
+    rBtn.BackgroundTransparency = 1
+    rBtn.Text = icon
+    rBtn.TextSize = 18
+    rBtn.ZIndex = 21
+    rBtn.Parent = ReactionPicker
+
+    rBtn.MouseButton1Click:Connect(function()
+        ReactionPicker.Visible = false
+        if TargetReactionMsgId then
+            pushPacketToNetwork({
+                kind = "reaction",
+                msgId = TargetReactionMsgId,
+                userId = LocalPlayer.UserId,
+                emoji = icon
+            })
+            TargetReactionMsgId = nil
+        end
+    end)
+end
+
+-- ==========================================
+-- XỬ LÝ REPLY, REACTION & HIỂN THỊ TIN NHẮN
+-- ==========================================
+local function setReplyTarget(msgId)
+    local data = MessagesData[msgId]
+    if not data then return end
+    CurrentReplyId = msgId
+    ReplyPreviewText.Text = "Trả lời " .. data.senderName .. ": " .. data.text
+    ReplyBar.Visible = true
+    ChatScroll.Size = UDim2.new(1, -12, 1, -144)
+    MsgInput:CaptureFocus()
+end
+
+local function clearReplyTarget()
+    CurrentReplyId = nil
+    ReplyBar.Visible = false
+    ChatScroll.Size = UDim2.new(1, -12, 1, -106)
+end
+
+CancelReplyBtn.MouseButton1Click:Connect(clearReplyTarget)
+
+local function updateReactionsUI(msgId)
+    local data = MessagesData[msgId]
+    if not data or not data.reactionLabel then return end
+
+    local counts = {}
+    for _, emoji in pairs(data.reactions) do
+        if emoji then
+            counts[emoji] = (counts[emoji] or 0) + 1
+        end
+    end
+
+    local parts = {}
+    for emoji, count in pairs(counts) do
+        table.insert(parts, count > 1 and (emoji .. " " .. count) or emoji)
+    end
+
+    if #parts > 0 then
+        data.reactionLabel.Text = table.concat(parts, "  ")
+        data.reactionFrame.Visible = true
+    else
+        data.reactionFrame.Visible = false
+    end
+end
+
+local function applyReactionData(msgId, reactorUserId, emoji)
+    local data = MessagesData[msgId]
+    if not data then return end
+
+    if data.reactions[reactorUserId] == emoji then
+        data.reactions[reactorUserId] = nil
+    else
+        data.reactions[reactorUserId] = emoji
+    end
+    updateReactionsUI(msgId)
+end
+
+local function createMessageBubble(msgTable)
+    local msgId = msgTable.id
+    if RenderedIds[msgId] then return end
+    RenderedIds[msgId] = true
+    msgOrderCount = msgOrderCount + 1
+
+    local senderUserId = tonumber(msgTable.userId) or LocalPlayer.UserId
+    local senderName = msgTable.displayName or msgTable.username or "Player"
+    local text = msgTable.text or ""
+    local timeStr = msgTable.timeStr or getVNTime()
+    local replyToId = msgTable.replyToId
+    local isMine = (senderUserId == LocalPlayer.UserId)
+
+    local Row = Instance.new("Frame")
+    Row.Name = msgId
+    Row.Size = UDim2.new(1, 0, 0, 0)
+    Row.AutomaticSize = Enum.AutomaticSize.Y
+    Row.BackgroundTransparency = 1
+    Row.LayoutOrder = msgOrderCount
+    Row.Parent = ChatScroll
+
+    if not isMine then
+        local Avatar = Instance.new("ImageLabel")
+        Avatar.Size = UDim2.new(0, 30, 0, 30)
+        Avatar.Position = UDim2.new(0, 2, 0, 14)
+        Avatar.BackgroundColor3 = Color3.fromRGB(45, 48, 55)
+        Avatar.Image = getPlayerAvatar(senderUserId)
+        Avatar.Parent = Row
+        Instance.new("UICorner", Avatar).CornerRadius = UDim.new(1, 0)
+    end
+
+    local ContentHolder = Instance.new("Frame")
+    ContentHolder.Size = UDim2.new(1, isMine and -12 or -42, 0, 0)
+    ContentHolder.Position = UDim2.new(0, isMine and 6 or 38, 0, 0)
+    ContentHolder.AutomaticSize = Enum.AutomaticSize.Y
+    ContentHolder.BackgroundTransparency = 1
+    ContentHolder.Parent = Row
+
+    local HolderLayout = Instance.new("UIListLayout")
+    HolderLayout.SortOrder = Enum.SortOrder.LayoutOrder
+    HolderLayout.HorizontalAlignment = isMine and Enum.HorizontalAlignment.Right or Enum.HorizontalAlignment.Left
+    HolderLayout.Padding = UDim.new(0, 3)
+    HolderLayout.Parent = ContentHolder
+
+    local MetaLabel = Instance.new("TextLabel")
+    MetaLabel.Size = UDim2.new(1, 0, 0, 13)
+    MetaLabel.BackgroundTransparency = 1
+    MetaLabel.Text = isMine and timeStr or (senderName .. " • " .. timeStr)
+    MetaLabel.Font = Enum.Font.Gotham
+    MetaLabel.TextSize = 10
+    MetaLabel.TextColor3 = Color3.fromRGB(150, 155, 165)
+    MetaLabel.TextXAlignment = isMine and Enum.TextXAlignment.Right or Enum.TextXAlignment.Left
+    MetaLabel.LayoutOrder = 1
+    MetaLabel.Parent = ContentHolder
+
+    if replyToId and replyToId ~= "" and MessagesData[replyToId] then
+        local targetMsg = MessagesData[replyToId]
+        local QuoteBox = Instance.new("Frame")
+        QuoteBox.Size = UDim2.new(0, 210, 0, 24)
+        QuoteBox.BackgroundColor3 = Color3.fromRGB(36, 39, 46)
+        QuoteBox.LayoutOrder = 2
+        QuoteBox.Parent = ContentHolder
+        Instance.new("UICorner", QuoteBox).CornerRadius = UDim.new(0, 8)
+
+        local QuoteText = Instance.new("TextLabel")
+        QuoteText.Size = UDim2.new(1, -12, 1, 0)
+        QuoteText.Position = UDim2.new(0, 6, 0, 0)
+        QuoteText.BackgroundTransparency = 1
+        QuoteText.Text = "↳ " .. targetMsg.senderName .. ": " .. targetMsg.text
+        QuoteText.Font = Enum.Font.Gotham
+        QuoteText.TextSize = 10
+        QuoteText.TextColor3 = Color3.fromRGB(175, 180, 190)
+        QuoteText.TextXAlignment = Enum.TextXAlignment.Left
+        QuoteText.TextTruncate = Enum.TextTruncate.AtEnd
+        QuoteText.Parent = QuoteBox
+    end
+
+    local BubbleRow = Instance.new("Frame")
+    BubbleRow.Size = UDim2.new(1, 0, 0, 0)
+    BubbleRow.AutomaticSize = Enum.AutomaticSize.Y
+    BubbleRow.BackgroundTransparency = 1
+    BubbleRow.LayoutOrder = 3
+    BubbleRow.Parent = ContentHolder
+
+    local Bubble = Instance.new("Frame")
+    Bubble.Size = UDim2.new(0, 0, 0, 0)
+    Bubble.AutomaticSize = Enum.AutomaticSize.XY
+    Bubble.BackgroundColor3 = isMine and Color3.fromRGB(0, 132, 255) or Color3.fromRGB(46, 49, 56)
+    Bubble.Parent = BubbleRow
+    Instance.new("UICorner", Bubble).CornerRadius = UDim.new(0, 14)
+
+    if isMine then
+        Bubble.AnchorPoint = Vector2.new(1, 0)
+        Bubble.Position = UDim2.new(1, 0, 0, 0)
+    end
+
+    local BubblePad = Instance.new("UIPadding")
+    BubblePad.PaddingTop = UDim.new(0, 7)
+    BubblePad.PaddingBottom = UDim.new(0, 7)
+    BubblePad.PaddingLeft = UDim.new(0, 11)
+    BubblePad.PaddingRight = UDim.new(0, 11)
+    BubblePad.Parent = Bubble
+
+    local MsgText = Instance.new("TextLabel")
+    MsgText.Size = UDim2.new(0, 0, 0, 0)
+    MsgText.AutomaticSize = Enum.AutomaticSize.XY
+    MsgText.BackgroundTransparency = 1
+    MsgText.Text = text
+    MsgText.Font = Enum.Font.Gotham
+    MsgText.TextSize = 13
+    MsgText.TextColor3 = Color3.fromRGB(255, 255, 255)
+    MsgText.TextWrapped = true
+    MsgText.TextXAlignment = Enum.TextXAlignment.Left
+    MsgText.Parent = Bubble
+
+    local SizeConstraint = Instance.new("UISizeConstraint")
+    SizeConstraint.MaxSize = Vector2.new(205, 1000)
+    SizeConstraint.Parent = MsgText
+
+    local ActionRow = Instance.new("Frame")
+    ActionRow.Size = UDim2.new(0, 110, 0, 18)
+    ActionRow.BackgroundTransparency = 1
+    ActionRow.LayoutOrder = 4
+    ActionRow.Parent = ContentHolder
+
+    local ActionLayout = Instance.new("UIListLayout")
+    ActionLayout.FillDirection = Enum.FillDirection.Horizontal
+    ActionLayout.HorizontalAlignment = isMine and Enum.HorizontalAlignment.Right or Enum.HorizontalAlignment.Left
+    ActionLayout.Padding = UDim.new(0, 8)
+    ActionLayout.Parent = ActionRow
+
+    local ReplyActionBtn = Instance.new("TextButton")
+    ReplyActionBtn.Size = UDim2.new(0, 42, 0, 16)
+    ReplyActionBtn.BackgroundTransparency = 1
+    ReplyActionBtn.Text = "Trả lời"
+    ReplyActionBtn.Font = Enum.Font.GothamBold
+    ReplyActionBtn.TextSize = 10
+    ReplyActionBtn.TextColor3 = Color3.fromRGB(145, 150, 160)
+    ReplyActionBtn.Parent = ActionRow
+
+    local ReactActionBtn = Instance.new("TextButton")
+    ReactActionBtn.Size = UDim2.new(0, 24, 0, 16)
+    ReactActionBtn.BackgroundTransparency = 1
+    ReactActionBtn.Text = "😊+"
+    ReactActionBtn.Font = Enum.Font.Gotham
+    ReactActionBtn.TextSize = 11
+    ReactActionBtn.TextColor3 = Color3.fromRGB(145, 150, 160)
+    ReactActionBtn.Parent = ActionRow
+
+    local ReactionFrame = Instance.new("Frame")
+    ReactionFrame.Size = UDim2.new(0, 0, 0, 20)
+    ReactionFrame.AutomaticSize = Enum.AutomaticSize.X
+    ReactionFrame.BackgroundColor3 = Color3.fromRGB(38, 40, 46)
+    ReactionFrame.Visible = false
+    ReactionFrame.LayoutOrder = 5
+    ReactionFrame.Parent = ContentHolder
+    Instance.new("UICorner", ReactionFrame).CornerRadius = UDim.new(1, 0)
+
+    local RPad = Instance.new("UIPadding")
+    RPad.PaddingLeft = UDim.new(0, 6)
+    RPad.PaddingRight = UDim.new(0, 6)
+    RPad.Parent = ReactionFrame
+
+    local ReactionLabel = Instance.new("TextLabel")
+    ReactionLabel.Size = UDim2.new(0, 0, 1, 0)
+    ReactionLabel.AutomaticSize = Enum.AutomaticSize.X
+    ReactionLabel.BackgroundTransparency = 1
+    ReactionLabel.Text = ""
+    ReactionLabel.TextSize = 12
+    ReactionLabel.Parent = ReactionFrame
+
+    MessagesData[msgId] = {
+        senderName = senderName,
+        text = text,
+        reactions = {},
+        reactionFrame = ReactionFrame,
+        reactionLabel = ReactionLabel
+    }
+
+    ReplyActionBtn.MouseButton1Click:Connect(function()
+        setReplyTarget(msgId)
+    end)
+
+    ReactActionBtn.MouseButton1Click:Connect(function()
+        TargetReactionMsgId = msgId
+        local btnPos = ReactActionBtn.AbsolutePosition
+        local mainPos = MainFrame.AbsolutePosition
+        local relY = math.clamp(btnPos.Y - mainPos.Y - 40, 50, MainFrame.AbsoluteSize.Y - 95)
+        local relX = isMine and (MainFrame.AbsoluteSize.X - 205) or 35
+        ReactionPicker.Position = UDim2.new(0, relX, 0, relY)
+        ReactionPicker.Visible = not ReactionPicker.Visible
+    end)
+
+    task.defer(function()
+        ChatScroll.CanvasPosition = Vector2.new(0, ChatScroll.AbsoluteCanvasSize.Y + 500)
+    end)
+
+    if not MainFrame.Visible and not isMine then
+        UnreadBadge.Visible = true
+    end
+end
+
+local function sendCurrentMessage()
+    local text = MsgInput.Text
+    if string.gsub(text, "%s+", "") == "" then return end
+
+    local msgId = tostring(LocalPlayer.UserId) .. "_" .. tostring(os.time()) .. "_" .. tostring(math.random(1000, 9999))
+    local replyId = CurrentReplyId or ""
+
+    MsgInput.Text = ""
+    clearReplyTarget()
+    ReactionPicker.Visible = false
+
+    pushPacketToNetwork({
+        kind = "message",
+        id = msgId,
+        userId = LocalPlayer.UserId,
+        displayName = LocalPlayer.DisplayName,
+        username = LocalPlayer.Name,
+        text = text,
+        replyToId = replyId
+    })
+end
+
+SendBtn.MouseButton1Click:Connect(sendCurrentMessage)
+MsgInput.FocusLost:Connect(function(enterPressed)
+    if enterPressed then
+        sendCurrentMessage()
+    end
+end)
+
+ToggleBtn.MouseButton1Click:Connect(function()
+    MainFrame.Visible = not MainFrame.Visible
+    if MainFrame.Visible then
+        UnreadBadge.Visible = false
+    else
+        ReactionPicker.Visible = false
+    end
+end)
+
+MinimizeBtn.MouseButton1Click:Connect(function()
+    MainFrame.Visible = false
+    ReactionPicker.Visible = false
+end)
+
+-- Vòng lặp đồng bộ xuyên server
+task.spawn(function()
+    while ScreenGui.Parent do
+        local data = pullUpdatesFromNetwork()
+        if data then
+            if type(data.messages) == "table" then
+                for _, m in ipairs(data.messages) do
+                    createMessageBubble(m)
+                end
+            end
+            if type(data.reactions) == "table" then
+                for _, r in pairs(data.reactions) do
+                    if r and r.msgId and r.userId then
+                        applyReactionData(r.msgId, tonumber(r.userId), r.emoji)
+                    end
+                end
+            end
+        end
+        task.wait(CONFIG.PollInterval)
+    end
+end)
