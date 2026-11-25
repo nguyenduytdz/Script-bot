@@ -19,7 +19,6 @@ local MarketplaceService = game:GetService("MarketplaceService")
 local TweenService = game:GetService("TweenService")
 local UserInputService = game:GetService("UserInputService")
 local TeleportService = game:GetService("TeleportService")
-local Workspace = game:GetService("Workspace")
 local LocalPlayer = Players.LocalPlayer
 
 local function getUiParent()
@@ -44,7 +43,6 @@ local UiParent = getUiParent()
 local httpRequest = (syn and syn.request) or (http and http.request) or http_request or (fluxus and fluxus.request) or request
 
 local isRunning = true
-local isFarming = false
 local startTime = tick()
 local petsCaughtCount = 0
 local processedItems = {}
@@ -63,6 +61,11 @@ local function getVnTimeString()
     return string.format("%02d:%02d:%02d - %02d/%02d/%d",
         vnTimeTable.hour, vnTimeTable.min, vnTimeTable.sec,
         vnTimeTable.day, vnTimeTable.month, vnTimeTable.year)
+end
+
+local function getVnShortClock()
+    local vnTimeTable = os.date("!*t", os.time() + 25200)
+    return string.format("%02d:%02d", vnTimeTable.hour, vnTimeTable.min)
 end
 
 local cachedGameName = "Throw Food For Animals"
@@ -420,7 +423,7 @@ TitleLabel.Font = Enum.Font.GothamBold
 TitleLabel.ZIndex = 11
 TitleLabel.Parent = MainFrame
 
--- THANH TAB NẰM BÊN DƯỚI MENU NHỎ GỌN (ĐÃ THAY WEBHOOK BẰNG TAB FARM)
+-- THANH TAB NẰM BÊN DƯỚI MENU NHỎ GỌN (ĐÃ XÓA TAB FARM)
 local BottomTabBar = Instance.new("ScrollingFrame")
 BottomTabBar.Name = "BottomTabBar"
 BottomTabBar.Size = UDim2.new(1, -14, 0, 36)
@@ -430,7 +433,7 @@ BottomTabBar.BorderSizePixel = 0
 BottomTabBar.ScrollingDirection = Enum.ScrollingDirection.X
 BottomTabBar.ScrollBarThickness = 2
 BottomTabBar.ScrollBarImageColor3 = Color3.fromRGB(115, 130, 175)
-BottomTabBar.CanvasSize = UDim2.new(0, 462, 0, 0)
+BottomTabBar.CanvasSize = UDim2.new(0, 390, 0, 0)
 BottomTabBar.ZIndex = 14
 BottomTabBar.Parent = MainFrame
 Instance.new("UICorner", BottomTabBar).CornerRadius = UDim.new(0, 10)
@@ -463,96 +466,46 @@ local function makeBottomTabBtn(order, text)
 end
 
 local TabHomeBtn = makeBottomTabBtn(1, "🏠 Home")
-local TabFarmBtn = makeBottomTabBtn(2, "🌾 Farm")
-local TabHopBtn = makeBottomTabBtn(3, "🌐 Hop Sever")
-local TabHistoryBtn = makeBottomTabBtn(4, "📜 Lịch sử")
-local TabSettingsBtn = makeBottomTabBtn(5, "⚙️ Settings")
-local TabNoteBtn = makeBottomTabBtn(6, "📝 Ghi chú")
+local TabHopBtn = makeBottomTabBtn(2, "🌐 Hop Sever")
+local TabHistoryBtn = makeBottomTabBtn(3, "📜 Lịch sử")
+local TabSettingsBtn = makeBottomTabBtn(4, "⚙️ Settings")
+local TabNoteBtn = makeBottomTabBtn(5, "📝 Ghi chú")
 
 -- ==========================================
 -- DYNAMIC ISLAND TRÊN ĐẦU MÀN HÌNH
+-- CHỈ ĐỂ LẠI GIỜ VIỆT NAM (00:00), CHỮ TO, NẰM BÊN PHẢI, MÀU VÀNG
 -- ==========================================
 local DynamicIsland = Instance.new("Frame")
 DynamicIsland.Name = "u459DynamicIsland"
 DynamicIsland.AnchorPoint = Vector2.new(0.5, 0)
 DynamicIsland.Position = UDim2.new(0.5, 0, 0, 6)
-DynamicIsland.Size = UDim2.new(0, 210, 0, 34)
+DynamicIsland.Size = UDim2.new(0, 170, 0, 36)
 DynamicIsland.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
 DynamicIsland.BorderSizePixel = 0
 DynamicIsland.Visible = true
 DynamicIsland.ZIndex = 80
 DynamicIsland.Parent = ScreenGui
 local IslandCorner = Instance.new("UICorner", DynamicIsland)
-IslandCorner.CornerRadius = UDim.new(0, 17)
+IslandCorner.CornerRadius = UDim.new(0, 18)
 
 local IslandStroke = Instance.new("UIStroke")
-IslandStroke.Color = Color3.fromRGB(255, 255, 255)
-IslandStroke.Transparency = 0.85
+IslandStroke.Color = Color3.fromRGB(255, 220, 50)
+IslandStroke.Transparency = 0.65
 IslandStroke.Thickness = 1
 IslandStroke.Parent = DynamicIsland
 
-local IslandCompactText = Instance.new("TextLabel")
-IslandCompactText.Size = UDim2.new(1, -20, 1, 0)
-IslandCompactText.Position = UDim2.new(0, 10, 0, 0)
-IslandCompactText.BackgroundTransparency = 1
-IslandCompactText.Text = "🟢 0 Pet • 00:00:00"
-IslandCompactText.TextColor3 = Color3.fromRGB(255, 255, 255)
-IslandCompactText.TextSize = 11
-IslandCompactText.Font = Enum.Font.GothamBold
-IslandCompactText.TextXAlignment = Enum.TextXAlignment.Center
-IslandCompactText.ZIndex = 82
-IslandCompactText.Parent = DynamicIsland
-
-local IslandExpandedText = Instance.new("TextLabel")
-IslandExpandedText.Size = UDim2.new(1, -24, 1, -10)
-IslandExpandedText.Position = UDim2.new(0, 12, 0, 5)
-IslandExpandedText.BackgroundTransparency = 1
-IslandExpandedText.Text = ""
-IslandExpandedText.TextColor3 = Color3.fromRGB(244, 240, 232)
-IslandExpandedText.TextSize = 11
-IslandExpandedText.Font = Enum.Font.Code
-IslandExpandedText.TextWrapped = true
-IslandExpandedText.TextXAlignment = Enum.TextXAlignment.Left
-IslandExpandedText.TextYAlignment = Enum.TextYAlignment.Center
-IslandExpandedText.Visible = false
-IslandExpandedText.ZIndex = 82
-IslandExpandedText.Parent = DynamicIsland
-
-local IslandTapBtn = Instance.new("TextButton")
-IslandTapBtn.Size = UDim2.new(1, 0, 1, 0)
-IslandTapBtn.Position = UDim2.new(0, 0, 0, 0)
-IslandTapBtn.BackgroundTransparency = 1
-IslandTapBtn.Text = ""
-IslandTapBtn.ZIndex = 85
-IslandTapBtn.Parent = DynamicIsland
-
-local isIslandExpanded = false
-local function setIslandExpanded(expanded)
-    isIslandExpanded = expanded
-    if expanded then
-        IslandCompactText.Visible = false
-        IslandExpandedText.Visible = true
-        TweenService:Create(DynamicIsland, TweenInfo.new(0.42, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
-           Size = UDim2.new(0, 326, 0, 78)
-        }):Play()
-        TweenService:Create(IslandCorner, TweenInfo.new(0.42, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
-            CornerRadius = UDim.new(0, 22)
-        }):Play()
-    else
-        IslandExpandedText.Visible = false
-        IslandCompactText.Visible = true
-        TweenService:Create(DynamicIsland, TweenInfo.new(0.38, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
-            Size = UDim2.new(0, 210, 0, 34)
-        }):Play()
-        TweenService:Create(IslandCorner, TweenInfo.new(0.38, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
-            CornerRadius = UDim.new(0, 17)
-        }):Play()
-    end
-end
-
-onButtonClicked(IslandTapBtn, function()
-    setIslandExpanded(not isIslandExpanded)
-end)
+local IslandVnClockLabel = Instance.new("TextLabel")
+IslandVnClockLabel.Size = UDim2.new(1, -24, 1, 0)
+IslandVnClockLabel.Position = UDim2.new(0, 12, 0, 0)
+IslandVnClockLabel.BackgroundTransparency = 1
+IslandVnClockLabel.Text = "00:00"
+IslandVnClockLabel.TextColor3 = Color3.fromRGB(255, 220, 50)
+IslandVnClockLabel.TextSize = 20
+IslandVnClockLabel.Font = Enum.Font.GothamBold
+IslandVnClockLabel.TextXAlignment = Enum.TextXAlignment.Right
+IslandVnClockLabel.TextYAlignment = Enum.TextYAlignment.Center
+IslandVnClockLabel.ZIndex = 82
+IslandVnClockLabel.Parent = DynamicIsland
 
 -- ==========================================
 -- KHUNG CHỮ NHẬT NẰM NGANG CHỈ HIỆN KHI CHẠY INTRO
@@ -785,7 +738,7 @@ HomeContent.Size = UDim2.new(1, -16, 0, CONTENT_HEIGHT)
 HomeContent.Position = UDim2.new(0, 8, 0, CONTENT_TOP_Y)
 HomeContent.BackgroundTransparency = 1
 HomeContent.BorderSizePixel = 0
-HomeContent.CanvasSize = UDim2.new(0, 0, 0, 300)
+HomeContent.CanvasSize = UDim2.new(0, 0, 0, 270)
 HomeContent.ScrollBarThickness = 5
 HomeContent.ScrollBarImageColor3 = Color3.fromRGB(130, 140, 175)
 HomeContent.Visible = true
@@ -793,7 +746,7 @@ HomeContent.ZIndex = 12
 HomeContent.Parent = MainFrame
 
 local HomeInfoCard = Instance.new("TextLabel")
-HomeInfoCard.Size = UDim2.new(1, -8, 0, 128)
+HomeInfoCard.Size = UDim2.new(1, -8, 0, 98)
 HomeInfoCard.Position = UDim2.new(0, 0, 0, 0)
 HomeInfoCard.BackgroundColor3 = Color3.fromRGB(32, 34, 46)
 HomeInfoCard.TextColor3 = Color3.fromRGB(232, 235, 245)
@@ -809,7 +762,7 @@ Instance.new("UICorner", HomeInfoCard).CornerRadius = UDim.new(0, 8)
 
 local HomeJobBox = Instance.new("TextBox")
 HomeJobBox.Size = UDim2.new(1, -8, 0, 32)
-HomeJobBox.Position = UDim2.new(0, 0, 0, 136)
+HomeJobBox.Position = UDim2.new(0, 0, 0, 106)
 HomeJobBox.BackgroundColor3 = Color3.fromRGB(28, 30, 42)
 HomeJobBox.TextColor3 = Color3.fromRGB(130, 215, 255)
 HomeJobBox.TextSize = 10
@@ -823,7 +776,7 @@ Instance.new("UICorner", HomeJobBox).CornerRadius = UDim.new(0, 7)
 
 local HomeCopyJobBtn = Instance.new("TextButton")
 HomeCopyJobBtn.Size = UDim2.new(1, -8, 0, 32)
-HomeCopyJobBtn.Position = UDim2.new(0, 0, 0, 174)
+HomeCopyJobBtn.Position = UDim2.new(0, 0, 0, 144)
 HomeCopyJobBtn.BackgroundColor3 = Color3.fromRGB(61, 139, 255)
 HomeCopyJobBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
 HomeCopyJobBtn.TextSize = 11
@@ -835,7 +788,7 @@ Instance.new("UICorner", HomeCopyJobBtn).CornerRadius = UDim.new(0, 8)
 
 local HomeQuickHopBtn = Instance.new("TextButton")
 HomeQuickHopBtn.Size = UDim2.new(1, -8, 0, 32)
-HomeQuickHopBtn.Position = UDim2.new(0, 0, 0, 212)
+HomeQuickHopBtn.Position = UDim2.new(0, 0, 0, 182)
 HomeQuickHopBtn.BackgroundColor3 = Color3.fromRGB(46, 204, 113)
 HomeQuickHopBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
 HomeQuickHopBtn.TextSize = 11
@@ -844,442 +797,6 @@ HomeQuickHopBtn.Text = "🌐 Mở Tab Hop Sever"
 HomeQuickHopBtn.ZIndex = 13
 HomeQuickHopBtn.Parent = HomeContent
 Instance.new("UICorner", HomeQuickHopBtn).CornerRadius = UDim.new(0, 8)
-
--- ==========================================
--- TAB FARM (THAY THẾ TAB WEBHOOK)
--- 1. Độ hiếm (Common -> Divine) [> / v]
--- 2. Khu vực farm [> / v]
--- 3. Cách đi đến thứ đó (Teleporting, Đi bộ) [> / v]
--- 4. Cách mang về (Bay, Đi về, Bay nhanh) [> / v]
--- + Nút Farm ở bên dưới
--- ==========================================
-local FarmContent = Instance.new("ScrollingFrame")
-FarmContent.Size = UDim2.new(1, -16, 0, CONTENT_HEIGHT)
-FarmContent.Position = UDim2.new(0, 8, 0, CONTENT_TOP_Y)
-FarmContent.BackgroundTransparency = 1
-FarmContent.BorderSizePixel = 0
-FarmContent.ScrollingDirection = Enum.ScrollingDirection.Y
-FarmContent.CanvasSize = UDim2.new(0, 0, 0, 420)
-FarmContent.ScrollBarThickness = 5
-FarmContent.ScrollBarImageColor3 = Color3.fromRGB(130, 140, 175)
-FarmContent.Visible = false
-FarmContent.ZIndex = 12
-FarmContent.Parent = MainFrame
-
-local FarmLayout = Instance.new("UIListLayout")
-FarmLayout.SortOrder = Enum.SortOrder.LayoutOrder
-FarmLayout.Padding = UDim.new(0, 6)
-FarmLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
-FarmLayout.Parent = FarmContent
-
-local FarmStatusLabel = Instance.new("TextLabel")
-FarmStatusLabel.LayoutOrder = 1
-FarmStatusLabel.Size = UDim2.new(1, -8, 0, 34)
-FarmStatusLabel.BackgroundColor3 = Color3.fromRGB(32, 34, 46)
-FarmStatusLabel.TextColor3 = Color3.fromRGB(220, 230, 245)
-FarmStatusLabel.TextSize = 10
-FarmStatusLabel.Font = Enum.Font.Code
-FarmStatusLabel.TextWrapped = true
-FarmStatusLabel.TextXAlignment = Enum.TextXAlignment.Left
-FarmStatusLabel.Text = " 🌾 Chế độ Farm: Sẵn sàng"
-FarmStatusLabel.ZIndex = 13
-FarmStatusLabel.Parent = FarmContent
-Instance.new("UICorner", FarmStatusLabel).CornerRadius = UDim.new(0, 7)
-
-local RARITY_ORDER = {
-    "Common",
-    "Uncommon",
-    "Rare",
-    "Epic",
-    "Legendary",
-    "Mythic",
-    "Secret",
-    "Divine"
-}
-
-local selectedRarities = {}
-for _, rName in ipairs(RARITY_ORDER) do
-    selectedRarities[rName] = true
-end
-
-local selectedAreaName = "Khu vực mặc định"
-local selectedAreaCFrame = nil
-local travelMethod = "Teleporting" -- "Teleporting" | "Đi bộ"
-local returnMethod = "Bay"         -- "Bay" | "Đi về" | "Bay nhanh"
-
-local function createCollapsibleSection(orderNum, titleText, initialOpen)
-    local isOpen = initialOpen and true or false
-
-    local container = Instance.new("Frame")
-    container.LayoutOrder = orderNum
-    container.Size = UDim2.new(1, -8, 0, 30)
-    container.BackgroundColor3 = Color3.fromRGB(28, 30, 42)
-    container.BorderSizePixel = 0
-    container.ClipsDescendants = true
-    container.ZIndex = 13
-    container.Parent = FarmContent
-    Instance.new("UICorner", container).CornerRadius = UDim.new(0, 8)
-
-    local headerBtn = Instance.new("TextButton")
-    headerBtn.Size = UDim2.new(1, 0, 0, 30)
-    headerBtn.Position = UDim2.new(0, 0, 0, 0)
-    headerBtn.BackgroundColor3 = Color3.fromRGB(38, 41, 56)
-    headerBtn.TextColor3 = Color3.fromRGB(244, 240, 232)
-    headerBtn.TextSize = 10
-    headerBtn.Font = Enum.Font.GothamBold
-    headerBtn.TextXAlignment = Enum.TextXAlignment.Left
-    headerBtn.Text = (isOpen and " v " or " > ") .. titleText
-    headerBtn.ZIndex = 14
-    headerBtn.Parent = container
-    Instance.new("UICorner", headerBtn).CornerRadius = UDim.new(0, 8)
-
-    local bodyFrame = Instance.new("Frame")
-    bodyFrame.Size = UDim2.new(1, -12, 0, 10)
-    bodyFrame.Position = UDim2.new(0, 6, 0, 35)
-    bodyFrame.BackgroundTransparency = 1
-    bodyFrame.Visible = isOpen
-    bodyFrame.ZIndex = 13
-    bodyFrame.Parent = container
-
-    local bodyLayout = Instance.new("UIListLayout")
-    bodyLayout.SortOrder = Enum.SortOrder.LayoutOrder
-    bodyLayout.Padding = UDim.new(0, 4)
-    bodyLayout.Parent = bodyFrame
-
-    local function refreshSectionHeight()
-        if isOpen then
-            headerBtn.Text = " v " .. titleText
-            bodyFrame.Visible = true
-            local h = bodyLayout.AbsoluteContentSize.Y + 42
-            container.Size = UDim2.new(1, -8, 0, math.max(36, h))
-        else
-            headerBtn.Text = " > " .. titleText
-            bodyFrame.Visible = false
-            container.Size = UDim2.new(1, -8, 0, 30)
-        end
-        task.defer(function()
-            FarmContent.CanvasSize = UDim2.new(0, 0, 0, FarmLayout.AbsoluteContentSize.Y + 14)
-        end)
-    end
-
-    bodyLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
-        if isOpen then
-            refreshSectionHeight()
-        end
-    end)
-
-    onButtonClicked(headerBtn, function()
-        isOpen = not isOpen
-        refreshSectionHeight()
-        setLiveAction((isOpen and "Mở mục: " or "Đóng mục: ") .. titleText, Color3.fromRGB(130, 215, 255))
-    end)
-
-    return container, bodyFrame, refreshSectionHeight
-end
-
--- 1. Độ hiếm từ Common -> Divine
-local _, rarityBody, refreshRaritySec = createCollapsibleSection(2, "1. Độ hiếm cần farm (Common - Divine)", true)
-
-local rarityButtons = {}
-local function updateRarityButtonsVisual()
-    for _, rName in ipairs(RARITY_ORDER) do
-        local btn = rarityButtons[rName]
-        if btn then
-            if selectedRarities[rName] then
-                btn.BackgroundColor3 = Color3.fromRGB(46, 204, 113)
-                btn.TextColor3 = Color3.fromRGB(255, 255, 255)
-                btn.Text = "✔ " .. rName
-            else
-                btn.BackgroundColor3 = Color3.fromRGB(45, 48, 64)
-                btn.TextColor3 = Color3.fromRGB(185, 190, 210)
-                btn.Text = "  " .. rName
-            end
-        end
-    end
-end
-
-for idx, rName in ipairs(RARITY_ORDER) do
-    local rBtn = Instance.new("TextButton")
-    rBtn.LayoutOrder = idx
-    rBtn.Size = UDim2.new(1, 0, 0, 24)
-    rBtn.TextSize = 10
-    rBtn.Font = Enum.Font.GothamBold
-    rBtn.TextXAlignment = Enum.TextXAlignment.Left
-    rBtn.ZIndex = 14
-    rBtn.Parent = rarityBody
-    Instance.new("UICorner", rBtn).CornerRadius = UDim.new(0, 5)
-    rarityButtons[rName] = rBtn
-
-    onButtonClicked(rBtn, function()
-        selectedRarities[rName] = not selectedRarities[rName]
-        updateRarityButtonsVisual()
-        setLiveAction(
-            (selectedRarities[rName] and "Bật độ hiếm: " or "Tắt độ hiếm: ") .. rName,
-            Color3.fromRGB(130, 235, 185)
-        )
-    end)
-end
-updateRarityButtonsVisual()
-
--- 2. Chọn khu vực để farm
-local _, areaBody, refreshAreaSec = createCollapsibleSection(3, "2. Chọn khu vực để farm", false)
-
-local areaButtons = {}
-local function discoverFarmAreas()
-    local areas = {}
-    local seen = {}
-
-    local function addArea(name, cf)
-        if not name or name == "" or seen[name] then return end
-        seen[name] = true
-        table.insert(areas, { name = name, cf = cf })
-    end
-
-    local foldersToScan = {
-        Workspace:FindFirstChild("Zones"),
-        Workspace:FindFirstChild("Areas"),
-        Workspace:FindFirstChild("Map"),
-        Workspace:FindFirstChild("Spawns"),
-        Workspace:FindFirstChild("Regions")
-    }
-
-    for _, folder in ipairs(foldersToScan) do
-        if folder then
-            for _, obj in ipairs(folder:GetChildren()) do
-                if obj:IsA("BasePart") then
-                    addArea(obj.Name, obj.CFrame + Vector3.new(0, 4, 0))
-                elseif obj:IsA("Model") then
-                    local pivot = obj:GetPivot()
-                    addArea(obj.Name, pivot + Vector3.new(0, 4, 0))
-                end
-            end
-        end
-    end
-
-    if #areas == 0 then
-        local hrp = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
-        local basePos = hrp and hrp.Position or Vector3.new(0, 5, 0)
-        addArea("Khu vực hiện tại", CFrame.new(basePos))
-        addArea("Khu vực 1 (Common/Rare)", CFrame.new(basePos + Vector3.new(25, 0, 0)))
-        addArea("Khu vực 2 (Epic/Legendary)", CFrame.new(basePos + Vector3.new(-25, 0, 25)))
-        addArea("Khu vực 3 (Mythic/Divine)", CFrame.new(basePos + Vector3.new(0, 0, -35)))
-    end
-
-    return areas
-end
-
-local function rebuildAreaButtons()
-    for _, ch in ipairs(areaBody:GetChildren()) do
-        if ch:IsA("TextButton") then
-            ch:Destroy()
-        end
-    end
-    areaButtons = {}
-
-    local areas = discoverFarmAreas()
-    if areas[1] and not selectedAreaCFrame then
-        selectedAreaName = areas[1].name
-        selectedAreaCFrame = areas[1].cf
-    end
-
-    for idx, ar in ipairs(areas) do
-        local b = Instance.new("TextButton")
-        b.LayoutOrder = idx
-        b.Size = UDim2.new(1, 0, 0, 24)
-        b.TextSize = 10
-        b.Font = Enum.Font.GothamBold
-        b.TextXAlignment = Enum.TextXAlignment.Left
-        b.ZIndex = 14
-        b.Parent = areaBody
-        Instance.new("UICorner", b).CornerRadius = UDim.new(0, 5)
-
-        local isCur = (selectedAreaName == ar.name)
-        b.BackgroundColor3 = isCur and Color3.fromRGB(61, 139, 255) or Color3.fromRGB(45, 48, 64)
-        b.TextColor3 = Color3.fromRGB(255, 255, 255)
-        b.Text = (isCur and "📍 " or "  ") .. ar.name
-        areaButtons[ar.name] = b
-
-        onButtonClicked(b, function()
-            selectedAreaName = ar.name
-            selectedAreaCFrame = ar.cf
-            rebuildAreaButtons()
-            setLiveAction("Đã chọn khu vực farm: " .. ar.name, Color3.fromRGB(130, 215, 255))
-        end)
-    end
-end
-rebuildAreaButtons()
-
--- 3. Cách đi đến thứ đó (Teleporting, Đi bộ)
-local _, travelBody, refreshTravelSec = createCollapsibleSection(4, "3. Cách đi đến thứ đó", false)
-
-local travelOptions = { "Teleporting", "Đi bộ" }
-local function rebuildTravelButtons()
-    for _, ch in ipairs(travelBody:GetChildren()) do
-        if ch:IsA("TextButton") then
-            ch:Destroy()
-        end
-    end
-
-    for idx, mode in ipairs(travelOptions) do
-        local b = Instance.new("TextButton")
-        b.LayoutOrder = idx
-        b.Size = UDim2.new(1, 0, 0, 24)
-        b.TextSize = 10
-        b.Font = Enum.Font.GothamBold
-        b.TextXAlignment = Enum.TextXAlignment.Left
-        b.ZIndex = 14
-        b.Parent = travelBody
-        Instance.new("UICorner", b).CornerRadius = UDim.new(0, 5)
-
-        local active = (travelMethod == mode)
-        b.BackgroundColor3 = active and Color3.fromRGB(46, 204, 113) or Color3.fromRGB(45, 48, 64)
-        b.TextColor3 = Color3.fromRGB(255, 255, 255)
-        b.Text = (active and "✔ " or "  ") .. mode
-
-        onButtonClicked(b, function()
-            travelMethod = mode
-            rebuildTravelButtons()
-            setLiveAction("Cách đi đến: " .. mode, Color3.fromRGB(46, 204, 113))
-        end)
-    end
-end
-rebuildTravelButtons()
-
--- 4. Cách mang về (Bay, Đi về, Bay nhanh)
-local _, returnBody, refreshReturnSec = createCollapsibleSection(5, "4. Cách mang về", false)
-
-local returnOptions = { "Bay", "Đi về", "Bay nhanh" }
-local function rebuildReturnButtons()
-    for _, ch in ipairs(returnBody:GetChildren()) do
-        if ch:IsA("TextButton") then
-            ch:Destroy()
-        end
-    end
-
-    for idx, mode in ipairs(returnOptions) do
-        local b = Instance.new("TextButton")
-        b.LayoutOrder = idx
-        b.Size = UDim2.new(1, 0, 0, 24)
-        b.TextSize = 10
-        b.Font = Enum.Font.GothamBold
-        b.TextXAlignment = Enum.TextXAlignment.Left
-        b.ZIndex = 14
-        b.Parent = returnBody
-        Instance.new("UICorner", b).CornerRadius = UDim.new(0, 5)
-
-        local active = (returnMethod == mode)
-        b.BackgroundColor3 = active and Color3.fromRGB(142, 68, 173) or Color3.fromRGB(45, 48, 64)
-        b.TextColor3 = Color3.fromRGB(255, 255, 255)
-        b.Text = (active and "✔ " or "  ") .. mode
-
-        onButtonClicked(b, function()
-            returnMethod = mode
-            rebuildReturnButtons()
-            setLiveAction("Cách mang về: " .. mode, Color3.fromRGB(205, 140, 255))
-        end)
-    end
-end
-rebuildReturnButtons()
-
--- Nút Farm nằm bên dưới các phần chọn lọc
-local FarmActionBtn = Instance.new("TextButton")
-FarmActionBtn.LayoutOrder = 6
-FarmActionBtn.Size = UDim2.new(1, -8, 0, 36)
-FarmActionBtn.BackgroundColor3 = Color3.fromRGB(46, 204, 113)
-FarmActionBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-FarmActionBtn.TextSize = 12
-FarmActionBtn.Font = Enum.Font.GothamBold
-FarmActionBtn.Text = "🌾 BẮT ĐẦU FARM"
-FarmActionBtn.ZIndex = 14
-FarmActionBtn.Parent = FarmContent
-Instance.new("UICorner", FarmActionBtn).CornerRadius = UDim.new(0, 8)
-
-FarmLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
-    FarmContent.CanvasSize = UDim2.new(0, 0, 0, FarmLayout.AbsoluteContentSize.Y + 14)
-end)
-
-local function moveCharacterTo(targetCf, mode)
-    local char = LocalPlayer.Character
-    local hrp = char and char:FindFirstChild("HumanoidRootPart")
-    local hum = char and char:FindFirstChildOfClass("Humanoid")
-    if not hrp or not targetCf then return end
-
-    if mode == "Teleporting" or mode == "Bay nhanh" then
-        hrp.CFrame = targetCf
-    elseif mode == "Đi bộ" then
-        if hum then
-            hum:MoveTo(targetCf.Position)
-        else
-            hrp.CFrame = targetCf
-        end
-    elseif mode == "Bay" then
-        local startCf = hrp.CFrame
-        local steps = 18
-        for i = 1, steps do
-            if not isFarming and mode == "Bay" then break end
-            local alpha = i / steps
-            local pos = startCf.Position:Lerp(targetCf.Position, alpha) + Vector3.new(0, math.sin(alpha * math.pi) * 8, 0)
-            hrp.CFrame = CFrame.new(pos)
-            task.wait(0.03)
-        end
-    end
-end
-
-task.spawn(function()
-    while true do
-        task.wait(0.6)
-        if isFarming then
-            local char = LocalPlayer.Character
-            local hrp = char and char:FindFirstChild("HumanoidRootPart")
-            if hrp then
-                local areas = discoverFarmAreas()
-                local targetCf = selectedAreaCFrame or (areas[1] and areas[1].cf) or hrp.CFrame
-                FarmStatusLabel.Text = string.format(
-                    " 🌾 Đang Farm (%s) • Đi: %s • Về: %s",
-                    selectedAreaName, travelMethod, returnMethod
-                )
-                moveCharacterTo(targetCf, travelMethod)
-
-                for _, obj in ipairs(Workspace:GetDescendants()) do
-                    if not isFarming then break end
-                    if obj:IsA("ProximityPrompt") and obj.Enabled then
-                        local parentPart = obj.Parent and (obj.Parent:IsA("BasePart") and obj.Parent or obj.Parent:FindFirstChildWhichIsA("BasePart", true))
-                        if parentPart then
-                            moveCharacterTo(parentPart.CFrame + Vector3.new(0, 2, 0), travelMethod)
-                            pcall(function()
-                                fireproximityprompt(obj)
-                            end)
-                            task.wait(0.25)
-                            moveCharacterTo(targetCf, returnMethod)
-                            break
-                        end
-                    end
-                end
-            end
-        else
-            FarmStatusLabel.Text = string.format(
-                " ⏸️ Dừng Farm • Khu: %s • Đi: %s • Về: %s",
-                selectedAreaName, travelMethod, returnMethod
-            )
-        end
-    end
-end)
-
-onButtonClicked(FarmActionBtn, function()
-    isFarming = not isFarming
-    if isFarming then
-        FarmActionBtn.Text = "⏹️ DỪNG FARM"
-        FarmActionBtn.BackgroundColor3 = Color3.fromRGB(224, 86, 36)
-        setLiveAction(
-            string.format("Bắt đầu Farm (%s | %s -> %s)", selectedAreaName, travelMethod, returnMethod),
-            Color3.fromRGB(46, 204, 113)
-        )
-    else
-        FarmActionBtn.Text = "🌾 BẮT ĐẦU FARM"
-        FarmActionBtn.BackgroundColor3 = Color3.fromRGB(46, 204, 113)
-        setLiveAction("Đã dừng Farm", Color3.fromRGB(255, 130, 85))
-    end
-end)
 
 -- --- TAB HOP SEVER ---
 local HopContent = Instance.new("ScrollingFrame")
@@ -1413,44 +930,82 @@ local function setHopStatus(msg)
     HopStatusLabel.Text = " " .. tostring(msg)
 end
 
-local function fetchPublicServers(maxPages)
-    if not httpRequest then
-        return nil, "Executor không hỗ trợ httpRequest"
+local function rawHttpGet(url)
+    if httpRequest then
+        local ok, res = pcall(function()
+            return httpRequest({
+                Url = url,
+                Method = "GET",
+                Headers = {
+                    ["Accept"] = "application/json",
+                    ["User-Agent"] = "Roblox/WinInet"
+                }
+            })
+        end)
+        if ok and type(res) == "table" and type(res.Body) == "string" and res.Body ~= "" then
+            return res.Body
+        end
     end
+
+    local gOk, gBody = pcall(function()
+        return HttpService:GetAsync(url, false)
+    end)
+    if gOk and type(gBody) == "string" and gBody ~= "" then
+        return gBody
+    end
+
+    return nil
+end
+
+local function fetchPublicServers(maxPages, sortOrder)
     local allServers = {}
     local cursor = ""
     local pages = 0
+    local order = sortOrder or "Asc"
 
     while pages < (maxPages or 3) do
         pages = pages + 1
         local url = string.format(
-            "https://games.roblox.com/v1/games/%d/servers/Public?sortOrder=Asc&limit=100%s",
+            "https://games.roblox.com/v1/games/%d/servers/Public?sortOrder=%s&limit=100%s",
             game.PlaceId,
+            order,
             cursor ~= "" and ("&cursor=" .. HttpService:UrlEncode(cursor)) or ""
         )
-        local ok, res = pcall(function()
-            return httpRequest({ Url = url, Method = "GET" })
-        end)
-        if not ok or not res or not res.Body then
-            return nil, "Không lấy được danh sách server"
-        end
-        local dOk, decoded = pcall(function()
-            return HttpService:JSONDecode(res.Body)
-        end)
-        if not dOk or type(decoded) ~= "table" or type(decoded.data) ~= "table" then
-            return nil, "Lỗi đọc dữ liệu server"
-        end
-        for _, srv in ipairs(decoded.data) do
-            if type(srv) == "table" and srv.id and srv.id ~= game.JobId then
-                table.insert(allServers, srv)
+
+        local body = rawHttpGet(url)
+        if not body then
+            if #allServers > 0 then
+                break
             end
+            return nil, "Không thể kết nối tới máy chủ Roblox"
         end
-        if decoded.nextPageCursor and decoded.nextPageCursor ~= "" then
-            cursor = decoded.nextPageCursor
+
+        local cleanBody = body:match("%b{}") or body
+        local dOk, decoded = pcall(function()
+            return HttpService:JSONDecode(cleanBody)
+        end)
+
+        if dOk and type(decoded) == "table" then
+            if type(decoded.data) == "table" then
+                for _, srv in ipairs(decoded.data) do
+                    if type(srv) == "table" and srv.id and tostring(srv.id) ~= tostring(game.JobId) then
+                        table.insert(allServers, srv)
+                    end
+                end
+            end
+            if type(decoded.nextPageCursor) == "string" and decoded.nextPageCursor ~= "" then
+                cursor = decoded.nextPageCursor
+            else
+                break
+            end
         else
-            break
+            if #allServers > 0 then
+                break
+            end
+            return nil, "Phản hồi danh sách server chưa sẵn sàng, hãy thử lại"
         end
     end
+
     return allServers, nil
 end
 
@@ -1543,10 +1098,11 @@ local function loadServersByMode(mode)
     setLiveAction("Đang tải danh sách " .. modeName .. "...", Color3.fromRGB(130, 215, 255))
 
     task.spawn(function()
-        local servers, err = fetchPublicServers(4)
+        local sortOrder = (mode == "old_server") and "Desc" or "Asc"
+        local servers, err = fetchPublicServers(4, sortOrder)
         if not servers then
-            setHopStatus("❌ " .. tostring(err))
-            setLiveAction("Lỗi tải server: " .. tostring(err), Color3.fromRGB(255, 95, 95))
+            setHopStatus("⚠️ " .. tostring(err))
+            setLiveAction("Chưa tải được danh sách: " .. tostring(err), Color3.fromRGB(255, 195, 80))
             isHopping = false
             return
         end
@@ -1582,10 +1138,8 @@ local function loadServersByMode(mode)
             end
             renderServerList(topLow, "⚡ Ping thấp")
         elseif mode == "old_server" then
-            local olderServers, _ = fetchPublicServers(6)
-            local pool = (olderServers and #olderServers > 0) and olderServers or servers
-            for i = #pool, math.max(1, #pool - 19), -1 do
-                table.insert(list, pool[i])
+            for i = 1, math.min(20, #servers) do
+                table.insert(list, servers[i])
             end
             renderServerList(list, "🕰️ Sever cũ")
         end
@@ -1627,12 +1181,17 @@ onButtonClicked(JoinJobBtn, function()
     teleportToJob(PasteJobInput.Text, "JobId đã dán")
 end)
 
--- --- TAB SETTINGS ---
+-- ==========================================
+-- TAB SETTINGS: CHỈ HIỆN THÔNG TIN CÁC BẢN CẬP NHẬT
+-- BÊN NGOÀI: GIỜ CẬP NHẬT | CHỦ CẬP NHẬT | PHIÊN BẢN | LOẠI CẬP NHẬT
+-- BẤM VÀO SẼ HIỆN CHI TIẾT BẢN CẬP NHẬT ĐÓ
+-- ==========================================
 local Tab3Content = Instance.new("ScrollingFrame")
 Tab3Content.Size = UDim2.new(1, -16, 0, CONTENT_HEIGHT)
 Tab3Content.Position = UDim2.new(0, 8, 0, CONTENT_TOP_Y)
 Tab3Content.BackgroundTransparency = 1
 Tab3Content.BorderSizePixel = 0
+Tab3Content.ScrollingDirection = Enum.ScrollingDirection.Y
 Tab3Content.CanvasSize = UDim2.new(0, 0, 0, 320)
 Tab3Content.ScrollBarThickness = 5
 Tab3Content.ScrollBarImageColor3 = Color3.fromRGB(130, 140, 175)
@@ -1640,20 +1199,123 @@ Tab3Content.Visible = false
 Tab3Content.ZIndex = 12
 Tab3Content.Parent = MainFrame
 
-local SettingsInfoLabel = Instance.new("TextLabel")
-SettingsInfoLabel.Size = UDim2.new(1, -8, 0, 160)
-SettingsInfoLabel.Position = UDim2.new(0, 0, 0, 0)
-SettingsInfoLabel.BackgroundColor3 = Color3.fromRGB(32, 34, 46)
-SettingsInfoLabel.TextColor3 = Color3.fromRGB(225, 225, 235)
-SettingsInfoLabel.TextSize = 11
-SettingsInfoLabel.Font = Enum.Font.Code
-SettingsInfoLabel.TextWrapped = true
-SettingsInfoLabel.TextXAlignment = Enum.TextXAlignment.Left
-SettingsInfoLabel.TextYAlignment = Enum.TextYAlignment.Top
-SettingsInfoLabel.Text = " ⚙️ Cài đặt nâng cao:\n • Tự động quét Backpack & Character\n • Hỗ trợ lọc hậu tố tiền K, M, B, T, Qa, spd...\n • Lưu lịch sử thú bắt được kèm giờ Việt Nam\n • Hỗ trợ Farm độ hiếm Common -> Divine + Hop Sever"
-SettingsInfoLabel.ZIndex = 13
-SettingsInfoLabel.Parent = Tab3Content
-Instance.new("UICorner", SettingsInfoLabel).CornerRadius = UDim.new(0, 8)
+local UpdateListLayout = Instance.new("UIListLayout")
+UpdateListLayout.SortOrder = Enum.SortOrder.LayoutOrder
+UpdateListLayout.Padding = UDim.new(0, 6)
+UpdateListLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
+UpdateListLayout.Parent = Tab3Content
+
+local UpdateEntries = {
+    {
+        time = "22:30",
+        author = "Nguyen Duy Ngô",
+        version = "v2.4",
+        kind = "Update tính năng",
+        details = "• Dynamic Island chỉ hiển thị giờ Việt Nam (00:00) chữ to màu vàng bên phải.\n• Tab Home bỏ thông tin Đã bắt và Trạng thái.\n• Cải thiện đọc dữ liệu danh sách server trong Hop Sever.\n• Tab Settings hiển thị bản cập nhật và mở chi tiết khi bấm vào."
+    },
+    {
+        time = "20:15",
+        author = "Nguyen Duy Ngô",
+        version = "v2.3",
+        kind = "Fix",
+        details = "• Sửa lỗi hiển thị tab khi chuyển qua lại giữa Home, Hop Sever, Lịch sử, Settings và Ghi chú.\n• Tối ưu tốc độ quét thông tin pet mới nhận."
+    },
+    {
+        time = "17:40",
+        author = "Nguyen Duy Ngô",
+        version = "v2.2",
+        kind = "Update tính năng",
+        details = "• Thêm bộ lọc tìm kiếm và xác nhận trước khi xóa lịch sử.\n• Thêm ghi chú nổi tùy chỉnh font, màu sắc và hiệu ứng trên màn hình."
+    }
+}
+
+local expandedUpdateFlags = {}
+local updateCardRefs = {}
+
+local function refreshUpdateList()
+    for _, ch in ipairs(Tab3Content:GetChildren()) do
+        if ch:IsA("Frame") then
+            ch:Destroy()
+        end
+    end
+    updateCardRefs = {}
+
+    for idx, entry in ipairs(UpdateEntries) do
+        local isOpen = expandedUpdateFlags[idx] == true
+
+        local card = Instance.new("Frame")
+        card.LayoutOrder = idx
+        card.Size = UDim2.new(1, -8, 0, 44)
+        card.BackgroundColor3 = Color3.fromRGB(32, 34, 46)
+        card.BorderSizePixel = 0
+        card.ClipsDescendants = true
+        card.ZIndex = 13
+        card.Parent = Tab3Content
+        Instance.new("UICorner", card).CornerRadius = UDim.new(0, 8)
+
+        -- Phần thông tin tóm tắt bên ngoài: Giờ cập nhật | Chủ cập nhật | Phiên bản | Loại cập nhật
+        local summaryBtn = Instance.new("TextButton")
+        summaryBtn.Size = UDim2.new(1, 0, 0, 44)
+        summaryBtn.Position = UDim2.new(0, 0, 0, 0)
+        summaryBtn.BackgroundColor3 = Color3.fromRGB(38, 41, 56)
+        summaryBtn.TextColor3 = Color3.fromRGB(244, 240, 232)
+        summaryBtn.TextSize = 9
+        summaryBtn.Font = Enum.Font.GothamBold
+        summaryBtn.TextXAlignment = Enum.TextXAlignment.Left
+        summaryBtn.TextWrapped = true
+        summaryBtn.Text = string.format(
+            " %s ⏰ %s | 👤 %s\n     🏷️ %s • 🛠️ %s",
+            isOpen and "v" or ">",
+            entry.time,
+            entry.author,
+            entry.version,
+            entry.kind
+        )
+        summaryBtn.ZIndex = 14
+        summaryBtn.Parent = card
+        Instance.new("UICorner", summaryBtn).CornerRadius = UDim.new(0, 8)
+
+        local detailBox = Instance.new("TextLabel")
+        detailBox.Size = UDim2.new(1, -14, 0, 74)
+        detailBox.Position = UDim2.new(0, 7, 0, 48)
+        detailBox.BackgroundColor3 = Color3.fromRGB(25, 27, 37)
+        detailBox.TextColor3 = Color3.fromRGB(220, 228, 244)
+        detailBox.TextSize = 9
+        detailBox.Font = Enum.Font.Code
+        detailBox.TextXAlignment = Enum.TextXAlignment.Left
+        detailBox.TextYAlignment = Enum.TextYAlignment.Top
+        detailBox.TextWrapped = true
+        detailBox.Text = entry.details
+        detailBox.Visible = isOpen
+        detailBox.ZIndex = 14
+        detailBox.Parent = card
+        Instance.new("UICorner", detailBox).CornerRadius = UDim.new(0, 6)
+
+        local detailHeight = math.max(58, detailBox.TextBounds.Y + 12)
+        detailBox.Size = UDim2.new(1, -14, 0, detailHeight)
+        card.Size = UDim2.new(1, -8, 0, isOpen and (54 + detailHeight) or 44)
+
+        onButtonClicked(summaryBtn, function()
+            expandedUpdateFlags[idx] = not expandedUpdateFlags[idx]
+            refreshUpdateList()
+            setLiveAction(
+                (expandedUpdateFlags[idx] and "Xem chi tiết bản " or "Đóng chi tiết bản ") .. entry.version,
+                Color3.fromRGB(255, 220, 50)
+            )
+        end)
+
+        table.insert(updateCardRefs, card)
+    end
+
+    task.defer(function()
+        Tab3Content.CanvasSize = UDim2.new(0, 0, 0, UpdateListLayout.AbsoluteContentSize.Y + 12)
+    end)
+end
+
+refreshUpdateList()
+UpdateListLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
+    Tab3Content.CanvasSize = UDim2.new(0, 0, 0, UpdateListLayout.AbsoluteContentSize.Y + 12)
+end)
 
 -- --- TAB GHI CHÚ MÀN HÌNH ---
 local Tab4Content = Instance.new("ScrollingFrame")
@@ -2164,7 +1826,6 @@ end)
 
 local allTabButtons = {
     home = TabHomeBtn,
-    farm = TabFarmBtn,
     hop = TabHopBtn,
     history = TabHistoryBtn,
     settings = TabSettingsBtn,
@@ -2173,7 +1834,6 @@ local allTabButtons = {
 
 local tabNamesVi = {
     home = "Home",
-    farm = "Farm",
     hop = "Hop Sever",
     history = "Lịch sử",
     settings = "Settings",
@@ -2194,7 +1854,7 @@ end
 
 openTab = function(tabKey)
     if type(tabKey) == "number" then
-        local numMap = { "home", "farm", "hop", "history", "settings", "note" }
+        local numMap = { "home", "hop", "history", "settings", "note" }
         tabKey = numMap[tabKey] or "home"
     end
 
@@ -2202,19 +1862,13 @@ openTab = function(tabKey)
     setLiveAction("Đã chuyển sang tab " .. (tabNamesVi[tabKey] or tostring(tabKey)), Color3.fromRGB(130, 215, 255))
 
     HomeContent.Visible = (tabKey == "home")
-    FarmContent.Visible = (tabKey == "farm")
     HopContent.Visible = (tabKey == "hop")
     Tab2Content.Visible = (tabKey == "history")
     Tab3Content.Visible = (tabKey == "settings")
     Tab4Content.Visible = (tabKey == "note")
 
-    if tabKey == "farm" then
-        rebuildAreaButtons()
-        refreshRaritySec()
-        refreshAreaSec()
-        refreshTravelSec()
-        refreshReturnSec()
-        FarmContent.CanvasSize = UDim2.new(0, 0, 0, FarmLayout.AbsoluteContentSize.Y + 14)
+    if tabKey == "settings" then
+        refreshUpdateList()
     end
 
     local isHist = (tabKey == "history")
@@ -2230,7 +1884,6 @@ openTab = function(tabKey)
 end
 
 onButtonClicked(TabHomeBtn, function() openTab("home") end)
-onButtonClicked(TabFarmBtn, function() openTab("farm") end)
 onButtonClicked(TabHopBtn, function() openTab("hop") end)
 onButtonClicked(TabHistoryBtn, function() openTab("history") end)
 onButtonClicked(TabSettingsBtn, function() openTab("settings") end)
@@ -2272,25 +1925,6 @@ local function getPetRealColor(item, rarityStr)
     else
         return 9807270
     end
-end
-
-local function isRarityAllowed(rarityStr)
-    local anySelected = false
-    for _, v in pairs(selectedRarities) do
-        if v then
-            anySelected = true
-            break
-        end
-    end
-    if not anySelected then return true end
-
-    local low = string.lower(tostring(rarityStr or ""))
-    for _, rName in ipairs(RARITY_ORDER) do
-        if selectedRarities[rName] and string.find(low, string.lower(rName), 1, true) then
-            return true
-        end
-    end
-    return false
 end
 
 local function extractPetInfo(item)
@@ -2434,11 +2068,6 @@ end
 -- GỬI WEBHOOK & GHI LỊCH SỬ
 -- ==========================================
 local function sendDiscordWebhook(petData)
-    if not isRarityAllowed(petData.Rarity) then
-        setLiveAction("Bỏ qua " .. petData.Name .. " (ngoài độ hiếm chọn)", Color3.fromRGB(185, 190, 210))
-        return
-    end
-
     if CURRENT_MIN_MONEY > 0 and petData.NumericMoney < CURRENT_MIN_MONEY then
         setLiveAction("Bỏ qua " .. petData.Name .. " (dưới mức lọc tiền)", Color3.fromRGB(185, 190, 210))
         return
@@ -2603,20 +2232,11 @@ RunService.RenderStepped:Connect(function(dt)
     local maxPlr = Players.MaxPlayers
 
     HomeInfoCard.Text = string.format(
-        " 🏠 TỔNG QUAN HỆ THỐNG\n 👤 Người chơi: %d/%d | 🐾 Đã bắt: %d\n ⏱️ Đã chạy: %s | 🇻🇳 %s\n ⚡ FPS: %d | 📶 Ping: %dms\n 🟢 Trạng thái: %s",
-        plrCount, maxPlr, #HistoryRecords, runTimeStr, vnClockStr, currentFps, ping,
-        isFarming and "Đang Farm" or (isRunning and "Đang chạy" or "Tạm dừng")
+        " 🏠 TỔNG QUAN HỆ THỐNG\n 👤 Người chơi: %d/%d | ⏱️ Đã chạy: %s\n 🇻🇳 %s | ⚡ FPS: %d | 📶 Ping: %dms",
+        plrCount, maxPlr, runTimeStr, vnClockStr, currentFps, ping
     )
 
     if DynamicIsland.Visible then
-        local statusIcon = (isRunning or isFarming) and "🟢" or "🔴"
-        IslandCompactText.Text = string.format("%s %d Pet • %s", statusIcon, #HistoryRecords, runTimeStr)
-        if isIslandExpanded then
-            local minMoneyStr = CURRENT_MIN_MONEY == 0 and "Tất cả" or (formatBigNumber(CURRENT_MIN_MONEY) .. "+/s")
-            IslandExpandedText.Text = string.format(
-                "%s %s | ⏱️ %s\n⚡ %d FPS | 📶 %dms | 💰 %s",
-                statusIcon, isFarming and "Đang Farm" or (isRunning and "Đang chạy" or "Tạm dừng"), runTimeStr, currentFps, ping, minMoneyStr
-            )
-        end
+        IslandVnClockLabel.Text = getVnShortClock()
     end
 end)
