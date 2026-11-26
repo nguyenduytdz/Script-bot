@@ -1,5 +1,5 @@
 -- ==========================================
--- HOP SEVER STANDALONE SCRIPT (MOBILE UI)
+-- HOP SEVER STANDALONE SCRIPT (FIXED & DEBUG)
 -- ==========================================
 local HttpService = game:GetService("HttpService")
 local Players = game:GetService("Players")
@@ -28,9 +28,13 @@ local function getUiParent()
 end
 
 local UiParent = getUiParent()
-local httpRequest = (syn and syn.request) or (http and http.request) or http_request or (fluxus and fluxus.request) or request
+local httpRequest = (syn and syn.request)
+    or (http and http.request)
+    or http_request
+    or (fluxus and fluxus.request)
+    or (krnl and krnl.request)
+    or request
 
--- Âm thanh click
 local clickSound = Instance.new("Sound")
 clickSound.Name = "HopClickSound"
 clickSound.SoundId = "rbxassetid://6895079853"
@@ -89,7 +93,6 @@ local function attachDrag(target, handle)
     end)
 end
 
--- Xóa bản cũ nếu chạy lại
 if UiParent:FindFirstChild("StandaloneHopSeverUI") then
     UiParent.StandaloneHopSeverUI:Destroy()
 end
@@ -101,7 +104,6 @@ ScreenGui.IgnoreGuiInset = true
 ScreenGui.ResetOnSpawn = false
 ScreenGui.Parent = UiParent
 
--- Nút nổi bật/tắt menu Hop
 local ToggleBtn = Instance.new("TextButton")
 ToggleBtn.Name = "HopToggleBtn"
 ToggleBtn.Size = UDim2.new(0, 40, 0, 40)
@@ -120,7 +122,6 @@ ToggleStroke.Thickness = 2
 ToggleStroke.Parent = ToggleBtn
 attachDrag(ToggleBtn, ToggleBtn)
 
--- Khung chính Hop Server
 local HopFrame = Instance.new("Frame")
 HopFrame.Name = "HopMainFrame"
 HopFrame.Size = UDim2.new(0, 266, 0, 268)
@@ -154,11 +155,11 @@ HeaderLbl.ZIndex = 11
 HeaderLbl.Parent = HopFrame
 
 local StatusLbl = Instance.new("TextLabel")
-StatusLbl.Size = UDim2.new(1, -12, 0, 28)
+StatusLbl.Size = UDim2.new(1, -12, 0, 30)
 StatusLbl.Position = UDim2.new(0, 6, 0, 28)
 StatusLbl.BackgroundColor3 = Color3.fromRGB(32, 34, 48)
 StatusLbl.TextColor3 = Color3.fromRGB(255, 240, 140)
-StatusLbl.TextSize = 9
+StatusLbl.TextSize = 8
 StatusLbl.Font = FONT_HEAVY
 StatusLbl.TextWrapped = true
 StatusLbl.TextXAlignment = Enum.TextXAlignment.Left
@@ -173,19 +174,19 @@ end
 
 local OnePlrBtn = Instance.new("TextButton")
 OnePlrBtn.Size = UDim2.new(0.32, -5, 0, 25)
-OnePlrBtn.Position = UDim2.new(0, 6, 0, 60)
+OnePlrBtn.Position = UDim2.new(0, 6, 0, 62)
 OnePlrBtn.BackgroundColor3 = Color3.fromRGB(46, 204, 113)
 OnePlrBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
 OnePlrBtn.TextSize = 8
 OnePlrBtn.Font = FONT_HEAVY
-OnePlrBtn.Text = "👤 1 NGƯỜI"
+OnePlrBtn.Text = "👤 ÍT NGƯỜI"
 OnePlrBtn.ZIndex = 12
 OnePlrBtn.Parent = HopFrame
 Instance.new("UICorner", OnePlrBtn).CornerRadius = UDim.new(0, 6)
 
 local LowPingBtn = Instance.new("TextButton")
 LowPingBtn.Size = UDim2.new(0.32, -5, 0, 25)
-LowPingBtn.Position = UDim2.new(0.34, -1, 0, 60)
+LowPingBtn.Position = UDim2.new(0.34, -1, 0, 62)
 LowPingBtn.BackgroundColor3 = Color3.fromRGB(61, 139, 255)
 LowPingBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
 LowPingBtn.TextSize = 8
@@ -197,7 +198,7 @@ Instance.new("UICorner", LowPingBtn).CornerRadius = UDim.new(0, 6)
 
 local OldSrvBtn = Instance.new("TextButton")
 OldSrvBtn.Size = UDim2.new(0.32, -5, 0, 25)
-OldSrvBtn.Position = UDim2.new(0.68, -2, 0, 60)
+OldSrvBtn.Position = UDim2.new(0.68, -2, 0, 62)
 OldSrvBtn.BackgroundColor3 = Color3.fromRGB(155, 89, 182)
 OldSrvBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
 OldSrvBtn.TextSize = 8
@@ -209,7 +210,7 @@ Instance.new("UICorner", OldSrvBtn).CornerRadius = UDim.new(0, 6)
 
 local CopyJobBtn = Instance.new("TextButton")
 CopyJobBtn.Size = UDim2.new(1, -12, 0, 22)
-CopyJobBtn.Position = UDim2.new(0, 6, 0, 89)
+CopyJobBtn.Position = UDim2.new(0, 6, 0, 91)
 CopyJobBtn.BackgroundColor3 = Color3.fromRGB(230, 126, 34)
 CopyJobBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
 CopyJobBtn.TextSize = 8
@@ -221,7 +222,7 @@ Instance.new("UICorner", CopyJobBtn).CornerRadius = UDim.new(0, 6)
 
 local JobInput = Instance.new("TextBox")
 JobInput.Size = UDim2.new(1, -68, 0, 24)
-JobInput.Position = UDim2.new(0, 6, 0, 115)
+JobInput.Position = UDim2.new(0, 6, 0, 117)
 JobInput.BackgroundColor3 = Color3.fromRGB(32, 34, 48)
 JobInput.TextColor3 = Color3.fromRGB(255, 255, 255)
 JobInput.PlaceholderColor3 = Color3.fromRGB(185, 192, 215)
@@ -236,7 +237,7 @@ Instance.new("UICorner", JobInput).CornerRadius = UDim.new(0, 6)
 
 local JoinBtn = Instance.new("TextButton")
 JoinBtn.Size = UDim2.new(0, 52, 0, 24)
-JoinBtn.Position = UDim2.new(1, -58, 0, 115)
+JoinBtn.Position = UDim2.new(1, -58, 0, 117)
 JoinBtn.BackgroundColor3 = Color3.fromRGB(31, 184, 154)
 JoinBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
 JoinBtn.TextSize = 9
@@ -247,8 +248,8 @@ JoinBtn.Parent = HopFrame
 Instance.new("UICorner", JoinBtn).CornerRadius = UDim.new(0, 6)
 
 local ListScroll = Instance.new("ScrollingFrame")
-ListScroll.Size = UDim2.new(1, -12, 0, 112)
-ListScroll.Position = UDim2.new(0, 6, 0, 144)
+ListScroll.Size = UDim2.new(1, -12, 0, 108)
+ListScroll.Position = UDim2.new(0, 6, 0, 146)
 ListScroll.BackgroundColor3 = Color3.fromRGB(24, 26, 38)
 ListScroll.BorderSizePixel = 0
 ListScroll.CanvasSize = UDim2.new(0, 0, 0, 0)
@@ -272,28 +273,37 @@ local function rawGet(url)
                 Method = "GET",
                 Headers = {
                     ["Accept"] = "application/json",
-                    ["User-Agent"] = "Roblox/WinInet"
+                    ["User-Agent"] = "Mozilla/5.0"
                 }
             })
         end)
-        if ok and type(res) == "table" and type(res.Body) == "string" and res.Body ~= "" then
-            return res.Body
+        if ok and type(res) == "table" then
+            local statusCode = tonumber(res.StatusCode or res.Status or 0) or 0
+            local body = tostring(res.Body or "")
+            if body ~= "" then
+                return body, statusCode
+            end
+            return nil, "HTTP " .. tostring(statusCode)
         end
     end
-    local gOk, gBody = pcall(function()
-        return HttpService:GetAsync(url, false)
-    end)
-    if gOk and type(gBody) == "string" and gBody ~= "" then
-        return gBody
+
+    if game:GetService("RunService"):IsStudio() then
+        local gOk, gBody = pcall(function()
+            return HttpService:GetAsync(url, false)
+        end)
+        if gOk and type(gBody) == "string" and gBody ~= "" then
+            return gBody, 200
+        end
     end
-    return nil
+
+    return nil, "EXECUTOR CHẶN REQUEST"
 end
 
 local function fetchServers(maxPages, sortOrder)
     local result = {}
     local cursor = ""
     local page = 0
-    while page < (maxPages or 4) do
+    while page < (maxPages or 3) do
         page = page + 1
         local url = string.format(
             "https://games.roblox.com/v1/games/%d/servers/Public?sortOrder=%s&limit=100%s",
@@ -301,31 +311,41 @@ local function fetchServers(maxPages, sortOrder)
             sortOrder or "Asc",
             cursor ~= "" and ("&cursor=" .. HttpService:UrlEncode(cursor)) or ""
         )
-        local body = rawGet(url)
+        local body, codeOrErr = rawGet(url)
         if not body then
             if #result > 0 then break end
-            return nil, "KHÔNG KẾT NỐI ĐƯỢC MÁY CHỦ"
+            return nil, "LỖI KẾT NỐI (" .. tostring(codeOrErr) .. ")"
         end
-        local clean = body:match("%b{}") or body
+
         local ok, decoded = pcall(function()
-            return HttpService:JSONDecode(clean)
+            return HttpService:JSONDecode(body)
         end)
-        if ok and type(decoded) == "table" then
-            if type(decoded.data) == "table" then
-                for _, srv in ipairs(decoded.data) do
-                    if type(srv) == "table" and srv.id and tostring(srv.id) ~= tostring(game.JobId) then
-                        table.insert(result, srv)
-                    end
+        if not ok or type(decoded) ~= "table" then
+            if #result > 0 then break end
+            return nil, "BỊ CHẶN / TRẢ VỀ KHÔNG PHẢI JSON"
+        end
+
+        if type(decoded.errors) == "table" and #decoded.errors > 0 then
+            local errItem = decoded.errors[1]
+            local code = errItem and errItem.code or "?"
+            local msg = errItem and errItem.message or "API ERROR"
+            if #result > 0 then break end
+            return nil, string.format("ROBLOX ERR %s: %s", tostring(code), tostring(msg))
+        end
+
+        if type(decoded.data) == "table" then
+            for _, srv in ipairs(decoded.data) do
+                if type(srv) == "table" and srv.id and tostring(srv.id) ~= tostring(game.JobId) then
+                    table.insert(result, srv)
                 end
             end
-            if type(decoded.nextPageCursor) == "string" and decoded.nextPageCursor ~= "" then
-                cursor = decoded.nextPageCursor
-            else
-                break
-            end
+        end
+
+        if type(decoded.nextPageCursor) == "string" and decoded.nextPageCursor ~= "" then
+            cursor = decoded.nextPageCursor
+            task.wait(0.25)
         else
-            if #result > 0 then break end
-            return nil, "DỮ LIỆU SEVER CHƯA SẴN SÀNG"
+            break
         end
     end
     return result, nil
@@ -407,33 +427,34 @@ local function loadMode(mode)
     setStatus("🔍 ĐANG TÌM DANH SÁCH SEVER...")
     task.spawn(function()
         local order = (mode == "old") and "Desc" or "Asc"
-        local servers, err = fetchServers(4, order)
+        local servers, err = fetchServers(3, order)
         if not servers then
             setStatus("⚠️ " .. tostring(err))
             isBusy = false
             return
         end
 
+        if #servers == 0 then
+            setStatus("⚠️ GAME KHÔNG CÓ SERVER CÔNG KHAI KHÁC")
+            isBusy = false
+            return
+        end
+
         local out = {}
         if mode == "one" then
-            for _, s in ipairs(servers) do
-                if (tonumber(s.playing) or 999) == 1 then
-                    table.insert(out, s)
-                end
+            table.sort(servers, function(a, b)
+                return (tonumber(a.playing) or 999999) < (tonumber(b.playing) or 999999)
+            end)
+            for i = 1, math.min(20, #servers) do
+                table.insert(out, servers[i])
             end
-            if #out == 0 then
-                table.sort(servers, function(a, b)
-                    return (tonumber(a.playing) or 999) < (tonumber(b.playing) or 999)
-                end)
-                for i = 1, math.min(15, #servers) do table.insert(out, servers[i]) end
-            end
-            renderRows(out, "👤 1 NGƯỜI")
+            renderRows(out, "👤 ÍT NGƯỜI")
         elseif mode == "ping" then
             for _, s in ipairs(servers) do
                 if s.ping ~= nil then table.insert(out, s) end
             end
             table.sort(out, function(a, b)
-                return (tonumber(a.ping) or 9999) < (tonumber(b.ping) or 9999)
+                return (tonumber(a.ping) or 999999) < (tonumber(b.ping) or 999999)
             end)
             local top = {}
             for i = 1, math.min(20, #out) do table.insert(top, out[i]) end
