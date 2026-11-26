@@ -1,5 +1,5 @@
 -- ==========================================
--- HOP SEVER STANDALONE SCRIPT (FIXED & DEBUG)
+-- HOP SEVER STANDALONE SCRIPT (FIXED 773 & FAST HOP)
 -- ==========================================
 local HttpService = game:GetService("HttpService")
 local Players = game:GetService("Players")
@@ -124,7 +124,7 @@ attachDrag(ToggleBtn, ToggleBtn)
 
 local HopFrame = Instance.new("Frame")
 HopFrame.Name = "HopMainFrame"
-HopFrame.Size = UDim2.new(0, 266, 0, 268)
+HopFrame.Size = UDim2.new(0, 266, 0, 286)
 HopFrame.Position = UDim2.new(0.04, 0, 0.23, 0)
 HopFrame.BackgroundColor3 = Color3.fromRGB(20, 22, 32)
 HopFrame.BorderSizePixel = 0
@@ -208,14 +208,26 @@ OldSrvBtn.ZIndex = 12
 OldSrvBtn.Parent = HopFrame
 Instance.new("UICorner", OldSrvBtn).CornerRadius = UDim.new(0, 6)
 
+local FastHopBtn = Instance.new("TextButton")
+FastHopBtn.Size = UDim2.new(0.5, -8, 0, 22)
+FastHopBtn.Position = UDim2.new(0, 6, 0, 91)
+FastHopBtn.BackgroundColor3 = Color3.fromRGB(241, 196, 15)
+FastHopBtn.TextColor3 = Color3.fromRGB(20, 22, 32)
+FastHopBtn.TextSize = 8
+FastHopBtn.Font = FONT_HEAVY
+FastHopBtn.Text = "⚡ HOP SEVER TỰ ĐỘNG"
+FastHopBtn.ZIndex = 12
+FastHopBtn.Parent = HopFrame
+Instance.new("UICorner", FastHopBtn).CornerRadius = UDim.new(0, 6)
+
 local CopyJobBtn = Instance.new("TextButton")
-CopyJobBtn.Size = UDim2.new(1, -12, 0, 22)
-CopyJobBtn.Position = UDim2.new(0, 6, 0, 91)
+CopyJobBtn.Size = UDim2.new(0.5, -8, 0, 22)
+CopyJobBtn.Position = UDim2.new(0.5, 2, 0, 91)
 CopyJobBtn.BackgroundColor3 = Color3.fromRGB(230, 126, 34)
 CopyJobBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
 CopyJobBtn.TextSize = 8
 CopyJobBtn.Font = FONT_HEAVY
-CopyJobBtn.Text = "📋 COPY JOBID SEVER HIỆN TẠI"
+CopyJobBtn.Text = "📋 COPY JOBID"
 CopyJobBtn.ZIndex = 12
 CopyJobBtn.Parent = HopFrame
 Instance.new("UICorner", CopyJobBtn).CornerRadius = UDim.new(0, 6)
@@ -248,7 +260,7 @@ JoinBtn.Parent = HopFrame
 Instance.new("UICorner", JoinBtn).CornerRadius = UDim.new(0, 6)
 
 local ListScroll = Instance.new("ScrollingFrame")
-ListScroll.Size = UDim2.new(1, -12, 0, 108)
+ListScroll.Size = UDim2.new(1, -12, 0, 126)
 ListScroll.Position = UDim2.new(0, 6, 0, 146)
 ListScroll.BackgroundColor3 = Color3.fromRGB(24, 26, 38)
 ListScroll.BorderSizePixel = 0
@@ -353,16 +365,32 @@ end
 
 local function joinJob(jobId, tag)
     local cleanId = tostring(jobId or ""):gsub("^%s+", ""):gsub("%s+$", "")
+
     if cleanId == "" then
-        setStatus("⚠️ HÃY DÁN JOBID TRƯỚC KHI JOIN!")
+        setStatus("🔄 ĐANG TÌM SEVER TỰ ĐỘNG...")
+        local okAuto, errAuto = pcall(function()
+            TeleportService:Teleport(game.PlaceId, LocalPlayer)
+        end)
+        if not okAuto then
+            setStatus("⚠️ KHÔNG TỰ ĐỘNG ĐƯỢC: " .. tostring(errAuto))
+        end
         return
     end
+
     setStatus("🔄 ĐANG JOIN " .. tostring(tag or cleanId:sub(1, 12)) .. "...")
     local ok, err = pcall(function()
         TeleportService:TeleportToPlaceInstance(game.PlaceId, cleanId, LocalPlayer)
     end)
+
     if not ok then
-        setStatus("❌ LỖI JOIN: " .. tostring(err))
+        setStatus("⚠️ BỊ HẠN CHẾ JOBID -> ĐANG ĐỔI SEVER...")
+        task.wait(0.4)
+        local ok2, err2 = pcall(function()
+            TeleportService:Teleport(game.PlaceId, LocalPlayer)
+        end)
+        if not ok2 then
+            setStatus("❌ LỖI TELEPORT: " .. tostring(err2 or err))
+        end
     end
 end
 
@@ -467,6 +495,10 @@ local function loadMode(mode)
         isBusy = false
     end)
 end
+
+onClick(FastHopBtn, function()
+    joinJob("", "TỰ ĐỘNG")
+end, 1.15)
 
 onClick(OnePlrBtn, function() loadMode("one") end)
 onClick(LowPingBtn, function() loadMode("ping") end)
