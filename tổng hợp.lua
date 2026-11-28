@@ -1,22 +1,24 @@
 -- ==========================================
--- VENYX STYLE UI TEMPLATE (ROUNDED & EMPTY TABS)
+-- VENYX STYLE UI TEMPLATE (CLEAN ROUNDED CORNERS)
 -- ==========================================
 
 local Players = game:GetService("Players")
 local LocalPlayer = Players.LocalPlayer
 
-if game.CoreGui:FindFirstChild("VenyxRoundedUI") then
-    game.CoreGui.VenyxRoundedUI:Destroy()
+if game.CoreGui:FindFirstChild("VenyxCleanRoundedUI") then
+    game.CoreGui.VenyxCleanRoundedUI:Destroy()
 end
 
 local ScreenGui = Instance.new("ScreenGui")
-ScreenGui.Name = "VenyxRoundedUI"
+ScreenGui.Name = "VenyxCleanRoundedUI"
 ScreenGui.Parent = game.CoreGui
 ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 ScreenGui.ResetOnSpawn = false
 
+local RADIUS = 20
+
 -- ==========================================
--- 1. KHUNG CHÍNH BO GÓC LỚN (GIỐNG ẢNH)
+-- 1. KHUNG CHÍNH (CHỈ DÙNG 1 UICORNER DUY NHẤT)
 -- ==========================================
 local MainFrame = Instance.new("Frame")
 MainFrame.Name = "MainFrame"
@@ -27,13 +29,15 @@ MainFrame.Size = UDim2.new(0, 780, 0, 430)
 MainFrame.Active = true
 MainFrame.Draggable = true
 MainFrame.ClipsDescendants = true
+MainFrame.ZIndex = 1
 
 local MainCorner = Instance.new("UICorner", MainFrame)
-MainCorner.CornerRadius = UDim.new(0, 20)
+MainCorner.CornerRadius = UDim.new(0, RADIUS)
 
 local MainStroke = Instance.new("UIStroke", MainFrame)
 MainStroke.Color = Color3.fromRGB(58, 60, 66)
 MainStroke.Thickness = 1.5
+MainStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
 
 -- Nút mở lại khi thu nhỏ
 local RestoreBtn = Instance.new("TextButton")
@@ -55,36 +59,63 @@ RestoreStroke.Color = Color3.fromRGB(72, 75, 82)
 RestoreStroke.Thickness = 1.3
 
 -- ==========================================
--- 2. THANH TIÊU ĐỀ (TOPBAR)
+-- 2. LỚP NỀN PHÂN VÙNG (KHÔNG DÙNG MASK GÂY LÒI GÓC)
+-- ==========================================
+-- Nền TopBar nằm sát mép trên, dùng UICorner giống MainFrame nhưng chỉ cao vừa đủ
+local TopBg = Instance.new("Frame")
+TopBg.Parent = MainFrame
+TopBg.BackgroundColor3 = Color3.fromRGB(33, 34, 38)
+TopBg.BorderSizePixel = 0
+TopBg.Position = UDim2.new(0, 0, 0, 0)
+TopBg.Size = UDim2.new(1, 0, 0, 50)
+TopBg.ZIndex = 1
+
+-- Tạo khối vuông phủ phần dưới TopBg nhưng chừa lề RADIUS ở 2 góc trên
+local TopLowerFill = Instance.new("Frame")
+TopLowerFill.Parent = MainFrame
+TopLowerFill.BackgroundColor3 = Color3.fromRGB(33, 34, 38)
+TopLowerFill.BorderSizePixel = 0
+TopLowerFill.Position = UDim2.new(0, 0, 0, RADIUS)
+TopLowerFill.Size = UDim2.new(1, 0, 0, 50 - RADIUS)
+TopLowerFill.ZIndex = 1
+
+-- Nền Sidebar nằm bên trái, dưới TopBg
+local SideBg = Instance.new("Frame")
+SideBg.Parent = MainFrame
+SideBg.BackgroundColor3 = Color3.fromRGB(28, 29, 32)
+SideBg.BorderSizePixel = 0
+SideBg.Position = UDim2.new(0, 0, 0, 50)
+SideBg.Size = UDim2.new(0, 58, 1, -50)
+SideBg.ZIndex = 1
+
+-- Đường kẻ ngang dưới TopBar
+local TopDivider = Instance.new("Frame")
+TopDivider.Parent = MainFrame
+TopDivider.BackgroundColor3 = Color3.fromRGB(48, 50, 56)
+TopDivider.BorderSizePixel = 0
+TopDivider.Position = UDim2.new(0, 0, 0, 49)
+TopDivider.Size = UDim2.new(1, 0, 0, 1)
+TopDivider.ZIndex = 2
+
+-- Đường kẻ dọc bên phải Sidebar
+local SideDivider = Instance.new("Frame")
+SideDivider.Parent = MainFrame
+SideDivider.BackgroundColor3 = Color3.fromRGB(48, 50, 56)
+SideDivider.BorderSizePixel = 0
+SideDivider.Position = UDim2.new(0, 57, 0, 50)
+SideDivider.Size = UDim2.new(0, 1, 1, -50)
+SideDivider.ZIndex = 2
+
+-- ==========================================
+-- 3. NỘI DUNG TOPBAR
 -- ==========================================
 local TopBar = Instance.new("Frame")
 TopBar.Parent = MainFrame
-TopBar.BackgroundColor3 = Color3.fromRGB(33, 34, 38)
-TopBar.BorderSizePixel = 0
+TopBar.BackgroundTransparency = 1
 TopBar.Position = UDim2.new(0, 0, 0, 0)
 TopBar.Size = UDim2.new(1, 0, 0, 50)
-TopBar.ClipsDescendants = true
+TopBar.ZIndex = 3
 
--- Bo góc trên trùng với MainFrame để không bị lòi góc nhọn
-local TopCorner = Instance.new("UICorner", TopBar)
-TopCorner.CornerRadius = UDim.new(0, 20)
-
--- Che phần bo góc dưới của TopBar
-local TopBottomMask = Instance.new("Frame")
-TopBottomMask.Parent = TopBar
-TopBottomMask.BackgroundColor3 = Color3.fromRGB(33, 34, 38)
-TopBottomMask.BorderSizePixel = 0
-TopBottomMask.Position = UDim2.new(0, 0, 1, -20)
-TopBottomMask.Size = UDim2.new(1, 0, 0, 20)
-
-local TopDivider = Instance.new("Frame")
-TopDivider.Parent = TopBar
-TopDivider.BackgroundColor3 = Color3.fromRGB(48, 50, 56)
-TopDivider.BorderSizePixel = 0
-TopDivider.Position = UDim2.new(0, 0, 1, -1)
-TopDivider.Size = UDim2.new(1, 0, 0, 1)
-
--- Logo V x
 local LogoLabel = Instance.new("TextLabel")
 LogoLabel.Parent = TopBar
 LogoLabel.BackgroundTransparency = 1
@@ -94,8 +125,8 @@ LogoLabel.Font = Enum.Font.GothamBlack
 LogoLabel.Text = "Vₓ"
 LogoLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
 LogoLabel.TextSize = 21
+LogoLabel.ZIndex = 4
 
--- Tên Hub + Game
 local BrandLabel = Instance.new("TextLabel")
 BrandLabel.Parent = TopBar
 BrandLabel.BackgroundTransparency = 1
@@ -107,8 +138,8 @@ BrandLabel.Text = 'VENYX  <font color="#6E7178">/</font>  <font color="#C2C6CE" 
 BrandLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
 BrandLabel.TextSize = 16
 BrandLabel.TextXAlignment = Enum.TextXAlignment.Left
+BrandLabel.ZIndex = 4
 
--- Badge phiên bản v1.2.4
 local VersionBadge = Instance.new("TextLabel")
 VersionBadge.Parent = TopBar
 VersionBadge.BackgroundColor3 = Color3.fromRGB(46, 48, 53)
@@ -118,14 +149,15 @@ VersionBadge.Font = Enum.Font.GothamMedium
 VersionBadge.Text = "v1.2.4"
 VersionBadge.TextColor3 = Color3.fromRGB(190, 193, 200)
 VersionBadge.TextSize = 11
+VersionBadge.ZIndex = 4
 Instance.new("UICorner", VersionBadge).CornerRadius = UDim.new(1, 0)
 
--- Badge trạng thái • Idle
 local StatusBadge = Instance.new("Frame")
 StatusBadge.Parent = TopBar
 StatusBadge.BackgroundColor3 = Color3.fromRGB(46, 48, 53)
 StatusBadge.Position = UDim2.new(0, 342, 0.5, -10)
 StatusBadge.Size = UDim2.new(0, 56, 0, 20)
+StatusBadge.ZIndex = 4
 Instance.new("UICorner", StatusBadge).CornerRadius = UDim.new(1, 0)
 
 local StatusDot = Instance.new("Frame")
@@ -133,6 +165,7 @@ StatusDot.Parent = StatusBadge
 StatusDot.BackgroundColor3 = Color3.fromRGB(235, 235, 235)
 StatusDot.Position = UDim2.new(0, 9, 0.5, -3)
 StatusDot.Size = UDim2.new(0, 6, 0, 6)
+StatusDot.ZIndex = 5
 Instance.new("UICorner", StatusDot).CornerRadius = UDim.new(1, 0)
 
 local StatusText = Instance.new("TextLabel")
@@ -145,13 +178,14 @@ StatusText.Text = "Idle"
 StatusText.TextColor3 = Color3.fromRGB(220, 222, 228)
 StatusText.TextSize = 11
 StatusText.TextXAlignment = Enum.TextXAlignment.Left
+StatusText.ZIndex = 5
 
--- Thanh Search bên phải
 local SearchBoxFrame = Instance.new("Frame")
 SearchBoxFrame.Parent = TopBar
 SearchBoxFrame.BackgroundColor3 = Color3.fromRGB(25, 26, 29)
 SearchBoxFrame.Position = UDim2.new(1, -218, 0.5, -14)
 SearchBoxFrame.Size = UDim2.new(0, 162, 0, 28)
+SearchBoxFrame.ZIndex = 4
 Instance.new("UICorner", SearchBoxFrame).CornerRadius = UDim.new(1, 0)
 local SearchStroke = Instance.new("UIStroke", SearchBoxFrame)
 SearchStroke.Color = Color3.fromRGB(54, 56, 62)
@@ -169,8 +203,8 @@ SearchInput.Text = ""
 SearchInput.TextColor3 = Color3.fromRGB(235, 235, 235)
 SearchInput.TextSize = 12
 SearchInput.TextXAlignment = Enum.TextXAlignment.Left
+SearchInput.ZIndex = 5
 
--- Nút thu nhỏ (–)
 local MinBtn = Instance.new("TextButton")
 MinBtn.Parent = TopBar
 MinBtn.BackgroundColor3 = Color3.fromRGB(46, 48, 53)
@@ -180,6 +214,7 @@ MinBtn.Font = Enum.Font.GothamBold
 MinBtn.Text = "–"
 MinBtn.TextColor3 = Color3.fromRGB(220, 222, 228)
 MinBtn.TextSize = 14
+MinBtn.ZIndex = 4
 Instance.new("UICorner", MinBtn).CornerRadius = UDim.new(1, 0)
 
 MinBtn.MouseButton1Click:Connect(function()
@@ -193,71 +228,47 @@ RestoreBtn.MouseButton1Click:Connect(function()
 end)
 
 -- ==========================================
--- 3. CỘT ICON BÊN TRÁI (SIDEBAR BO GÓC DƯỚI)
+-- 4. NỘI DUNG SIDEBAR (6 ICON + AVATAR)
 -- ==========================================
 local Sidebar = Instance.new("Frame")
 Sidebar.Parent = MainFrame
-Sidebar.BackgroundColor3 = Color3.fromRGB(28, 29, 32)
-Sidebar.BorderSizePixel = 0
+Sidebar.BackgroundTransparency = 1
 Sidebar.Position = UDim2.new(0, 0, 0, 50)
 Sidebar.Size = UDim2.new(0, 58, 1, -50)
-Sidebar.ClipsDescendants = true
-
--- Bo góc dưới trái khớp với MainFrame
-local SideCorner = Instance.new("UICorner", Sidebar)
-SideCorner.CornerRadius = UDim.new(0, 20)
-
-local SideTopMask = Instance.new("Frame")
-SideTopMask.Parent = Sidebar
-SideTopMask.BackgroundColor3 = Color3.fromRGB(28, 29, 32)
-SideTopMask.BorderSizePixel = 0
-SideTopMask.Position = UDim2.new(0, 0, 0, 0)
-SideTopMask.Size = UDim2.new(1, 0, 0, 20)
-
-local SideRightMask = Instance.new("Frame")
-SideRightMask.Parent = Sidebar
-SideRightMask.BackgroundColor3 = Color3.fromRGB(28, 29, 32)
-SideRightMask.BorderSizePixel = 0
-SideRightMask.Position = UDim2.new(1, -20, 0, 0)
-SideRightMask.Size = UDim2.new(0, 20, 1, 0)
-
-local SideDivider = Instance.new("Frame")
-SideDivider.Parent = Sidebar
-SideDivider.BackgroundColor3 = Color3.fromRGB(48, 50, 56)
-SideDivider.BorderSizePixel = 0
-SideDivider.Position = UDim2.new(1, -1, 0, 0)
-SideDivider.Size = UDim2.new(0, 1, 1, 0)
+Sidebar.ZIndex = 3
 
 local IconHolder = Instance.new("Frame")
 IconHolder.Parent = Sidebar
 IconHolder.BackgroundTransparency = 1
 IconHolder.Position = UDim2.new(0, 0, 0, 12)
 IconHolder.Size = UDim2.new(1, 0, 1, -76)
+IconHolder.ZIndex = 3
 
 local IconLayout = Instance.new("UIListLayout", IconHolder)
 IconLayout.Padding = UDim.new(0, 8)
 IconLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
 
--- Avatar người chơi ở góc dưới cùng bên trái
 local AvatarFrame = Instance.new("ImageLabel")
 AvatarFrame.Parent = Sidebar
 AvatarFrame.BackgroundColor3 = Color3.fromRGB(46, 48, 53)
 AvatarFrame.Position = UDim2.new(0.5, -16, 1, -48)
 AvatarFrame.Size = UDim2.new(0, 32, 0, 32)
 AvatarFrame.Image = Players:GetUserThumbnailAsync(LocalPlayer.UserId, Enum.ThumbnailType.HeadShot, Enum.ThumbnailSize.Size100x100)
+AvatarFrame.ZIndex = 4
 Instance.new("UICorner", AvatarFrame).CornerRadius = UDim.new(1, 0)
 local AvatarStroke = Instance.new("UIStroke", AvatarFrame)
 AvatarStroke.Color = Color3.fromRGB(72, 76, 84)
 AvatarStroke.Thickness = 1.2
 
 -- ==========================================
--- 4. KHU VỰC NỘI DUNG CHÍNH (ĐỂ TRỐNG HOÀN TOÀN)
+-- 5. KHU VỰC NỘI DUNG CHÍNH (ĐỂ TRỐNG HOÀN TOÀN)
 -- ==========================================
 local ContentWrapper = Instance.new("Frame")
 ContentWrapper.Parent = MainFrame
 ContentWrapper.BackgroundTransparency = 1
 ContentWrapper.Position = UDim2.new(0, 58, 0, 50)
 ContentWrapper.Size = UDim2.new(1, -58, 1, -50)
+ContentWrapper.ZIndex = 3
 
 local ResizeHint = Instance.new("TextLabel")
 ResizeHint.Parent = ContentWrapper
@@ -268,6 +279,7 @@ ResizeHint.Font = Enum.Font.GothamBold
 ResizeHint.Text = "//"
 ResizeHint.TextColor3 = Color3.fromRGB(95, 98, 106)
 ResizeHint.TextSize = 11
+ResizeHint.ZIndex = 4
 
 local TabConfigs = {
     { Name = "Home",     Icon = "⌂", SubTabs = {"Overview"} },
@@ -292,6 +304,7 @@ for index, cfg in ipairs(TabConfigs) do
     TabBtn.Text = cfg.Icon
     TabBtn.TextColor3 = isFirst and Color3.fromRGB(255, 255, 255) or Color3.fromRGB(132, 136, 145)
     TabBtn.TextSize = 18
+    TabBtn.ZIndex = 4
     Instance.new("UICorner", TabBtn).CornerRadius = UDim.new(0, 10)
 
     local Page = Instance.new("Frame")
@@ -299,6 +312,7 @@ for index, cfg in ipairs(TabConfigs) do
     Page.BackgroundTransparency = 1
     Page.Size = UDim2.new(1, 0, 1, 0)
     Page.Visible = isFirst
+    Page.ZIndex = 3
 
     local PageTitle = Instance.new("TextLabel")
     PageTitle.Parent = Page
@@ -310,12 +324,14 @@ for index, cfg in ipairs(TabConfigs) do
     PageTitle.TextColor3 = Color3.fromRGB(245, 246, 250)
     PageTitle.TextSize = 19
     PageTitle.TextXAlignment = Enum.TextXAlignment.Left
+    PageTitle.ZIndex = 4
 
     local SubTabBar = Instance.new("Frame")
     SubTabBar.Parent = Page
     SubTabBar.BackgroundColor3 = Color3.fromRGB(31, 32, 36)
     SubTabBar.Position = UDim2.new(1, -220, 0, 14)
     SubTabBar.Size = UDim2.new(0, 198, 0, 28)
+    SubTabBar.ZIndex = 4
     Instance.new("UICorner", SubTabBar).CornerRadius = UDim.new(1, 0)
     local SubStroke = Instance.new("UIStroke", SubTabBar)
     SubStroke.Color = Color3.fromRGB(50, 52, 58)
@@ -327,13 +343,14 @@ for index, cfg in ipairs(TabConfigs) do
     SubLayout.VerticalAlignment = Enum.VerticalAlignment.Center
     SubLayout.Padding = UDim.new(0, 4)
 
-    -- Khu vực nội dung hoàn toàn TRỐNG
+    -- Khung chứa bên trong hoàn toàn TRỐNG
     local EmptyBody = Instance.new("Frame")
     EmptyBody.Name = "EmptyContainer"
     EmptyBody.Parent = Page
     EmptyBody.BackgroundTransparency = 1
     EmptyBody.Position = UDim2.new(0, 22, 0, 52)
     EmptyBody.Size = UDim2.new(1, -44, 1, -68)
+    EmptyBody.ZIndex = 3
 
     local SubBtns = {}
     for sIdx, sName in ipairs(cfg.SubTabs) do
@@ -346,6 +363,7 @@ for index, cfg in ipairs(TabConfigs) do
         sBtn.Text = sName
         sBtn.TextColor3 = (sIdx == 1) and Color3.fromRGB(255, 255, 255) or Color3.fromRGB(145, 148, 156)
         sBtn.TextSize = 11
+        sBtn.ZIndex = 5
         Instance.new("UICorner", sBtn).CornerRadius = UDim.new(1, 0)
 
         table.insert(SubBtns, sBtn)
